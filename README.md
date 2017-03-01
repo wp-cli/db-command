@@ -1,7 +1,7 @@
 wp-cli/db-command
 =================
 
-Perform basic database operations using credentials stored in wp-config.php
+Perform basic database operations using credentials stored in wp-config.php.
 
 [![Build Status](https://travis-ci.org/wp-cli/db-command.svg?branch=master)](https://travis-ci.org/wp-cli/db-command)
 
@@ -9,11 +9,350 @@ Quick links: [Using](#using) | [Installing](#installing) | [Contributing](#contr
 
 ## Using
 
+This package implements the following commands:
 
+### wp db create
+
+Create a new database.
+
+~~~
+wp db create 
+~~~
+
+Runs `CREATE_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
+`DB_USER` and `DB_PASSWORD` database credentials specified in
+wp-config.php.
+
+**EXAMPLES**
+
+    $ wp db create
+    Success: Database created.
+
+
+
+### wp db drop
+
+Delete the existing database.
+
+~~~
+wp db drop [--yes]
+~~~
+
+Runs `DROP_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
+`DB_USER` and `DB_PASSWORD` database credentials specified in
+wp-config.php.
+
+**OPTIONS**
+
+	[--yes]
+		Answer yes to the confirmation message.
+
+**EXAMPLES**
+
+    $ wp db drop --yes
+    Success: Database dropped.
+
+
+
+### wp db reset
+
+Remove all tables from the database.
+
+~~~
+wp db reset [--yes]
+~~~
+
+Runs `DROP_DATABASE` and `CREATE_DATABASE` SQL statements using
+`DB_HOST`, `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
+specified in wp-config.php.
+
+**OPTIONS**
+
+	[--yes]
+		Answer yes to the confirmation message.
+
+**EXAMPLES**
+
+    $ wp db reset --yes
+    Success: Database reset.
+
+
+
+### wp db check
+
+Check the current status of the database.
+
+~~~
+wp db check 
+~~~
+
+Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
+`DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
+specified in wp-config.php.
+
+[See docs](http://dev.mysql.com/doc/refman/5.7/en/check-table.html)
+for more details on the `CHECK TABLE` statement.
+
+**EXAMPLES**
+
+    $ wp db check
+    Success: Database checked.
+
+
+
+### wp db optimize
+
+Optimize the database.
+
+~~~
+wp db optimize 
+~~~
+
+Runs `mysqlcheck` utility with `--optimize=true` using `DB_HOST`,
+`DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
+specified in wp-config.php.
+
+[See docs](http://dev.mysql.com/doc/refman/5.7/en/optimize-table.html)
+for more details on the `OPTIMIZE TABLE` statement.
+
+**EXAMPLES**
+
+    $ wp db optimize
+    Success: Database optimized.
+
+
+
+### wp db repair
+
+Repair the database.
+
+~~~
+wp db repair 
+~~~
+
+Runs `mysqlcheck` utility with `--repair=true` using `DB_HOST`,
+`DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
+specified in wp-config.php.
+
+[See docs](http://dev.mysql.com/doc/refman/5.7/en/repair-table.html) for
+more details on the `REPAIR TABLE` statement.
+
+**EXAMPLES**
+
+    $ wp db repair
+    Success: Database repaired.
+
+
+
+### wp db cli
+
+Open a MySQL console using credentials from wp-config.php
+
+~~~
+wp db cli [--database=<database>] [--default-character-set=<character-set>] [--<field>=<value>]
+~~~
+
+**OPTIONS**
+
+	[--database=<database>]
+		Use a specific database. Defaults to DB_NAME.
+
+	[--default-character-set=<character-set>]
+		Use a specific character set. Defaults to DB_CHARSET when defined.
+
+	[--<field>=<value>]
+		Extra arguments to pass to the MySQL executable.
+
+**EXAMPLES**
+
+    # Open MySQL console
+    $ wp db cli
+    mysql>
+
+
+
+### wp db query
+
+Execute a SQL query against the database.
+
+~~~
+wp db query [<sql>] [--<field>=<value>]
+~~~
+
+Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
+ and `DB_PASSWORD` database credentials specified in wp-config.php.
+
+**OPTIONS**
+
+	[<sql>]
+		A SQL query. If not passed, will try to read from STDIN.
+
+	[--<field>=<value>]
+		Extra arguments to pass to mysql.
+
+**EXAMPLES**
+
+    # Execute a query stored in a file
+    $ wp db query < debug.sql
+
+    # Check all tables in the database
+    $ wp db query "CHECK TABLE $(wp db tables | paste -s -d',');"
+    +---------------------------------------+-------+----------+----------+
+    | Table                                 | Op    | Msg_type | Msg_text |
+    +---------------------------------------+-------+----------+----------+
+    | wordpress_dbase.wp_users              | check | status   | OK       |
+    | wordpress_dbase.wp_usermeta           | check | status   | OK       |
+    | wordpress_dbase.wp_posts              | check | status   | OK       |
+    | wordpress_dbase.wp_comments           | check | status   | OK       |
+    | wordpress_dbase.wp_links              | check | status   | OK       |
+    | wordpress_dbase.wp_options            | check | status   | OK       |
+    | wordpress_dbase.wp_postmeta           | check | status   | OK       |
+    | wordpress_dbase.wp_terms              | check | status   | OK       |
+    | wordpress_dbase.wp_term_taxonomy      | check | status   | OK       |
+    | wordpress_dbase.wp_term_relationships | check | status   | OK       |
+    | wordpress_dbase.wp_termmeta           | check | status   | OK       |
+    | wordpress_dbase.wp_commentmeta        | check | status   | OK       |
+    +---------------------------------------+-------+----------+----------+
+
+    # Pass extra arguments through to MySQL
+    $ wp db query 'SELECT * FROM wp_options WHERE option_name="home"' --skip-column-names
+    +---+------+------------------------------+-----+
+    | 2 | home | http://wordpress-develop.dev | yes |
+    +---+------+------------------------------+-----+
+
+
+
+### wp db export
+
+Exports the database to a file or to STDOUT.
+
+~~~
+wp db export [<file>] [--<field>=<value>] [--tables=<tables>] [--porcelain]
+~~~
+
+Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
+`DB_PASSWORD` database credentials specified in wp-config.php.
+
+**OPTIONS**
+
+	[<file>]
+		The name of the SQL file to export. If '-', then outputs to STDOUT. If omitted, it will be '{dbname}.sql'.
+
+	[--<field>=<value>]
+		Extra arguments to pass to mysqldump
+
+	[--tables=<tables>]
+		The comma separated list of specific tables to export. Excluding this parameter will export all tables in the database.
+
+	[--porcelain]
+		Output filename for the exported database.
+
+**EXAMPLES**
+
+    # Export database with drop query included
+    $ wp db export --add-drop-table
+    Success: Exported to 'wordpress_dbase.sql'.
+
+    # Export certain tables
+    $ wp db export --tables=wp_options,wp_users
+    Success: Exported to 'wordpress_dbase.sql'.
+
+    # Export all tables matching a wildcard
+    $ wp db export --tables=$(wp db tables 'wp_user*' --format=csv)
+    Success: Exported to 'wordpress_dbase.sql'.
+
+    # Export all tables matching prefix
+    $ wp db export --tables=$(wp db tables --all-tables-with-prefix --format=csv)
+    Success: Exported to 'wordpress_dbase.sql'.
+
+
+
+### wp db import
+
+Import a database from a file or from STDIN.
+
+~~~
+wp db import [<file>] [--skip-optimization]
+~~~
+
+Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
+`DB_PASSWORD` database credentials specified in wp-config.php. This
+does not create database by itself and only performs whatever tasks are
+defined in the SQL.
+
+**OPTIONS**
+
+	[<file>]
+		The name of the SQL file to import. If '-', then reads from STDIN. If omitted, it will look for '{dbname}.sql'.
+
+	[--skip-optimization]
+		When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
+
+**EXAMPLES**
+
+    # Import MySQL from a file.
+    $ wp db import wordpress_dbase.sql
+    Success: Imported from 'wordpress_dbase.sql'.
+
+
+
+### wp db tables
+
+List the database tables.
+
+~~~
+wp db tables [<table>...] [--scope=<scope>] [--network] [--all-tables-with-prefix] [--all-tables] [--format=<format>]
+~~~
+
+Defaults to all tables registered to the $wpdb database handler.
+
+**OPTIONS**
+
+	[<table>...]
+		List tables based on wildcard search, e.g. 'wp_*_options' or 'wp_post?'.
+
+	[--scope=<scope>]
+		Can be all, global, ms_global, blog, or old tables. Defaults to all.
+
+	[--network]
+		List all the tables in a multisite install. Overrides --scope=<scope>.
+
+	[--all-tables-with-prefix]
+		List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
+
+	[--all-tables]
+		List all tables in the database, regardless of the prefix, and even if not registered on $wpdb. Overrides --all-tables-with-prefix.
+
+	[--format=<format>]
+		Render output in a particular format.
+		---
+		default: list
+		options:
+		  - list
+		  - csv
+		---
+
+**EXAMPLES**
+
+    # List tables for a single site, without shared tables like 'wp_users'
+    $ wp db tables --scope=blog --url=sub.example.com
+    wp_3_posts
+    wp_3_comments
+    wp_3_options
+    wp_3_postmeta
+    wp_3_terms
+    wp_3_term_taxonomy
+    wp_3_term_relationships
+    wp_3_termmeta
+    wp_3_commentmeta
+
+    # Export only tables for a single site
+    $ wp db export --tables=$(wp db tables --url=sub.example.com --format=csv)
+    Success: Exported to wordpress_dbase.sql
 
 ## Installing
 
-Installing this package requires WP-CLI v1.1.0 or greater. Update to the latest stable release with `wp cli update`.
+Installing this package requires WP-CLI v0.23.0 or greater. Update to the latest stable release with `wp cli update`.
 
 Once you've done so, you can install this package with `wp package install wp-cli/db-command`.
 
