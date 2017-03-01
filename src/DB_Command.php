@@ -489,6 +489,3 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 }
-
-WP_CLI::add_command( 'db', 'DB_Command' );
-
