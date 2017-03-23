@@ -17,7 +17,8 @@ cache:
 
 env:
   global:
-    - WP_CLI_BIN_DIR=/tmp/wp-cli-phar
+    - PATH="$TRAVIS_BUILD_DIR/vendor/bin:$PATH"
+    - WP_CLI_BIN_DIR="$TRAVIS_BUILD_DIR/vendor/bin"
 
 matrix:
   include:
@@ -32,9 +33,15 @@ matrix:
     - php: 5.3
       env: WP_VERSION=latest
 
-before_script:
+before_install:
   - phpenv config-rm xdebug.ini
-  - composer validate
+
+install:
+  - composer install
   - bash bin/install-package-tests.sh
 
-script: ./vendor/bin/behat --format progress --strict
+before_script:
+  - composer validate
+
+script:
+  - behat --format progress --strict
