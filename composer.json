@@ -15,6 +15,7 @@
         }
     ],
     "minimum-stability": "dev",
+    "prefer-stable": true,
     "autoload": {
         "psr-4": {"": "src/"},
         "files": [ "db-command.php" ]
