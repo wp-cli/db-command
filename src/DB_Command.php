@@ -127,7 +127,7 @@ class DB_Command extends WP_CLI_Command {
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/optimize-table.html)
 	 * for more details on the `OPTIMIZE TABLE` statement.
 	 *
-	 * ## EXAMPLES
+	 * ## EXAMPLEScd
 	 *
 	 *     $ wp db optimize
 	 *     Success: Database optimized.
