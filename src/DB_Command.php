@@ -61,7 +61,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database dropped.
 	 */
 	public function drop( $_, $assoc_args ) {
-		WP_CLI::confirm( "Are you sure you want to drop the database?", $assoc_args );
+		WP_CLI::confirm( "Are you sure you want to drop the '" . DB_NAME . "' database?", $assoc_args );
 
 		self::run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ) );
 
@@ -86,7 +86,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database reset.
 	 */
 	public function reset( $_, $assoc_args ) {
-		WP_CLI::confirm( "Are you sure you want to reset the database?", $assoc_args );
+		WP_CLI::confirm( "Are you sure you want to reset the '" . DB_NAME . "' database?", $assoc_args );
 
 		self::run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ) );
 		self::run_query( self::get_create_query() );
