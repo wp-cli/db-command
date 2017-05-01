@@ -110,7 +110,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database checked.
 	 */
 	public function check() {
-		self::run( Utils\esc_cmd( 'mysqlcheck --no-defaults %s', DB_NAME ), array(
+		self::run( Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ), array(
 			'check' => true,
 		) );
 
@@ -133,7 +133,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database optimized.
 	 */
 	public function optimize() {
-		self::run( Utils\esc_cmd( 'mysqlcheck --no-defaults %s', DB_NAME ), array(
+		self::run( Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ), array(
 			'optimize' => true,
 		) );
 
@@ -156,7 +156,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database repaired.
 	 */
 	public function repair() {
-		self::run( Utils\esc_cmd( 'mysqlcheck --no-defaults %s', DB_NAME ), array(
+		self::run( Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ), array(
 			'repair' => true,
 		) );
 
@@ -190,7 +190,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['database'] = DB_NAME;
 		}
 
-		self::run( 'mysql --no-defaults --no-auto-rehash', $assoc_args );
+		self::run( '/usr/bin/env mysql --no-defaults --no-auto-rehash', $assoc_args );
 	}
 
 	/**
@@ -245,7 +245,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['execute'] = $args[0];
 		}
 
-		self::run( 'mysql --no-defaults --no-auto-rehash', $assoc_args );
+		self::run( '/usr/bin/env mysql --no-defaults --no-auto-rehash', $assoc_args );
 	}
 
 	/**
@@ -307,7 +307,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$command = 'mysqldump --no-defaults %s';
+		$command = '/usr/bin/env mysqldump --no-defaults %s';
 		$command_esc_args = array( DB_NAME );
 
 		if ( isset( $assoc_args['tables'] ) ) {
@@ -382,7 +382,7 @@ class DB_Command extends WP_CLI_Command {
 			$mysql_args['execute'] = sprintf( $query, $result_file );
 		}
 
-		self::run( 'mysql --no-defaults --no-auto-rehash', $mysql_args );
+		self::run( '/usr/bin/env mysql --no-defaults --no-auto-rehash', $mysql_args );
 
 		WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
 	}
@@ -469,7 +469,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	private static function run_query( $query ) {
-		self::run( 'mysql --no-defaults --no-auto-rehash', array( 'execute' => $query ) );
+		self::run( '/usr/bin/env mysql --no-defaults --no-auto-rehash', array( 'execute' => $query ) );
 	}
 
 	private static function run( $cmd, $assoc_args = array(), $descriptors = null ) {
