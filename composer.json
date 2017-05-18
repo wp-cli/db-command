@@ -41,7 +41,8 @@
             "db query",
             "db export",
             "db import",
-            "db tables"
+            "db tables",
+            "db size"
         ]
     }
 }

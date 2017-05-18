@@ -456,6 +456,60 @@ class DB_Command extends WP_CLI_Command {
 		}
 	}
 
+	/**
+	 * Display the database size.
+	 *
+	 * Deisplays the database size for `DB_NAME` specified in wp-config.php.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--format]
+	 * : table, csv, json, bytes (displays only the size in bytes)
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp db size
+	 *     +-------------------+
+	 *     | wordpress_default |
+	 *     +-------------------+
+	 *     | 6,078,464         |
+	 *     +-------------------+
+	 */
+	public function size( $args, $assoc_args ) {
+
+		WP_CLI::get_runner()-> load_wordpress();
+
+		global $wpdb;
+
+		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
+		unset( $assoc_args['format'] );
+
+		// Get the database size.
+		$bytes = $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;', DB_NAME ) );
+
+		// Build rows for the formatter.
+		$rows = array();
+		$fields = array( 'Name', 'Size', 'Bytes' );
+
+		$rows[] = array(
+			'Name'  => DB_NAME,
+			'Size'  => size_format( $bytes ),
+			'Bytes' => $bytes,
+			);
+
+		$args = array(
+			'format' => $format,
+		);
+
+		if ( 'bytes' === $args['format'] ) {
+			WP_CLI::Line( $bytes );
+		} else {
+			// Display the rows.
+			$formatter = new \WP_CLI\Formatter( $args, $fields );
+			$formatter->display_items( $rows );
+		}
+	}
+
 	private static function get_create_query() {
 
 		$create_query = sprintf( 'CREATE DATABASE `%s`', DB_NAME );
@@ -487,5 +541,4 @@ class DB_Command extends WP_CLI_Command {
 		$final_args = array_merge( $assoc_args, $required );
 		Utils\run_mysql_command( $cmd, $final_args, $descriptors );
 	}
-
 }
