@@ -8,27 +8,12 @@ Feature: Display database size
     When I run `wp db size`
     Then STDOUT should contain:
       """
-      wp_cli_test
+      wp_cli_test	640 KB	655
       """
 
     And STDOUT should contain:
       """
-      640 KB
-      """
-
-    And STDOUT should contain:
-      """
-      655
-      """
-
-    And STDOUT should contain:
-      """
-      wp_terms
-      """
-
-    And STDOUT should contain:
-      """
-      48 KB
+      wp_terms	48 KB
       """
 
   Scenario: Display only database size for a WordPress install
@@ -37,20 +22,10 @@ Feature: Display database size
     When I run `wp db size --db-only`
     Then STDOUT should contain:
       """
-      wp_cli_test
+      wp_cli_test	640 KB	655
       """
 
-    And STDOUT should contain:
-      """
-      640 KB
-      """
-
-    And STDOUT should contain:
-      """
-      655
-      """
-
-    And STDOUT should not contain:
+    But STDOUT should not contain:
       """
       wp_terms
       """
@@ -64,7 +39,7 @@ Feature: Display database size
       655
       """
 
-    And STDOUT should not contain:
+    But STDOUT should not contain:
       """
       640 KB
       """

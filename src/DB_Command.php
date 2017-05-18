@@ -457,7 +457,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Display the database size.
+	 * Display the database and table sizes.
 	 *
 	 * Displays the database and table sizes for `DB_NAME` specified in wp-config.php.
 	 *
