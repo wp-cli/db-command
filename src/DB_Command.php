@@ -459,7 +459,7 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Display the database size.
 	 *
-	 * Deisplays the database size for `DB_NAME` specified in wp-config.php.
+	 * Displays the database size for `DB_NAME` specified in wp-config.php.
 	 *
 	 * ## OPTIONS
 	 *
@@ -469,11 +469,11 @@ class DB_Command extends WP_CLI_Command {
 	 * ## EXAMPLES
 	 *
 	 *     $ wp db size
-	 *     +-------------------+
-	 *     | wordpress_default |
-	 *     +-------------------+
-	 *     | 6,078,464         |
-	 *     +-------------------+
+	 *     +-------------------+------+---------+
+	 *     | Name              | Size | Bytes   |
+	 *     +-------------------+------+---------+
+	 *     | wordpress_default | 6 MB | 5865472 |
+	 *     +-------------------+------+---------+
 	 */
 	public function size( $args, $assoc_args ) {
 
