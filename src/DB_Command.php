@@ -459,12 +459,35 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Display the database size.
 	 *
-	 * Displays the database size for `DB_NAME` specified in wp-config.php.
+	 * Displays the database and table sizes for `DB_NAME` specified in wp-config.php.
 	 *
 	 * ## OPTIONS
 	 *
+	 * [--db-only]
+	 * : Only display the database size without including the tables.
+	 *
 	 * [--format]
-	 * : table, csv, json, bytes (displays only the size in bytes)
+	 * : table, csv, json, bytes
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - json
+	 *   - bytes, only works when combined with --db-only
+	 * ---
+	 *
+	 * [--scope=<scope>]
+	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
+	 *
+	 * [--network]
+	 * : List all the tables in a multisite install. Overrides --scope=<scope>.
+	 *
+	 * [--all-tables-with-prefix]
+	 * : List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
+	 *
+	 * [--all-tables]
+	 * : List all tables in the database, regardless of the prefix, and even if not registered on $wpdb. Overrides --all-tables-with-prefix.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -482,10 +505,20 @@ class DB_Command extends WP_CLI_Command {
 		global $wpdb;
 
 		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
+		$db_only = ! empty( WP_CLI\Utils\get_flag_value( $assoc_args, 'db-only' ) );
 		unset( $assoc_args['format'] );
+		unset( $assoc_args['db-only'] );
+
+		if ( empty( $args ) && empty( $assoc_args ) ) {
+			$assoc_args['scope'] = 'all';
+		}
 
 		// Get the database size.
-		$bytes = $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;', DB_NAME ) );
+		$bytes = $wpdb->get_var( $wpdb->prepare(
+			"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' GROUP BY table_schema;",
+			DB_NAME
+			)
+		);
 
 		// Build rows for the formatter.
 		$rows = array();
@@ -497,11 +530,34 @@ class DB_Command extends WP_CLI_Command {
 			'Bytes' => $bytes,
 			);
 
+		if ( ! $db_only ) {
+
+			// Add all of the table sizes
+			foreach( WP_CLI\Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
+
+				// Get the table size.
+				$table_bytes = $wpdb->get_var( $wpdb->prepare(
+					"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' and Table_Name = '%s' GROUP BY Table_Name LIMIT 1",
+					DB_NAME,
+					$table_name
+					)
+				);
+
+				// Add the table size to the list.
+				$rows[] = array(
+					'Name'  => $table_name,
+					'Size'  => size_format( $table_bytes ),
+					'Bytes' => $table_bytes,
+				);
+			}
+		}
+
 		$args = array(
 			'format' => $format,
 		);
 
-		if ( 'bytes' === $args['format'] ) {
+		if ( 'bytes' === $args['format'] && $db_only ) {
+			// Display the database size.
 			WP_CLI::Line( $bytes );
 		} else {
 			// Display the rows.

@@ -1,6 +1,8 @@
+# Assumes wp_cli_test has a database size of around 655,360 bytes.
+
 Feature: Display database size
 
-  Scenario: Display database size for a WordPress install, standard output
+  Scenario: Display database and table sizes for a WordPress install
     Given a WP install
 
     When I run `wp db size`
@@ -19,11 +21,50 @@ Feature: Display database size
       655
       """
 
-  Scenario: Display database size for a WordPress install, bytes only
+    And STDOUT should contain:
+      """
+      wp_terms
+      """
+
+    And STDOUT should contain:
+      """
+      48 KB
+      """
+
+  Scenario: Display only database size for a WordPress install
     Given a WP install
 
-    When I run `wp db size --format=bytes`
+    When I run `wp db size --db-only`
+    Then STDOUT should contain:
+      """
+      wp_cli_test
+      """
+
+    And STDOUT should contain:
+      """
+      640 KB
+      """
+
+    And STDOUT should contain:
+      """
+      655
+      """
+
+    And STDOUT should not contain:
+      """
+      wp_terms
+      """
+
+  Scenario: Display only database size in bytes for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --db-only --format=bytes`
     Then STDOUT should contain:
       """
       655
+      """
+
+    And STDOUT should not contain:
+      """
+      640 KB
       """
