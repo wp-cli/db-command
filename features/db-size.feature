@@ -34,12 +34,4 @@ Feature: Display database size
     Given a WP install
 
     When I run `wp db size --db-only --format=bytes`
-    Then STDOUT should contain:
-      """
-      655
-      """
-
-    But STDOUT should not contain:
-      """
-      640 KB
-      """
+    Then STDOUT should be a number
