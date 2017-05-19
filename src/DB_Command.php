@@ -545,7 +545,7 @@ class DB_Command extends WP_CLI_Command {
 
 		// For PHP 5.3 compat.
 		$tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'tables' );
-		$tables = ! empty( $empty );
+		$tables = ! empty( $tables );
 
 		unset( $assoc_args['format'] );
 		unset( $assoc_args['size_format'] );
