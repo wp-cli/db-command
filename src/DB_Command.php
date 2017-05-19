@@ -500,7 +500,7 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function size( $args, $assoc_args ) {
 
-		WP_CLI::get_runner()-> load_wordpress();
+		@WP_CLI::get_runner()-> load_wordpress();
 
 		global $wpdb;
 
