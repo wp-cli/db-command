@@ -2,7 +2,7 @@
 
 Feature: Display database size
 
-  Scenario: Display database and table sizes for a WordPress install
+  Scenario: Display only database size for a WordPress install
     Given a WP install
 
     When I run `wp db query "SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = 'wp_cli_test' GROUP BY table_schema;"`
@@ -19,38 +19,61 @@ Feature: Display database size
       KB	{DBSIZE}
       """
 
-  Scenario: Display only database size for a WordPress install
+  Scenario: Display only table sizes for a WordPress install
     Given a WP install
 
     When I run `wp db query "SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = 'wp_cli_test' GROUP BY table_schema;"`
     Then save STDOUT '(\d+)' as {DBSIZE}
 
-    When I run `wp db size --db-only`
+    When I run `wp db size --tables`
     Then STDOUT should contain:
       """
-      wp_cli_test
-      """
-
-    And STDOUT should contain:
-      """
-      KB	{DBSIZE}
+      wp_posts	80 KB
       """
 
     But STDOUT should not contain:
       """
-      wp_users
+      wp_cli_test
       """
 
   Scenario: Display only database size in bytes for a WordPress install
     Given a WP install
 
-    When I run `wp db query "SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = 'wp_cli_test' GROUP BY table_schema;"`
+    When I run `wp db query "SELECT SUM(data_length + index_length) as Size FROM information_schema.TABLES where table_schema = 'wp_cli_test' GROUP BY table_schema;"`
     Then save STDOUT '(\d+)' as {DBSIZE}
 
-    When I run `wp db size --db-only --format=bytes`
+    When I run `wp db size --size_format=b`
     Then STDOUT should be a number
 
-    And STDOUT should contain:
+    And STDOUT should be:
+    """
+    {DBSIZE}
+    """
+
+  Scenario: Display only database size in kilobytes for a WordPress install
+    Given a WP install
+
+    When I run `wp db query "SELECT CEILING( SUM(data_length + index_length) / 1024 ) as Size FROM information_schema.TABLES where table_schema = 'wp_cli_test' GROUP BY table_schema;"`
+    Then save STDOUT '(\d+)' as {DBSIZE}
+
+    When I run `wp db size --size_format=kb`
+    Then STDOUT should be a number
+
+    And STDOUT should be:
+    """
+    {DBSIZE}
+    """
+
+  Scenario: Display only database size in megabytes for a WordPress install
+    Given a WP install
+
+    When I run `wp db query "SELECT CEILING( SUM(data_length + index_length) / 1048576 ) as Size FROM information_schema.TABLES where table_schema = 'wp_cli_test' GROUP BY table_schema;"`
+    Then save STDOUT '(\d+)' as {DBSIZE}
+
+    When I run `wp db size --size_format=mb`
+    Then STDOUT should be a number
+
+    And STDOUT should be:
     """
     {DBSIZE}
     """
