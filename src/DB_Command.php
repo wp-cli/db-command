@@ -459,12 +459,13 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Display the database name and size.
 	 *
-	 * Display the database name and size for `DB_NAME` specified in wp-config.php.
+	 * Display the database name and size for `DB_NAME` specified in wp-config.php,
+	 * defaults to a human-readable number.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--size_format]
-	 * : Displays the database size as a number.
+	 * : Display only the database size as a number.
 	 * ---
 	 * default: b
 	 * options:
@@ -474,7 +475,7 @@ class DB_Command extends WP_CLI_Command {
 	 *  ---
 	 *
 	 * [--tables]
-	 * : Display each table name and size as ASCII table instead of the database size.
+	 * : Display each table name and size instead of the database size.
 	 *
 	 * [--format]
 	 * : table, csv, json
@@ -542,8 +543,6 @@ class DB_Command extends WP_CLI_Command {
 
 		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
 		$size_format = WP_CLI\Utils\get_flag_value( $assoc_args, 'size_format' );
-
-		// For PHP 5.3 compat.
 		$tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'tables' );
 		$tables = ! empty( $tables );
 
