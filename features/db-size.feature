@@ -5,7 +5,7 @@ Feature: Display database size
   Scenario: Display only database size for a WordPress install
     Given a WP install
 
-    When I run `wp db query "SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = 'wp_cli_test' GROUP BY table_schema;"`
+    When I run `wp db query "SELECT CEILING( SUM(data_length + index_length) / 1024 ) as Size FROM information_schema.TABLES where table_schema = 'wp_cli_test' GROUP BY table_schema;"`
     Then save STDOUT '(\d+)' as {DBSIZE}
 
     When I run `wp db size`
@@ -16,7 +16,7 @@ Feature: Display database size
 
     And STDOUT should contain:
       """
-      KB	{DBSIZE}
+      {DBSIZE} KB
       """
 
   Scenario: Display only table sizes for a WordPress install
