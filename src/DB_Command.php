@@ -457,9 +457,9 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Display the database name and size as ASCII table.
+	 * Display the database name and size.
 	 *
-	 * Displays the Display the database name and size as ASCII table for `DB_NAME` specified in wp-config.php.
+	 * Display the database name and size for `DB_NAME` specified in wp-config.php.
 	 *
 	 * ## OPTIONS
 	 *
@@ -501,29 +501,29 @@ class DB_Command extends WP_CLI_Command {
 	 * ## EXAMPLES
 	 *
 	 *     $ wp db size
-	 *     +-------------------+------+---------+
-	 *     | Name              | Size | Bytes   |
-	 *     +-------------------+------+---------+
-	 *     | wordpress_default | 6 MB | 5865472 |
-	 *     +-------------------+------+---------+
+	 *     +-------------------+------+
+	 *     | Name              | Size |
+	 *     +-------------------+------+
+	 *     | wordpress_default | 6 MB |
+	 *     +-------------------+------+
 	 *
 	 *     $ wp db size --tables
-	 *     +-----------------------+-------+-------+
-	 *     | Name                  | Size  | Bytes |
-	 *     +-----------------------+-------+-------+
-	 *     | wp_users              | 64 KB | 65536 |
-	 *     | wp_usermeta           | 48 KB | 49152 |
-	 *     | wp_posts              | 80 KB | 81920 |
-	 *     | wp_comments           | 96 KB | 98304 |
-	 *     | wp_links              | 32 KB | 32768 |
-	 *     | wp_options            | 32 KB | 32768 |
-	 *     | wp_postmeta           | 48 KB | 49152 |
-	 *     | wp_terms              | 48 KB | 49152 |
-	 *     | wp_term_taxonomy      | 48 KB | 49152 |
-	 *     | wp_term_relationships | 32 KB | 32768 |
-	 *     | wp_termmeta           | 48 KB | 49152 |
-	 *     | wp_commentmeta        | 48 KB | 49152 |
-	 *     +-----------------------+-------+-------+
+	 *     +-----------------------+-------+
+	 *     | Name                  | Size  |
+	 *     +-----------------------+-------+
+	 *     | wp_users              | 64 KB |
+	 *     | wp_usermeta           | 48 KB |
+	 *     | wp_posts              | 80 KB |
+	 *     | wp_comments           | 96 KB |
+	 *     | wp_links              | 32 KB |
+	 *     | wp_options            | 32 KB |
+	 *     | wp_postmeta           | 48 KB |
+	 *     | wp_terms              | 48 KB |
+	 *     | wp_term_taxonomy      | 48 KB |
+	 *     | wp_term_relationships | 32 KB |
+	 *     | wp_termmeta           | 48 KB |
+	 *     | wp_commentmeta        | 48 KB |
+	 *     +-----------------------+-------+
 	 *
 	 * 	   $ wp db size --size_format=b
 	 * 	   5865472
@@ -557,7 +557,7 @@ class DB_Command extends WP_CLI_Command {
 
 		// Build rows for the formatter.
 		$rows = array();
-		$fields = array( 'Name', 'Size', 'Bytes' );
+		$fields = array( 'Name', 'Size' );
 
 		if ( $tables ) {
 
@@ -576,7 +576,6 @@ class DB_Command extends WP_CLI_Command {
 				$rows[] = array(
 					'Name'  => $table_name,
 					'Size'  => size_format( $table_bytes ),
-					'Bytes' => $table_bytes,
 				);
 			}
 		} else {
@@ -592,7 +591,6 @@ class DB_Command extends WP_CLI_Command {
 			$rows[] = array(
 				'Name'  => DB_NAME,
 				'Size'  => size_format( $db_bytes ),
-				'Bytes' => $db_bytes,
 				);
 		}
 
