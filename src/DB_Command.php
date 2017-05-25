@@ -456,6 +456,174 @@ class DB_Command extends WP_CLI_Command {
 		}
 	}
 
+	/**
+	 * Display the database name and size.
+	 *
+	 * Display the database name and size for `DB_NAME` specified in wp-config.php,
+	 * defaults to a human-readable number.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--size_format]
+	 * : Display only the database size as a number.
+	 * ---
+	 * default: b
+	 * options:
+	 *  - b (bytes)
+	 *  - kb (kilobytes)
+	 *  - mb (megabytes)
+	 *  ---
+	 *
+	 * [--tables]
+	 * : Display each table name and size instead of the database size.
+	 *
+	 * [--format]
+	 * : table, csv, json
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - json
+	 * ---
+	 *
+	 * [--scope=<scope>]
+	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
+	 *
+	 * [--network]
+	 * : List all the tables in a multisite install. Overrides --scope=<scope>.
+	 *
+	 * [--all-tables-with-prefix]
+	 * : List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
+	 *
+	 * [--all-tables]
+	 * : List all tables in the database, regardless of the prefix, and even if not registered on $wpdb. Overrides --all-tables-with-prefix.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp db size
+	 *     +-------------------+------+
+	 *     | Name              | Size |
+	 *     +-------------------+------+
+	 *     | wordpress_default | 6 MB |
+	 *     +-------------------+------+
+	 *
+	 *     $ wp db size --tables
+	 *     +-----------------------+-------+
+	 *     | Name                  | Size  |
+	 *     +-----------------------+-------+
+	 *     | wp_users              | 64 KB |
+	 *     | wp_usermeta           | 48 KB |
+	 *     | wp_posts              | 80 KB |
+	 *     | wp_comments           | 96 KB |
+	 *     | wp_links              | 32 KB |
+	 *     | wp_options            | 32 KB |
+	 *     | wp_postmeta           | 48 KB |
+	 *     | wp_terms              | 48 KB |
+	 *     | wp_term_taxonomy      | 48 KB |
+	 *     | wp_term_relationships | 32 KB |
+	 *     | wp_termmeta           | 48 KB |
+	 *     | wp_commentmeta        | 48 KB |
+	 *     +-----------------------+-------+
+	 *
+	 * 	   $ wp db size --size_format=b
+	 * 	   5865472
+	 *
+	 * 	   $ wp db size --size_format=kb
+	 * 	   5728
+	 *
+	 * 	   $ wp db size --size_format=mb
+	 * 	   6
+	 */
+	public function size( $args, $assoc_args ) {
+
+		@WP_CLI::get_runner()-> load_wordpress();
+
+		global $wpdb;
+
+		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
+		$size_format = WP_CLI\Utils\get_flag_value( $assoc_args, 'size_format' );
+		$tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'tables' );
+		$tables = ! empty( $tables );
+
+		unset( $assoc_args['format'] );
+		unset( $assoc_args['size_format'] );
+		unset( $assoc_args['tables'] );
+
+		if ( empty( $args ) && empty( $assoc_args ) ) {
+			$assoc_args['scope'] = 'all';
+		}
+
+		// Build rows for the formatter.
+		$rows = array();
+		$fields = array( 'Name', 'Size' );
+
+		if ( $tables ) {
+
+			// Add all of the table sizes
+			foreach( WP_CLI\Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
+
+				// Get the table size.
+				$table_bytes = $wpdb->get_var( $wpdb->prepare(
+					"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' and Table_Name = '%s' GROUP BY Table_Name LIMIT 1",
+					DB_NAME,
+					$table_name
+					)
+				);
+
+				// Add the table size to the list.
+				$rows[] = array(
+					'Name'  => $table_name,
+					'Size'  => size_format( $table_bytes ),
+				);
+			}
+		} else {
+
+			// Get the database size.
+			$db_bytes = $wpdb->get_var( $wpdb->prepare(
+				"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' GROUP BY table_schema;",
+				DB_NAME
+				)
+			);
+
+			// Add the database size to the list.
+			$rows[] = array(
+				'Name'  => DB_NAME,
+				'Size'  => size_format( $db_bytes ),
+				);
+		}
+
+		if ( ! empty( $size_format ) && isset( $db_bytes ) && ! $tables ) {
+
+			// Display the database size as a number.
+			switch( $size_format ) {
+				case 'mb':
+					$divisor = MB_IN_BYTES;
+					break;
+
+				case 'kb':
+					$divisor = KB_IN_BYTES;
+					break;
+
+				case 'b':
+				default:
+					$divisor = 1;
+					break;
+			}
+
+			WP_CLI::Line( ceil( $db_bytes / $divisor ) );
+		} else {
+
+			// Display the rows.
+			$args = array(
+				'format' => $format,
+			);
+
+			$formatter = new \WP_CLI\Formatter( $args, $fields );
+			$formatter->display_items( $rows );
+		}
+	}
+
 	private static function get_create_query() {
 
 		$create_query = sprintf( 'CREATE DATABASE `%s`', DB_NAME );
@@ -487,5 +655,4 @@ class DB_Command extends WP_CLI_Command {
 		$final_args = array_merge( $assoc_args, $required );
 		Utils\run_mysql_command( $cmd, $final_args, $descriptors );
 	}
-
 }
