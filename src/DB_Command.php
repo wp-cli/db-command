@@ -459,13 +459,13 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Display the database name and size.
 	 *
-	 * Display the database name and size for `DB_NAME` specified in wp-config.php,
-	 * defaults to a human-readable number.
+	 * Display the database name and size for `DB_NAME` specified in wp-config.php.
+	 * The size defaults to a human-readable number.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--size_format]
-	 * : Display only the database size as a number.
+	 * : Display the database size only, as a bare number.
 	 * ---
 	 * default: b
 	 * options:
@@ -526,14 +526,14 @@ class DB_Command extends WP_CLI_Command {
 	 *     | wp_commentmeta        | 48 KB |
 	 *     +-----------------------+-------+
 	 *
-	 * 	   $ wp db size --size_format=b
-	 * 	   5865472
+	 *     $ wp db size --size_format=b
+	 *     5865472
 	 *
-	 * 	   $ wp db size --size_format=kb
-	 * 	   5728
+	 *     $ wp db size --size_format=kb
+	 *     5728
 	 *
-	 * 	   $ wp db size --size_format=mb
-	 * 	   6
+	 *     $ wp db size --size_format=mb
+	 *     6
 	 */
 	public function size( $args, $assoc_args ) {
 

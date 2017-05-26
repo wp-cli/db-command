@@ -360,13 +360,13 @@ Display the database name and size.
 wp db size [--size_format] [--tables] [--format] [--scope=<scope>] [--network] [--all-tables-with-prefix] [--all-tables]
 ~~~
 
-Display the database name and size for `DB_NAME` specified in wp-config.php,
-defaults to a human-readable number.
+Display the database name and size for `DB_NAME` specified in wp-config.php.
+The size defaults to a human-readable number.
 
 **OPTIONS**
 
 	[--size_format]
-		Display only the database size as a number.
+		Display the database size only, as a bare number.
 		---
 		default: b
 		options:
@@ -427,14 +427,14 @@ defaults to a human-readable number.
     | wp_commentmeta        | 48 KB |
     +-----------------------+-------+
 
-	   $ wp db size --size_format=b
-	   5865472
+    $ wp db size --size_format=b
+    5865472
 
-	   $ wp db size --size_format=kb
-	   5728
+    $ wp db size --size_format=kb
+    5728
 
-	   $ wp db size --size_format=mb
-	   6
+    $ wp db size --size_format=mb
+    6
 
 ## Installing
 
