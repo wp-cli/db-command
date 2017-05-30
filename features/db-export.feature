@@ -19,3 +19,17 @@ Feature: Export a WordPress database
       wp_cli_test.sql
       """
     And the wp_cli_test.sql file should exist
+
+  Scenario: Exclude tables when exporting the dtabase
+    Given a WP install
+
+    When I run `wp db export wp_cli_test.sql --exclude_tables=wp_users --porcelain`
+    Then the wp_cli_test.sql file should exist
+    And the wp_cli_test.sql file should not contain:
+      """
+      wp_users
+      """
+    And the wp_cli_test.sql file should contain:
+      """
+      wp_options
+      """
