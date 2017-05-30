@@ -264,6 +264,9 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--tables=<tables>]
 	 * : The comma separated list of specific tables to export. Excluding this parameter will export all tables in the database.
+	 * 
+	 * [--exclude_tables=<tables>]
+	 * : The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
 	 *
 	 * [--porcelain]
 	 * : Output filename for the exported database.
@@ -287,15 +290,15 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Exported to 'wordpress_dbase.sql'.
 	 * 
 	 *     # Skip certain tables from the exported database
-	 *     $ wp db export --skip-tables=wp_options,wp_users
+	 *     $ wp db export --exclude_tables=wp_options,wp_users
 	 *     Success: Exported to 'wordpress_dbase.sql'.
 	 *
 	 *     # Skip all tables matching a wildcard from the exported database
-	 *     $ wp db export --skip-tables=$(wp db tables 'wp_user*' --format=csv)
+	 *     $ wp db export --exclude_tables=$(wp db tables 'wp_user*' --format=csv)
 	 *     Success: Exported to 'wordpress_dbase.sql'.
 	 *
 	 *     # Skip all tables matching prefix from the exported database
-	 *     $ wp db export --skip-tables=$(wp db tables --all-tables-with-prefix --format=csv)
+	 *     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
 	 *     Success: Exported to 'wordpress_dbase.sql'.
 	 *
 	 * @alias dump
@@ -332,9 +335,9 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
-		if ( isset( $assoc_args['skip-tables'] ) ) {
-			$tables = explode( ',', trim( $assoc_args['skip-tables'], ',' ) );
-			unset( $assoc_args['skip-tables'] );
+		if ( isset( $assoc_args['exclude_tables'] ) ) {
+			$tables = explode( ',', trim( $assoc_args['exclude_tables'], ',' ) );
+			unset( $assoc_args['exclude_tables'] );
 			foreach ( $tables as $table ) {
 				$command .= ' --ignore-table';
 				$command .= ' %s';
