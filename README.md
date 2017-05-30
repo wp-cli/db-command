@@ -227,7 +227,7 @@ Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--<field>=<value>] [--tables=<tables>] [--porcelain]
+wp db export [<file>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--porcelain]
 ~~~
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
@@ -243,6 +243,9 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
 	[--tables=<tables>]
 		The comma separated list of specific tables to export. Excluding this parameter will export all tables in the database.
+
+	[--exclude_tables=<tables>]
+		The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
 
 	[--porcelain]
 		Output filename for the exported database.
@@ -263,6 +266,18 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
     # Export all tables matching prefix
     $ wp db export --tables=$(wp db tables --all-tables-with-prefix --format=csv)
+    Success: Exported to 'wordpress_dbase.sql'.
+
+    # Skip certain tables from the exported database
+    $ wp db export --exclude_tables=wp_options,wp_users
+    Success: Exported to 'wordpress_dbase.sql'.
+
+    # Skip all tables matching a wildcard from the exported database
+    $ wp db export --exclude_tables=$(wp db tables 'wp_user*' --format=csv)
+    Success: Exported to 'wordpress_dbase.sql'.
+
+    # Skip all tables matching prefix from the exported database
+    $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
     Success: Exported to 'wordpress_dbase.sql'.
 
 
@@ -438,9 +453,11 @@ The size defaults to a human-readable number.
 
 ## Installing
 
-Installing this package requires WP-CLI v0.23.0 or greater. Update to the latest stable release with `wp cli update`.
+This package is included with WP-CLI itself, no additional installation necessary.
 
-Once you've done so, you can install this package with `wp package install wp-cli/db-command`.
+To install the latest version of this package over what's included in WP-CLI, run:
+
+    wp package install git@github.com:wp-cli/db-command.git
 
 ## Contributing
 
