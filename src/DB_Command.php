@@ -335,7 +335,8 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
-		if ( isset( $assoc_args['exclude_tables'] ) ) {
+		$exclude_tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'exclude_tables' );
+		if ( isset( $exclude_tables ) ) {
 			$tables = explode( ',', trim( $assoc_args['exclude_tables'], ',' ) );
 			unset( $assoc_args['exclude_tables'] );
 			foreach ( $tables as $table ) {
