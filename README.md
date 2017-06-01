@@ -459,7 +459,7 @@ Display the database table prefix.
 wp db prefix
 ~~~
 
-Display the database table prefix specified in wp-config.php.
+Display the database table prefix, as defined by the database handler's interpretation of the current site.
 
 **EXAMPLES**
 
