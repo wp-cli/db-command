@@ -37,6 +37,7 @@
             "db reset",
             "db check",
             "db optimize",
+            "db prefix",
             "db repair",
             "db cli",
             "db query",

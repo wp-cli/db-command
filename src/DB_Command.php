@@ -662,7 +662,7 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function prefix() {
 		global $table_prefix;
-		return $table_prefix;
+		WP_CLI::log( $table_prefix );
 	}
 
 	private static function get_create_query() {
