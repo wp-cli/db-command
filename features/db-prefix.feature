@@ -4,7 +4,7 @@ Feature: Display database table prefix
     Given a WP install
 
     When I run `wp db prefix`
-    Then STDOUT should contain:
+    Then STDOUT should be:
       """
       wp_
       """
