@@ -461,6 +461,11 @@ wp db prefix
 
 Display the database table prefix specified in wp-config.php.
 
+**EXAMPLES**
+
+    $ wp db prefix
+    wp_
+
 ## Installing
 
 This package is included with WP-CLI itself, no additional installation necessary.
