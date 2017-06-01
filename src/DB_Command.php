@@ -661,7 +661,10 @@ class DB_Command extends WP_CLI_Command {
 	 *     wp_
 	 */
 	public function prefix() {
+		@WP_CLI::get_runner()->load_wordpress();
+
 		global $table_prefix;
+
 		WP_CLI::log( $table_prefix );
 	}
 
