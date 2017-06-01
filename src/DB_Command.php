@@ -653,7 +653,7 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Display the database table prefix.
 	 *
-	 * Display the database table prefix specified in wp-config.php.
+	 * Display the database table prefix, as defined by the database handler's interpretation of the current site.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -663,9 +663,9 @@ class DB_Command extends WP_CLI_Command {
 	public function prefix() {
 		@WP_CLI::get_runner()->load_wordpress();
 
-		global $table_prefix;
+		global $wpdb;
 
-		WP_CLI::log( $table_prefix );
+		WP_CLI::log( $wpdb->prefix );
 	}
 
 	private static function get_create_query() {
