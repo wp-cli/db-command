@@ -16,7 +16,7 @@ This package implements the following commands:
 Create a new database.
 
 ~~~
-wp db create 
+wp db create
 ~~~
 
 Runs `CREATE_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
@@ -83,7 +83,7 @@ specified in wp-config.php.
 Check the current status of the database.
 
 ~~~
-wp db check 
+wp db check
 ~~~
 
 Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
@@ -105,7 +105,7 @@ for more details on the `CHECK TABLE` statement.
 Optimize the database.
 
 ~~~
-wp db optimize 
+wp db optimize
 ~~~
 
 Runs `mysqlcheck` utility with `--optimize=true` using `DB_HOST`,
@@ -127,7 +127,7 @@ for more details on the `OPTIMIZE TABLE` statement.
 Repair the database.
 
 ~~~
-wp db repair 
+wp db repair
 ~~~
 
 Runs `mysqlcheck` utility with `--repair=true` using `DB_HOST`,
@@ -450,6 +450,21 @@ The size defaults to a human-readable number.
 
     $ wp db size --size_format=mb
     6
+
+### wp db prefix
+
+Display the database table prefix.
+
+~~~
+wp db prefix
+~~~
+
+Display the database table prefix, as defined by the database handler's interpretation of the current site.
+
+**EXAMPLES**
+
+    $ wp db prefix
+    wp_
 
 ## Installing
 

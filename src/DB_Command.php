@@ -264,7 +264,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--tables=<tables>]
 	 * : The comma separated list of specific tables to export. Excluding this parameter will export all tables in the database.
-	 * 
+	 *
 	 * [--exclude_tables=<tables>]
 	 * : The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
 	 *
@@ -288,7 +288,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     # Export all tables matching prefix
 	 *     $ wp db export --tables=$(wp db tables --all-tables-with-prefix --format=csv)
 	 *     Success: Exported to 'wordpress_dbase.sql'.
-	 * 
+	 *
 	 *     # Skip certain tables from the exported database
 	 *     $ wp db export --exclude_tables=wp_options,wp_users
 	 *     Success: Exported to 'wordpress_dbase.sql'.
@@ -648,6 +648,24 @@ class DB_Command extends WP_CLI_Command {
 			$formatter = new \WP_CLI\Formatter( $args, $fields );
 			$formatter->display_items( $rows );
 		}
+	}
+
+	/**
+	 * Display the database table prefix.
+	 *
+	 * Display the database table prefix, as defined by the database handler's interpretation of the current site.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp db prefix
+	 *     wp_
+	 */
+	public function prefix() {
+		@WP_CLI::get_runner()->load_wordpress();
+
+		global $wpdb;
+
+		WP_CLI::log( $wpdb->prefix );
 	}
 
 	private static function get_create_query() {
