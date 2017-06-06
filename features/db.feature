@@ -30,6 +30,26 @@ Feature: Perform database operations
     When I run `wp db repair`
     Then STDOUT should not be empty
 
+    When I run `wp db drop`
+    Then STDOUT should contain
+    """
+    Are you sure you want to drop the '<DB_NAME>' database? [y/n]
+    """
+    And STDOUT should contain
+    """
+    Success: Database dropped.
+    """
+
+    When I run `wp db reset`
+    Then STDOUT should contain
+    """
+    Are you sure you want to reset the '<DB_NAME>' database? [y/n]
+    """
+    And STDOUT should contain
+    """
+    Success: Database reset.
+    """
+
   Scenario: DB Query
     Given a WP install
 
