@@ -120,7 +120,7 @@ for more details on the `OPTIMIZE TABLE` statement.
     $ wp db optimize
     Success: Database optimized.
 
-
+*Note:* `wp db optimize` optimizes the entire database, including non-WordPress tables. [See #24](https://github.com/wp-cli/db-command/issues/24)
 
 ### wp db repair
 
