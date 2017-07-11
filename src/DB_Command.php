@@ -600,7 +600,7 @@ class DB_Command extends WP_CLI_Command {
 				// Add the table size to the list.
 				$rows[] = array(
 					'Name'  => $table_name,
-					'Size'  => size_format( $table_bytes ),
+					'Size'  => strtoupper( size_format( $table_bytes ) ),
 				);
 			}
 		} else {
@@ -615,7 +615,7 @@ class DB_Command extends WP_CLI_Command {
 			// Add the database size to the list.
 			$rows[] = array(
 				'Name'  => DB_NAME,
-				'Size'  => size_format( $db_bytes ),
+				'Size'  => strtoupper( size_format( $db_bytes ) ),
 				);
 		}
 
