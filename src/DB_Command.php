@@ -349,9 +349,7 @@ class DB_Command extends WP_CLI_Command {
 		$escaped_command = call_user_func_array( '\WP_CLI\Utils\esc_cmd', array_merge( array( $command ), $command_esc_args ) );
 
 		// Remove parameters not needed for SQL run.
-		if ( isset( $assoc_args['porcelain'] ) ) {
-			unset( $assoc_args['porcelain'] );
-		}
+		unset( $assoc_args['porcelain'] );
 
 		self::run( $escaped_command, $assoc_args );
 
