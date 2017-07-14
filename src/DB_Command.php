@@ -703,7 +703,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     42
 	 *
 	 *     $ wp db orphan --count
-	 *     Entries found: 8
+	 *     Entries found: 6
 	 *
 	 *     $ wp db orphan --delete
 	 *     4
@@ -712,7 +712,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     16
 	 *     23
 	 *     42
-	 *     Entries deleted: 8
+	 *     Entries deleted: 6
 	 *
 	 *     $ wp db orphan --type=usermeta
 	 *     1234
