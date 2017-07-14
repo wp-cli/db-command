@@ -666,6 +666,187 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::log( $wpdb->prefix );
 	}
 
+	/**
+	 * Display the IDs of all entries without existing reference object.
+	 *
+	 * For metadata, display all entries referencing an object that does not exist anymore. For comments and posts, display all entries referencing a post (parent) that does not exist anymore.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--type=<type>]
+	 * : Object type.
+	 * ---
+	 * default: post
+	 * options:
+	 *  - comment
+	 *  - commentmeta
+	 *  - post
+	 *  - postmeta
+	 *  - termmeta
+	 *  - usermeta
+	 * ---
+	 *
+	 * [--count]
+	 * : Print the number of found entries instead of the according IDs.
+	 *
+	 * [--delete]
+	 * : Delete all found entries.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp db orphan
+	 *     4
+	 *     8
+	 *     15
+	 *     16
+	 *     23
+	 *     42
+	 *
+	 *     $ wp db orphan --count
+	 *     Entries found: 6
+	 *
+	 *     $ wp db orphan --delete
+	 *     4
+	 *     8
+	 *     15
+	 *     16
+	 *     23
+	 *     42
+	 *     Entries deleted: 6
+	 *
+	 *     $ wp db orphan --type=usermeta
+	 *     1234
+	 */
+	public function orphan( array $args, array $assoc_args ) {
+
+		@WP_CLI::get_runner()->load_wordpress();
+
+		global $wpdb;
+
+		$valid_types = array(
+			'comment',
+			'commentmeta',
+			'post',
+			'postmeta',
+			'termmeta',
+			'usermeta',
+		);
+
+		$type = Utils\get_flag_value( $assoc_args, 'type', 'post' );
+		if ( ! in_array( $type, $valid_types, true ) ) {
+			return;
+		}
+
+		$query_values = $this->get_orphan_query_values( $type );
+		if ( ! $query_values ) {
+			return;
+		}
+
+		$count = Utils\get_flag_value( $assoc_args, 'count' );
+
+		$results = $wpdb->get_col( $wpdb->prepare(
+			'SELECT `%2$s` FROM `%1$s` WHERE `%3$s` != 0 AND `%3$s` NOT IN ( SELECT `%5$s` FROM `%4$s` )',
+			$query_values
+		) );
+		if ( ! $results ) {
+			if ( $count ) {
+				echo 'No entries found.' . PHP_EOL;
+			}
+
+			return;
+		}
+
+		if ( $count ) {
+			echo 'Entries found: ' . count( $results ) . PHP_EOL;
+		} else {
+			echo implode( PHP_EOL, $results ) . PHP_EOL;
+		}
+
+		if ( Utils\get_flag_value( $assoc_args, 'delete' ) ) {
+			$deleted = (int) $wpdb->query( $wpdb->prepare(
+				'DELETE FROM `%1$s` WHERE `%2$s` IN ( ' . implode( ',', $results ) . ' )',
+				$query_values
+			) );
+			if ( $deleted ) {
+				WP_CLI::success( "Entries deleted: {$deleted}" );
+			} else {
+				WP_CLI::error( 'No entries deleted.' );
+			}
+		}
+	}
+
+	/**
+	 * Return the values needed by orphan() for the given type.
+	 *
+	 * @param string $type Object type.
+	 *
+	 * @return string[] Values needed by orphan_meta().
+	 */
+	private function get_orphan_query_values( $type ) {
+
+		@WP_CLI::get_runner()->load_wordpress();
+
+		global $wpdb;
+
+		switch ( $type ) {
+			case 'comment':
+				return array(
+					$wpdb->comments,
+					'comment_id',
+					'comment_post_ID',
+					$wpdb->posts,
+					'ID',
+				);
+
+			case 'commentmeta':
+				return array(
+					$wpdb->commentmeta,
+					'meta_id',
+					'comment_id',
+					$wpdb->comments,
+					'comment_ID',
+				);
+
+			case 'post':
+				return array(
+					$wpdb->posts,
+					'ID',
+					'post_parent',
+					$wpdb->posts,
+					'ID',
+				);
+
+			case 'postmeta':
+				return array(
+					$wpdb->postmeta,
+					'meta_id',
+					'post_id',
+					$wpdb->posts,
+					'ID',
+				);
+
+			case 'termmeta':
+				return array(
+					$wpdb->termmeta,
+					'meta_id',
+					'term_id',
+					$wpdb->terms,
+					'term_id',
+				);
+
+			case 'usermeta':
+				return array(
+					$wpdb->usermeta,
+					'umeta_id',
+					'user_id',
+					$wpdb->users,
+					'ID',
+				);
+		}
+
+		return array();
+	}
+
 	private static function get_create_query() {
 
 		$create_query = sprintf( 'CREATE DATABASE `%s`', DB_NAME );
