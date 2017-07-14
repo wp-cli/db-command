@@ -742,7 +742,7 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
-		$count = array_key_exists( 'count', $assoc_args );
+		$count = Utils\get_flag_value( $assoc_args, 'count' );
 
 		$results = $wpdb->get_col( $wpdb->prepare(
 			'SELECT `%2$s` FROM `%1$s` WHERE `%3$s` != 0 AND `%3$s` NOT IN ( SELECT `%5$s` FROM `%4$s` )',
@@ -762,7 +762,7 @@ class DB_Command extends WP_CLI_Command {
 			echo implode( PHP_EOL, $results ) . PHP_EOL;
 		}
 
-		if ( array_key_exists( 'delete', $assoc_args ) ) {
+		if ( Utils\get_flag_value( $assoc_args, 'delete' ) ) {
 			$deleted = (int) $wpdb->query( $wpdb->prepare(
 				'DELETE FROM `%1$s` WHERE `%2$s` IN ( ' . implode( ',', $results ) . ' )',
 				$query_values
