@@ -812,9 +812,9 @@ class DB_Command extends WP_CLI_Command {
 
 			case 'post':
 				return array(
-					$wpdb->postmeta,
-					'meta_id',
-					'post_id',
+					$wpdb->posts,
+					'ID',
+					'post_parent',
 					$wpdb->posts,
 					'ID',
 				);
