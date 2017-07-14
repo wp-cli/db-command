@@ -732,11 +732,8 @@ class DB_Command extends WP_CLI_Command {
 			'usermeta',
 		);
 
-		if ( empty( $assoc_args['type'] ) ) {
-			$type = 'post';
-		} elseif ( in_array( $assoc_args['type'], $valid_types, true ) ) {
-			$type = $assoc_args['type'];
-		} else {
+		$type = Utils\get_flag_value( $assoc_args, 'type', 'post' );
+		if ( ! in_array( $type, $valid_types, true ) ) {
 			return;
 		}
 
