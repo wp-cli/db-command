@@ -545,3 +545,40 @@ Feature: Ack through the database
       """
       :11111111searchstring11111111
       """
+
+  Scenario: Multibyte strings are truncated
+    Given a WP install
+    And I run `wp option update multibytetest 'あいうえおかきくけこさしすせとたちつてと'`
+
+    When I run `wp db ack "かきくけこ" --before_context=0 --after_context=0`
+    Then STDOUT should contain:
+      """
+      :かきくけこ
+      """
+    And STDOUT should not contain:
+      """
+      かきくけこさ
+      """
+
+    When I run `wp db ack "かきくけこ" --before_context=3 --after_context=3`
+    Then STDOUT should contain:
+      """
+      :うえおかきくけこさしす
+      """
+
+
+    When I run `wp db ack "かきくけこ" --before_context=2 --after_context=1`
+    Then STDOUT should contain:
+      """
+      :えおかきくけこさし
+      """
+    And STDOUT should not contain:
+      """
+      えおかきくけこさしす
+      """
+
+    When I run `wp db ack "かきくけこ"`
+    Then STDOUT should contain:
+      """
+      :あいうえおかきくけこさしすせとたちつてと
+      """
