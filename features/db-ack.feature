@@ -570,11 +570,11 @@ Feature: Ack through the database
     When I run `wp db ack "かきくけこ" --before_context=2 --after_context=1`
     Then STDOUT should contain:
       """
-      :えおかきくけこさし
+      :えおかきくけこさ
       """
     And STDOUT should not contain:
       """
-      えおかきくけこさしす
+      えおかきくけこさし
       """
 
     When I run `wp db ack "かきくけこ"`

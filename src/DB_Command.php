@@ -755,7 +755,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$esc_like_search = self::esc_like( $search );
 		$safe_search = preg_quote( $search, '#' );
-		$search_regex = '#(.{0,' . $before_context . '})(' . $safe_search .')(.{0,' . $after_context . '})#i';
+		$search_regex = '#(.{0,' . $before_context . '})(' . $safe_search .')(.{0,' . $after_context . '})#ui';
 
 		$tables = WP_CLI\Utils\wp_get_table_names( $args, $assoc_args );
 
