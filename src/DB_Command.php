@@ -561,6 +561,7 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function size( $args, $assoc_args ) {
 
+		// Avoid a constant redefinition in wp-config.
 		@WP_CLI::get_runner()-> load_wordpress();
 
 		global $wpdb;
@@ -659,11 +660,125 @@ class DB_Command extends WP_CLI_Command {
 	 *     wp_
 	 */
 	public function prefix() {
+		// Avoid a constant redefinition in wp-config.
 		@WP_CLI::get_runner()->load_wordpress();
 
 		global $wpdb;
 
 		WP_CLI::log( $wpdb->prefix );
+	}
+
+	/**
+	 * Find a specific string in the database.
+	 *
+	 * Like [ack](http://beyondgrep.com/), but for your WordPress database. Searches through all or a selection of database tables for a given string. Outputs colorized references to the string.
+	 *
+	 * Defaults to searching through all tables registered to $wpdb. On multisite, this default is limited to the tables for the current site.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <search>
+	 * : String to search for.
+	 *
+	 * [<tables>...]
+	 * : One or more tables to search through for the string.
+	 *
+	 * [--network]
+	 * : Search through all the tables registered to $wpdb in a multisite install.
+	 *
+	 * [--all-tables-with-prefix]
+	 * : Search through all tables that match the registered table prefix, even if not registered on $wpdb. On one hand, sometimes plugins use tables without registering them to $wpdb. On another hand, this could return tables you don't expect. Overrides --no-network.
+	 *
+	 * [--all-tables]
+	 * : Search through ALL tables in the database, regardless of the prefix, and even if not registered on $wpdb. Overrides --network and --all-tables-with-prefix.
+	 *
+	 * [--before_context=<num>]
+	 * : Number of characters to display before the match (for large blobs).
+	 * ---
+	 * default: 40
+	 * ---
+	 *
+	 * [--after_context=<num>]
+	 * : Number of characters to display after the match (for large blobs).
+	 * ---
+	 * default: 40
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Search through the database for the 'wordpress-develop' string
+	 *     $ wp db ack wordpress-develop
+	 *     wp_options:option_value
+	 *     1:http://wordpress-develop.dev
+	 *     wp_options:option_value
+	 *
+	 *     # Search through a multisite database on the subsite 'foo' for the 'example.com' string
+	 *     $ wp db ack example.com --url=example.com/foo
+	 *      wp_2_comments:comment_author_url
+	 *      1:http://example.com/
+	 *      wp_2_options:option_value
+	 *      1:http://example.com/foo
+	 *      wp_2_options:option_value
+	 *      2:http://example.com/foo
+	 *      wp_2_options:option_value
+	 *      14:mail.example.com
+	 *      wp_2_options:option_value
+	 *      15:login@example.com
+	 *      wp_2_posts:post_content
+	 *      1:Welcome to <a href="http://example.com/">Example Sites</a>. This is your first
+	 *      wp_2_posts:post_content
+	 *      2: user, you should go to <a href="http://example.com/foo/wp-admin/">your dashboard</a> to de
+	 *      wp_2_posts:guid
+	 *      1:http://example.com/foo/?p=1
+	 *      wp_2_posts:guid
+	 *      2:http://example.com/foo/?page_id=2
+	 *
+	 */
+	public function ack( $args, $assoc_args ) {
+		global $wpdb;
+
+		// Avoid a constant redefinition in wp-config.
+		@WP_CLI::get_runner()->load_wordpress();
+
+		$search = array_shift( $args );
+
+		$before_context = \WP_CLI\Utils\get_flag_value( $assoc_args, 'before_context', 40 );
+		$before_context = '' === $before_context ? $before_context : (int) $before_context;
+
+		$after_context = \WP_CLI\Utils\get_flag_value( $assoc_args, 'after_context', 40 );
+		$after_context = '' === $after_context ? $after_context : (int) $after_context;
+
+		$color_table_col = WP_CLI::colorize( '%G' );
+		$color_key = WP_CLI::colorize( '%Y' );
+		$color_match = WP_CLI::colorize( '%3%k' );
+		$color_reset = WP_CLI::colorize( '%n' );
+
+		$esc_like_search = self::esc_like( $search );
+		$safe_search = preg_quote( $search, '#' );
+		$search_regex = '#(.{0,' . $before_context . '})(' . $safe_search .')(.{0,' . $after_context . '})#i';
+
+		$tables = WP_CLI\Utils\wp_get_table_names( $args, $assoc_args );
+
+		foreach( $tables as $table ) {
+			list( $primary_keys, $text_columns ) = self::get_columns( $table );
+			$primary_key = array_shift( $primary_keys );
+			foreach( $text_columns as $column ) {
+				$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key}, {$column} FROM {$table} WHERE {$column} LIKE %s;", '%' . $esc_like_search . '%' ) );
+				foreach( $results as $result ) {
+					WP_CLI::log( $color_table_col . "{$table}:{$column}" . $color_reset );
+					$pk_val = $color_key . $result->$primary_key . $color_reset;
+					$col_val = $result->$column;
+					preg_match_all( $search_regex , $col_val, $matches );
+					$bits = array();
+					foreach( $matches[0] as $key => $value ) {
+						$bits[] = $matches[1][ $key ] . $color_match . $matches[2][ $key ] . $color_reset . $matches[3][ $key ];
+					}
+					$col_val = implode( ' [...] ', $bits );
+					WP_CLI::log( "{$pk_val}:{$col_val}" );
+				}
+			}
+		}
+
 	}
 
 	private static function get_create_query() {
@@ -697,4 +812,66 @@ class DB_Command extends WP_CLI_Command {
 		$final_args = array_merge( $assoc_args, $required );
 		Utils\run_mysql_command( $cmd, $final_args, $descriptors );
 	}
+
+	/**
+	 * Get the column names of a db table differentiated into key columns and text columns, and optionally a catch-all all columns. 
+	 *
+	 * @param string $table The table name.
+	 * @param bool   $return_all_columns Optional. If set returns an all columns array as well. Default false.
+	 * @return array A 2 or 3 element array consisting of an array of primary key column names, an array of text column names, and optionally an array containing all column names.
+	 */
+	private static function get_columns( $table, $return_all_columns = false ) {
+		global $wpdb;
+
+		$primary_keys = $text_columns = $all_columns = array();
+		foreach ( $wpdb->get_results( "DESCRIBE $table" ) as $col ) {
+			if ( 'PRI' === $col->Key ) {
+				$primary_keys[] = $col->Field;
+			}
+			if ( self::is_text_col( $col->Type ) ) {
+				$text_columns[] = $col->Field;
+			}
+			if ( $return_all_columns ) {
+				$all_columns[] = $col->Field;
+			}
+		}
+		return $return_all_columns ? array( $primary_keys, $text_columns, $all_columns ) : array( $primary_keys, $text_columns );
+	}
+
+	/**
+	 * Whether a column is considered text or not.
+	 *
+	 * @param string Column type.
+	 * @bool True if text column, false otherwise.
+	 */
+	private static function is_text_col( $type ) {
+		foreach ( array( 'text', 'varchar' ) as $token ) {
+			if ( false !== strpos( $type, $token ) )
+				return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Escapes a MySQL string for inclusion in a `LIKE` clause. BC wrapper around different WP versions of this.
+	 *
+	 * @param string $old String to escape.
+	 * @param string Escaped string.
+	 */
+	private static function esc_like( $old ) {
+		global $wpdb;
+
+		// Remove notices in 4.0 and support backwards compatibility
+		if ( method_exists( $wpdb, 'esc_like' ) ) {
+			// 4.0
+			$old = $wpdb->esc_like( $old );
+		} else {
+			// 3.9 or less
+			$old = like_escape( esc_sql( $old ) );
+		}
+
+		return $old;
+	}
+
 }
