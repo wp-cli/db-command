@@ -32,7 +32,6 @@
         },
         "bundled": true,
         "commands": [
-            "db ack",
             "db create",
             "db drop",
             "db reset",
@@ -44,6 +43,7 @@
             "db query",
             "db export",
             "db import",
+            "db search",
             "db tables",
             "db size"
         ]

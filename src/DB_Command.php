@@ -669,16 +669,16 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Find a specific string in the database.
+	 * Find a string in the database.
 	 *
-	 * Like [ack](http://beyondgrep.com/), but for your WordPress database. Searches through all or a selection of database tables for a given string. Outputs colorized references to the string.
+	 * Searches through all or a selection of database tables for a given string, Outputs colorized references to the string.
 	 *
 	 * Defaults to searching through all tables registered to $wpdb. On multisite, this default is limited to the tables for the current site.
 	 *
 	 * ## OPTIONS
 	 *
 	 * <search>
-	 * : String to search for.
+	 * : String to search for. The search is case-insensitive by default.
 	 *
 	 * [<tables>...]
 	 * : One or more tables to search through for the string.
@@ -687,55 +687,115 @@ class DB_Command extends WP_CLI_Command {
 	 * : Search through all the tables registered to $wpdb in a multisite install.
 	 *
 	 * [--all-tables-with-prefix]
-	 * : Search through all tables that match the registered table prefix, even if not registered on $wpdb. On one hand, sometimes plugins use tables without registering them to $wpdb. On another hand, this could return tables you don't expect. Overrides --no-network.
+	 * : Search through all tables that match the registered table prefix, even if not registered on $wpdb. On one hand, sometimes plugins use tables without registering them to $wpdb. On another hand, this could return tables you don't expect. Overrides --network.
 	 *
 	 * [--all-tables]
 	 * : Search through ALL tables in the database, regardless of the prefix, and even if not registered on $wpdb. Overrides --network and --all-tables-with-prefix.
 	 *
 	 * [--before_context=<num>]
-	 * : Number of characters to display before the match (for large blobs).
+	 * : Number of characters to display before the match.
 	 * ---
 	 * default: 40
 	 * ---
 	 *
 	 * [--after_context=<num>]
-	 * : Number of characters to display after the match (for large blobs).
+	 * : Number of characters to display after the match.
 	 * ---
 	 * default: 40
 	 * ---
 	 *
+	 * [--regex]
+	 * : Runs the search as a regular expression (without delimiters). The search becomes case-sensitive (i.e. no PCRE flags are added, except 'u' if the database charset is UTF-8). Delimiters must be escaped if they occur in the expression.
+	 *
+	 * [--regex-flags=<regex-flags>]
+	 * : Pass PCRE modifiers to the regex search (e.g. 'i' for case-insensitivity). Note that 'u' (UTF-8 mode) will not be automatically added.
+	 *
+	 * [--regex-delimiter=<regex-delimiter>]
+	 * : The delimiter to use for the regex. It must be escaped if it appears in the search string.
+	 * ---
+	 * default: /
+	 * ---
+	 *
+	 * [--table_column_once]
+	 * : Output the 'table:column' line once before all matching row lines in the table column rather than before each matching row.
+	 *
+	 * [--one_line]
+	 * : Place the 'table:column' output on the same line as the row id and match ('table:column:id:match'). Overrides --table_column_once.
+	 *
+	 * [--matches_only]
+	 * : Only output the string matches (including context). No 'table:column's or row ids are outputted.
+	 *
+	 * [--stats]
+	 * : Output stats on the number of matches found, time taken, tables/columns/rows searched, tables skipped.
+	 *
+	 * [--table_column_color=<color_code>]
+	 * : Percent color code to use for the 'table:column' output. For a list of available percent color codes, see below. Default '%G' (bright green).
+	 *
+	 * [--id_color=<color_code>]
+	 * : Percent color code to use for the row id output. For a list of available percent color codes, see below. Default '%Y' (bright yellow).
+	 *
+	 * [--match_color=<color_code>]
+	 * : Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
+	 *
+	 * The percent color codes available are:
+	 * '%y' Yellow (dark) (mustard)
+	 * '%g' Green (dark)
+	 * '%b' Blue (dark)
+	 * '%r' Red (dark)
+	 * '%m' Magenta (dark)
+	 * '%c' Cyan (dark)
+	 * '%w' White (dark) (light gray)
+	 * '%k' Black
+	 * '%Y' Yellow (bright)
+	 * '%G' Green (bright)
+	 * '%B' Blue (bright)
+	 * '%R' Red (bright)
+	 * '%M' Magenta (bright)
+	 * '%C' Cyan (bright)
+	 * '%W' White
+	 * '%K' Black (bright) (dark gray)
+	 * '%3' Yellow background (dark) (mustard)
+	 * '%2' Green background (dark)
+	 * '%4' Blue background (dark)
+	 * '%1' Red background (dark)
+	 * '%5' Magenta background (dark)
+	 * '%6' Cyan background (dark)
+	 * '%7' White background (dark) (light gray)
+	 * '%0' Black background
+	 * '%8' Reverse
+	 * '%U' Underline
+	 * '%F' Blink (unlikely to work)
+	 * They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background '%3%k' can be made black on a bright yellow background with '%Y%0%8'.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     # Search through the database for the 'wordpress-develop' string
-	 *     $ wp db ack wordpress-develop
+	 *     $ wp db search wordpress-develop
 	 *     wp_options:option_value
 	 *     1:http://wordpress-develop.dev
 	 *     wp_options:option_value
+	 *     1:http://example.com/foo
+	 *         ...
 	 *
 	 *     # Search through a multisite database on the subsite 'foo' for the 'example.com' string
-	 *     $ wp db ack example.com --url=example.com/foo
-	 *      wp_2_comments:comment_author_url
-	 *      1:http://example.com/
-	 *      wp_2_options:option_value
-	 *      1:http://example.com/foo
-	 *      wp_2_options:option_value
-	 *      2:http://example.com/foo
-	 *      wp_2_options:option_value
-	 *      14:mail.example.com
-	 *      wp_2_options:option_value
-	 *      15:login@example.com
-	 *      wp_2_posts:post_content
-	 *      1:Welcome to <a href="http://example.com/">Example Sites</a>. This is your first
-	 *      wp_2_posts:post_content
-	 *      2: user, you should go to <a href="http://example.com/foo/wp-admin/">your dashboard</a> to de
-	 *      wp_2_posts:guid
-	 *      1:http://example.com/foo/?p=1
-	 *      wp_2_posts:guid
-	 *      2:http://example.com/foo/?page_id=2
+	 *     $ wp db search example.com --url=example.com/foo
+	 *     wp_2_comments:comment_author_url
+	 *     1:http://example.com/
+	 *     wp_2_options:option_value
+	 *         ...
+	 *
+	 *     # Search through the database for the 'https?://' regular expression, printing stats.
+	 *     $ wp db search 'https?:\/\/' --regex --stats
+	 *     wp_comments:comment_author_url
+	 *     1:https://wordpress.org/
+	 *         ...
+	 *     Success: Found 99146 matches in 10.752s (10.559s searching). Searched 12 tables, 53 columns, 1358907 rows. 1 table skipped: wp_term_relationships.
 	 *
 	 */
-	public function ack( $args, $assoc_args ) {
+	public function search( $args, $assoc_args ) {
 		global $wpdb;
+
+		$start_run_time = microtime( true );
 
 		// Avoid a constant redefinition in wp-config.
 		@WP_CLI::get_runner()->load_wordpress();
@@ -748,37 +808,149 @@ class DB_Command extends WP_CLI_Command {
 		$after_context = \WP_CLI\Utils\get_flag_value( $assoc_args, 'after_context', 40 );
 		$after_context = '' === $after_context ? $after_context : (int) $after_context;
 
-		$color_table_col = WP_CLI::colorize( '%G' );
-		$color_key = WP_CLI::colorize( '%Y' );
-		$color_match = WP_CLI::colorize( '%3%k' );
-		$color_reset = WP_CLI::colorize( '%n' );
+		if ( ( $regex = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex', false ) ) ) {
+			$regex_flags = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-flags', false );
+			$regex_delimiter = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-delimiter', '/' );
+			if ( '' === $regex_delimiter ) {
+				$regex_delimiter = '/';
+			}
+		}
 
-		$esc_like_search = self::esc_like( $search );
-		$safe_search = preg_quote( $search, '#' );
-		$search_regex = '#(.{0,' . $before_context . '})(' . $safe_search .')(.{0,' . $after_context . '})#ui';
+		$colors = self::get_colors( $assoc_args, array( 'table_column' => '%G', 'id' => '%Y', 'match' => $before_context || $after_context ? '%3%k' : '' ) );
+
+		$table_column_once = \WP_CLI\Utils\get_flag_value( $assoc_args, 'table_column_once', false );
+		$one_line = \WP_CLI\Utils\get_flag_value( $assoc_args, 'one_line', false );
+		$matches_only = \WP_CLI\Utils\get_flag_value( $assoc_args, 'matches_only', false );
+		$stats = \WP_CLI\Utils\get_flag_value( $assoc_args, 'stats', false );
+
+		$column_count = $row_count = $match_count = 0;
+		$skipped = array();
+
+		if ( $regex ) {
+			// Note the user must escape the delimiter in the search.
+			$search_regex = $regex_delimiter . $search . $regex_delimiter;
+			if ( $regex_flags ) {
+				$search_regex .= $regex_flags;
+			}
+			if ( false === @preg_match( $search_regex, '' ) ) {
+				WP_CLI::error( "The regex '$search_regex' fails." );
+			}
+			$encoding = null;
+			if ( 0 === strpos( $wpdb->charset, 'utf8' ) ) {
+				$encoding = 'UTF-8';
+				if ( ! $regex_flags ) {
+					$search_regex .= 'u';
+				}
+			}
+		} else {
+			$safe_search = preg_quote( $search, '#' );
+			$search_regex = '#(.{0,' . $before_context . '})(' . $safe_search .')(.{0,' . $after_context . '})#i';
+			if ( 0 === strpos( $wpdb->charset, 'utf8' ) ) {
+				$search_regex .= 'u';
+			}
+			$esc_like_search = '%' . self::esc_like( $search ) . '%';
+		}
 
 		$tables = WP_CLI\Utils\wp_get_table_names( $args, $assoc_args );
 
-		foreach( $tables as $table ) {
-			list( $primary_keys, $text_columns ) = self::get_columns( $table );
-			$primary_key = array_shift( $primary_keys );
-			foreach( $text_columns as $column ) {
-				$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key}, {$column} FROM {$table} WHERE {$column} LIKE %s;", '%' . $esc_like_search . '%' ) );
-				foreach( $results as $result ) {
-					WP_CLI::log( $color_table_col . "{$table}:{$column}" . $color_reset );
-					$pk_val = $color_key . $result->$primary_key . $color_reset;
-					$col_val = $result->$column;
-					preg_match_all( $search_regex , $col_val, $matches );
-					$bits = array();
-					foreach( $matches[0] as $key => $value ) {
-						$bits[] = $matches[1][ $key ] . $color_match . $matches[2][ $key ] . $color_reset . $matches[3][ $key ];
+		$start_search_time = microtime( true );
+
+		foreach ( $tables as $table ) {
+			list( $primary_keys, $text_columns, $all_columns ) = self::get_columns( $table );
+			if ( ! $all_columns ) {
+				WP_CLI::error( "No such table '$table'." );
+			}
+			if ( ! $text_columns ) {
+				if ( $stats ) {
+					$skipped[] = $table;
+				} else {
+					// Don't bother warning for term relationships (which is just 3 int columns).
+					if ( ! preg_match( '/_term_relationships$/', $table ) ) {
+						WP_CLI::warning( $primary_keys ? "No text columns for table '$table' - skipped." : "No primary key or text columns for table '$table' - skipped." );
 					}
-					$col_val = implode( ' [...] ', $bits );
-					WP_CLI::log( "{$pk_val}:{$col_val}" );
+				}
+				continue;
+			}
+			$column_count += count( $text_columns );
+			if ( ! $primary_keys ) {
+				WP_CLI::warning( "No primary key for table '$table'. No row ids will be outputted." );
+				$primary_key = $primary_key_sql = '';
+			} else {
+				$primary_key = array_shift( $primary_keys );
+				$primary_key_sql = $primary_key . ', ';
+			}
+
+			foreach ( $text_columns as $column ) {
+				if ( $regex ) {
+					$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column} FROM {$table}" );
+				} else {
+					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column} FROM {$table} WHERE {$column} LIKE %s;", $esc_like_search ) );
+				}
+				if ( $results ) {
+					$row_count += count( $results );
+					$table_column_val = $colors['table_column'][0] . "{$table}:{$column}" . $colors['table_column'][1];
+					$outputted_table_column_once = false;
+					foreach ( $results as $result ) {
+						$col_val = $result->$column;
+						if ( preg_match_all( $search_regex, $col_val, $matches, $regex ? PREG_OFFSET_CAPTURE : PREG_PATTERN_ORDER ) ) {
+							if ( ! $matches_only && ( ! $table_column_once || ! $outputted_table_column_once ) && ! $one_line ) {
+								WP_CLI::log( $table_column_val );
+								$outputted_table_column_once = true;
+							}
+							$pk_val = $primary_key ? ( $colors['id'][0] . $result->$primary_key . $colors['id'][1] . ':' ) : '';
+
+							$bits = array();
+							if ( $regex ) {
+								if ( null === $encoding ) {
+									$encoding = false;
+									if ( ( $before_context || $after_context ) && function_exists( 'mb_detect_encoding' ) ) {
+										$encoding = mb_detect_encoding( $col_val, null, true /*strict*/ );
+									}
+								}
+								foreach ( $matches[0] as $match_arr ) {
+									$match = $match_arr[0];
+									$offset = $match_arr[1];
+									// Offsets are in bytes, so need to use `strlen()` and  `substr()` before using `safe_substr()`. Note: not catering for combining chars.
+									$before = $before_context && $offset ? \cli\safe_substr( substr( $col_val, 0, $offset ), -$before_context, null /*length*/, false /*is_width*/, $encoding ) : '';
+									$after = $after_context ? \cli\safe_substr( substr( $col_val, $offset + strlen( $match ) ), 0, $after_context, false /*is_width*/, $encoding ) : '';
+									$bits[] = $before . $colors['match'][0] . $match . $colors['match'][1] . $after;
+								}
+							} else {
+								foreach ( $matches[0] as $key => $value ) {
+									// Note: not catering for combining chars.
+									$bits[] = $matches[1][ $key ] . $colors['match'][0] . $matches[2][ $key ] . $colors['match'][1] . $matches[3][ $key ];
+								}
+							}
+							$match_count += count( $bits );
+							$col_val = implode( ' [...] ', $bits );
+
+							WP_CLI::log( $matches_only ? $col_val : ( $one_line ? "{$table_column_val}:{$pk_val}{$col_val}" : "{$pk_val}{$col_val}" ) );
+						}
+					}
 				}
 			}
 		}
 
+		if ( $stats ) {
+			$table_count = count( $tables );
+			$skipped_count = count( $skipped );
+			$match_str = 1 === $match_count ? 'match' : 'matches';
+			$table_str = 1 === $table_count ? 'table' : 'tables';
+			$column_str = 1 === $column_count ? 'column' : 'columns';
+			$row_str = 1 === $row_count ? 'row' : 'rows';
+			$skipped_str = 1 === $skipped_count ? 'table skipped' : 'tables skipped';
+			if ( 0 !== $skipped_count ) {
+				$skipped_str .= ': ' . implode( ', ', $skipped );
+			}
+			$end_time = microtime( true );
+			$run_time = $end_time - $start_run_time;
+			$search_time = $end_time - $start_search_time;
+			$stats_msg = sprintf(
+				"Found %d %s in %.3fs (%.3fs searching). Searched %d %s, %d %s, %d %s. %d %s.",
+				$match_count, $match_str, $run_time, $search_time, $table_count, $table_str, $column_count, $column_str, $row_count, $row_str, $skipped_count, $skipped_str
+			);
+			WP_ClI::success( $stats_msg );
+		}
 	}
 
 	private static function get_create_query() {
@@ -814,28 +986,29 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Get the column names of a db table differentiated into key columns and text columns, and optionally a catch-all all columns. 
+	 * Get the column names of a db table differentiated into key columns and text columns and all columns.
 	 *
 	 * @param string $table The table name.
-	 * @param bool   $return_all_columns Optional. If set returns an all columns array as well. Default false.
-	 * @return array A 2 or 3 element array consisting of an array of primary key column names, an array of text column names, and optionally an array containing all column names.
+	 * @return array A 3 element array consisting of an array of primary key column names, an array of text column names, and an array containing all column names.
 	 */
-	private static function get_columns( $table, $return_all_columns = false ) {
+	private static function get_columns( $table ) {
 		global $wpdb;
 
 		$primary_keys = $text_columns = $all_columns = array();
-		foreach ( $wpdb->get_results( "DESCRIBE $table" ) as $col ) {
-			if ( 'PRI' === $col->Key ) {
-				$primary_keys[] = $col->Field;
-			}
-			if ( self::is_text_col( $col->Type ) ) {
-				$text_columns[] = $col->Field;
-			}
-			if ( $return_all_columns ) {
+		$suppress_errors = $wpdb->suppress_errors();
+		if ( ( $results = $wpdb->get_results( "DESCRIBE $table" ) ) ) {
+			foreach ( $wpdb->get_results( "DESCRIBE $table" ) as $col ) {
+				if ( 'PRI' === $col->Key ) {
+					$primary_keys[] = $col->Field;
+				}
+				if ( self::is_text_col( $col->Type ) ) {
+					$text_columns[] = $col->Field;
+				}
 				$all_columns[] = $col->Field;
 			}
 		}
-		return $return_all_columns ? array( $primary_keys, $text_columns, $all_columns ) : array( $primary_keys, $text_columns );
+		$wpdb->suppress_errors( $suppress_errors );
+		return array( $primary_keys, $text_columns, $all_columns );
 	}
 
 	/**
@@ -874,4 +1047,33 @@ class DB_Command extends WP_CLI_Command {
 		return $old;
 	}
 
+	/**
+	 * Gets the color codes from the options if any, and returns the passed in array colorized with 2 elements per entry, a color code (or '') and a reset (or '').
+	 *
+	 * @param array $assoc_args The associative argument array passed to the command.
+	 * @param array $colors Array of default percent color code strings keyed by the 3 color contexts 'table_column', 'id', 'match'.
+	 * @return array Array containing 3 2-element arrays.
+	 */
+	private function get_colors( $assoc_args, $colors ) {
+		$color_reset = WP_CLI::colorize( '%n' );
+
+		$color_codes = implode( '', array_map( function ( $v ) {
+			return substr( $v, 1 );
+		}, array_keys( \cli\Colors::getColors() ) ) );
+
+		$color_codes_regex = '/^(?:%[' . $color_codes . '])*$/';
+
+		foreach ( array_keys( $colors ) as $color_col ) {
+			if ( false !== ( $col_color_flag = \WP_CLI\Utils\get_flag_value( $assoc_args, $color_col . '_color', false ) ) ) {
+				if ( ! preg_match( $color_codes_regex, $col_color_flag, $matches ) ) {
+					WP_CLI::warning( "Unrecognized percent color code '$col_color_flag' for '{$color_col}_color'." );
+				} else {
+					$colors[ $color_col ] = $matches[0];
+				}
+			}
+			$colors[ $color_col ] = $colors[ $color_col ] ? array( WP_CLI::colorize( $colors[ $color_col ] ), $color_reset ) : array( '', '' );
+		}
+
+		return $colors;
+	}
 }
