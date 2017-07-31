@@ -1,4 +1,4 @@
-Feature: Ack through the database
+Feature: Search through the database
 
   Scenario: Search on a single site install
     Given a WP install
@@ -24,7 +24,7 @@ Feature: Ack through the database
       4:example.com example.com
       """
 
-    When I run `wp db ack example.com`
+    When I run `wp db search example.com`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -38,8 +38,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com wp_options`
+    When I run `wp db search example.com wp_options`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -53,8 +54,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com wp_options wp_not --before_context=0 --after_context=0`
+    When I run `wp db search example.com wp_options wp_not --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -78,8 +80,9 @@ Feature: Ack through the database
       """
       e_ample.c%m
       """
+    And STDERR should be empty
 
-    When I run `wp db ack EXAMPLE.COM --before_context=0 --after_context=0`
+    When I run `wp db search EXAMPLE.COM --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -93,17 +96,36 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack nothing_matches`
+    When I run `wp db search Example.Com --before_context=0 --after_context=0`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value
+      1:example.com
+      """
+    And STDOUT should not contain:
+      """
+      wp_not
+      """
+    And STDOUT should not contain:
+      """
+      pw_options
+      """
+    And STDERR should be empty
+
+    When I run `wp db search nothing_matches`
     Then STDOUT should be empty
+    And STDERR should be empty
 
     When I run `wp db prefix`
     Then STDOUT should be:
       """
       wp_
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com --all-tables-with-prefix --before_context=0 --after_context=0`
+    When I run `wp db search example.com --all-tables-with-prefix --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -127,8 +149,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com --all-tables --before_context=0 --after_context=0`
+    When I run `wp db search example.com --all-tables --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -158,11 +181,13 @@ Feature: Ack through the database
       """
       e_ample.c%m
       """
+    And STDERR should be empty
 
-    When I run `wp db ack e_ample.c%m`
+    When I run `wp db search e_ample.c%m`
     Then STDOUT should be empty
+    And STDERR should be empty
 
-    When I run `wp db ack e_ample.c%m --all-tables --before_context=0 --after_context=0`
+    When I run `wp db search e_ample.c%m --all-tables --before_context=0 --after_context=0`
     Then STDOUT should not contain:
       """
       wp_options
@@ -181,8 +206,9 @@ Feature: Ack through the database
       """
       example.com
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.comm --all-tables --before_context=0 --after_context=0`
+    When I run `wp db search example.comm --all-tables --before_context=0 --after_context=0`
     Then STDOUT should not contain:
       """
       wp_options
@@ -204,6 +230,32 @@ Feature: Ack through the database
     And STDOUT should not contain:
       """
       1:example.com
+      """
+    And STDERR should be empty
+
+    When I try `wp db search example.com no_such_table`
+    Then STDERR should be:
+      """
+      Error: No such table 'no_such_table'.
+      """
+    And STDOUT should be empty
+    And the return code should be 1
+
+    When I run `wp db query "CREATE TABLE no_key ( awesome_stuff TEXT );"`
+    And I run `wp db query "CREATE TABLE no_text ( id int(11) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id) );"`
+
+    When I run `wp db search example.com no_key`
+    Then STDOUT should be empty
+    And STDERR should be:
+      """
+      Warning: No primary key for table 'no_key'. No row ids will be outputted.
+      """
+
+    When I run `wp db search example.com no_text`
+    Then STDOUT should be empty
+    And STDERR should be:
+      """
+      Warning: No text columns for table 'no_text' - skipped.
       """
 
   Scenario: Search on a multisite install
@@ -235,7 +287,7 @@ Feature: Ack through the database
       2:e_ample.c%m
       """
 
-    When I run `wp db ack example.com`
+    When I run `wp db search example.com`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -257,8 +309,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com wp_options`
+    When I run `wp db search example.com wp_options`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -280,8 +333,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com --url=example.com/foo`
+    When I run `wp db search example.com --url=example.com/foo`
     Then STDOUT should not contain:
       """
       wp_options
@@ -303,8 +357,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com --network`
+    When I run `wp db search example.com --network`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -327,8 +382,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com --no-network`
+    When I run `wp db search example.com --no-network`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -350,8 +406,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com --all-tables-with-prefix`
+    When I run `wp db search example.com --all-tables-with-prefix`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -376,8 +433,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com --no-all-tables-with-prefix`
+    When I run `wp db search example.com --no-all-tables-with-prefix`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -399,8 +457,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com --all-tables-with-prefix --url=example.com/foo`
+    When I run `wp db search example.com --all-tables-with-prefix --url=example.com/foo`
     Then STDOUT should not contain:
       """
       wp_options
@@ -423,8 +482,9 @@ Feature: Ack through the database
       """
       pw_options
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com --all-tables`
+    When I run `wp db search example.com --all-tables`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -450,8 +510,9 @@ Feature: Ack through the database
       pw_options:awesome_stuff
       1:example.com
       """
+    And STDERR should be empty
 
-    When I run `wp db ack example.com --all-tables --url=example.com/foo`
+    When I run `wp db search example.com --all-tables --url=example.com/foo`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -477,11 +538,13 @@ Feature: Ack through the database
       pw_options:awesome_stuff
       1:example.com
       """
+    And STDERR should be empty
 
-    When I run `wp db ack e_ample.c%m`
+    When I run `wp db search e_ample.c%m`
     Then STDOUT should be empty
+    And STDERR should be empty
 
-    When I run `wp db ack e_ample.c%m --all-tables`
+    When I run `wp db search e_ample.c%m --all-tables`
     Then STDOUT should not contain:
       """
       wp_options
@@ -505,12 +568,13 @@ Feature: Ack through the database
       pw_options:awesome_stuff
       2:e_ample.c%m
       """
+    And STDERR should be empty
 
   Scenario: Long result strings are truncated
     Given a WP install
     And I run `wp option update searchtest '11111111searchstring11111111'`
 
-    When I run `wp db ack searchstring --before_context=0 --after_context=0`
+    When I run `wp db search searchstring --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
       :searchstring
@@ -520,7 +584,7 @@ Feature: Ack through the database
       searchstring1
       """
 
-    When I run `wp db ack searchstring --before_context=3 --after_context=3`
+    When I run `wp db search searchstring --before_context=3 --after_context=3`
     Then STDOUT should contain:
       """
       :111searchstring111
@@ -530,7 +594,7 @@ Feature: Ack through the database
       searchstring1111
       """
 
-    When I run `wp db ack searchstring --before_context=2 --after_context=1`
+    When I run `wp db search searchstring --before_context=2 --after_context=1`
     Then STDOUT should contain:
       """
       :11searchstring1
@@ -540,17 +604,17 @@ Feature: Ack through the database
       searchstring11
       """
 
-    When I run `wp db ack searchstring`
+    When I run `wp db search searchstring`
     Then STDOUT should contain:
       """
       :11111111searchstring11111111
       """
 
-  Scenario: Multibyte strings are truncated
+  Scenario: Search with multibyte strings
     Given a WP install
     And I run `wp option update multibytetest 'あいうえおかきくけこさしすせとたちつてと'`
 
-    When I run `wp db ack "かきくけこ" --before_context=0 --after_context=0`
+    When I run `wp db search "かきくけこ" --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
       :かきくけこ
@@ -560,14 +624,14 @@ Feature: Ack through the database
       かきくけこさ
       """
 
-    When I run `wp db ack "かきくけこ" --before_context=3 --after_context=3`
+    When I run `wp db search "かきくけこ" --before_context=3 --after_context=3`
     Then STDOUT should contain:
       """
       :うえおかきくけこさしす
       """
 
 
-    When I run `wp db ack "かきくけこ" --before_context=2 --after_context=1`
+    When I run `wp db search "かきくけこ" --before_context=2 --after_context=1`
     Then STDOUT should contain:
       """
       :えおかきくけこさ
@@ -577,8 +641,214 @@ Feature: Ack through the database
       えおかきくけこさし
       """
 
-    When I run `wp db ack "かきくけこ"`
+    When I run `wp db search "かきくけこ"`
     Then STDOUT should contain:
       """
       :あいうえおかきくけこさしすせとたちつてと
+      """
+
+  Scenario: Search with regular expressions
+    Given a WP install
+    And I run `wp option update regextst '12345é789あhttps://regextst.com1234567890123456789éhttps://regextst.com12345678901234567890regextst.com34567890t.com67890'`
+    # Note ö is o with combining umlaut.
+    And I run `wp option update regextst_combining 'lllllムnöppppp'`
+
+    When I run `wp db search 'https?:\/\/example.c.m' --regex`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value
+      1:http://example.com
+      """
+    And STDOUT should not contain:
+      """
+      [...]
+      """
+
+    When I run `wp db search 'unfindable' --regex`
+    Then STDOUT should be empty
+
+    When I run `wp db search '[0-9é]+?https:' --regex --regex-flags=u --before_context=0 --after_context=0`
+    Then STDOUT should contain:
+      """
+      :1234567890123456789éhttps:
+      """
+    And STDOUT should not contain:
+      """
+      /
+      """
+    And STDOUT should not contain:
+      """
+      [...]
+      """
+
+    When I run `wp db search 'htt(p(s):)\/\/' --regex --before_context=1 --after_context=3`
+    Then STDOUT should contain:
+      """
+      :あhttps://reg [...] éhttps://reg
+      """
+    And STDOUT should not contain:
+      """
+      rege
+      """
+
+    When I run `wp db search 'https://' --regex --regex-delimiter=# --before_context=9 --after_context=11`
+    Then STDOUT should contain:
+      """
+      :2345é789あhttps://regextst.co [...] 23456789éhttps://regextst.co
+      """
+    And STDOUT should not contain:
+      """
+      regextst.com
+      """
+
+    When I run `wp db search 'httPs://' --regex --regex-delimiter=# --before_context=3 --after_context=0`
+    Then STDOUT should be empty
+
+    When I run `wp db search 'httPs://' --regex --regex-flags=i --regex-delimiter=# --before_context=3 --after_context=0`
+    Then STDOUT should contain:
+      """
+      :89あhttps:// [...] 89éhttps://
+      """
+    And STDOUT should not contain:
+      """
+      https://r
+      """
+
+    # Bug: context counts combining characters as 2 characters.
+    When I run `wp db search 'ppppp' --regex --before_context=3 --after_context=4`
+    Then STDOUT should contain:
+      """
+      :nöppppp
+      """
+
+    # Bug: context counts combining characters as 2 characters.
+    When I run `wp db search 'ムn' --regex --before_context=2 --after_context=2`
+    Then STDOUT should contain:
+      """
+      :llムnö
+      """
+    And STDOUT should not contain:
+      """
+      :llムnöp
+      """
+
+    When I run `wp db search 't\.c' --regex --before_context=1 --after_context=1`
+    Then STDOUT should contain:
+      """
+      :st.co [...] st.co [...] st.co [...] 0t.co
+      """
+    And STDOUT should not contain:
+      """
+      st.com
+      """
+
+    When I try `wp db search 'https://' --regex`
+    Then STDERR should contain:
+      """
+      Error: The regex '/https:///' fails.
+      """
+    And STDOUT should be empty
+    And the return code should be 1
+
+  Scenario: Search with output options
+    Given a WP install
+
+    When I run `wp db search example.com`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value
+      1:http://example.com
+      wp_options:option_value
+      2:http://example.com
+      """
+
+    When I run `wp db search example.com --table_column_once`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value
+      1:http://example.com
+      2:http://example.com
+      """
+
+    When I run `wp db search example.com --one_line`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value:1:http://example.com
+      wp_options:option_value:2:http://example.com
+      """
+
+    When I run `wp db search example.com --table_column_once --one_line`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value:1:http://example.com
+      wp_options:option_value:2:http://example.com
+      """
+
+    When I run `wp db search example.com --all-tables --before_context=0 --after_context=0 --matches_only`
+    Then STDOUT should not contain:
+      """
+      :
+      """
+    And STDERR should be empty
+
+    When I run `wp db search example.com --all-tables --before_context=0 --after_context=0 --stats`
+    Then STDOUT should contain:
+      """
+      Success: Found
+      """
+    And STDOUT should contain:
+      """
+      1 table skipped: wp_term_relationships.
+      """
+    And STDERR should be empty
+
+  Scenario: Search with custom colors
+    Given a WP install
+
+    When I run `SHELL_PIPE=0 wp db search example.com`
+    Then STDOUT should contain:
+      """
+      [32;1mwp_options:option_value[0m
+      [33;1m1[0m:http://[43m[30mexample.com[0m
+      """
+
+    When I run `SHELL_PIPE=0 wp db search example.com --table_column_color=%r --id_color=%g --match_color=%b`
+    Then STDOUT should contain:
+      """
+      [31mwp_options:option_value[0m
+      [32m1[0m:http://[34mexample.com[0m
+      """
+
+    When I run `SHELL_PIPE=0 wp db search example.com --table_column_color=%r`
+    Then STDOUT should contain:
+      """
+      [31mwp_options:option_value[0m
+      [33;1m1[0m:http://[43m[30mexample.com[0m
+      """
+
+    When I run `SHELL_PIPE=0 wp db search example.com --id_color=%g`
+    Then STDOUT should contain:
+      """
+      [32;1mwp_options:option_value[0m
+      [32m1[0m:http://[43m[30mexample.com[0m
+      """
+
+    When I run `SHELL_PIPE=0 wp db search example.com --match_color=%b`
+    Then STDOUT should contain:
+      """
+      [32;1mwp_options:option_value[0m
+      [33;1m1[0m:http://[34mexample.com[0m
+      """
+
+    When I run `SHELL_PIPE=0 wp db search example.com --before_context=0 --after_context=0`
+    Then STDOUT should contain:
+      """
+      [32;1mwp_options:option_value[0m
+      [33;1m1[0m:example.com
+      """
+
+    When I run `wp db search example.com --match_color=%x`
+    Then STDERR should be:
+      """
+      Warning: Unrecognized percent color code '%x' for 'match_color'.
       """
