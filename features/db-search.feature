@@ -750,6 +750,7 @@ Feature: Search through the database
     And STDOUT should be empty
     And the return code should be 1
 
+  @require-wp-4.7
   Scenario: Search with output options
     Given a WP install
 
