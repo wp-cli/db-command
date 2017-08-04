@@ -613,6 +613,8 @@ Feature: Search through the database
   Scenario: Search with multibyte strings
     Given a WP install
     And I run `wp option update multibytetest 'あいうえおかきくけこさしすせとたちつてと'`
+    # Note ö is o with combining umlaut.
+    And I run `wp option update plaintst_combining 'lllllムnöppppp'`
 
     When I run `wp db search "かきくけこ" --before_context=0 --after_context=0`
     Then STDOUT should contain:
@@ -645,6 +647,38 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       :あいうえおかきくけこさしすせとたちつてと
+      """
+
+    When I run `wp db search 'ppppp' --before_context=3 --after_context=4`
+    Then STDOUT should contain:
+      """
+      :ムnöppppp
+      """
+
+    When I run `wp db search 'ppppp' --before_context=1 --after_context=1`
+    Then STDOUT should contain:
+      """
+      :öppppp
+      """
+
+    When I run `wp db search 'ムn' --before_context=2 --after_context=1`
+    Then STDOUT should contain:
+      """
+      :llムnö
+      """
+    And STDOUT should not contain:
+      """
+      :llムnöp
+      """
+
+    When I run `wp db search 'ムn' --before_context=2 --after_context=2`
+    Then STDOUT should contain:
+      """
+      :llムnöp
+      """
+    And STDOUT should not contain:
+      """
+      :llムnöpp
       """
 
   Scenario: Search with regular expressions
@@ -714,15 +748,19 @@ Feature: Search through the database
       https://r
       """
 
-    # Bug: context counts combining characters as 2 characters.
     When I run `wp db search 'ppppp' --regex --before_context=3 --after_context=4`
     Then STDOUT should contain:
       """
-      :nöppppp
+      :ムnöppppp
       """
 
-    # Bug: context counts combining characters as 2 characters.
-    When I run `wp db search 'ムn' --regex --before_context=2 --after_context=2`
+    When I run `wp db search 'ppppp' --regex --before_context=1 --after_context=1`
+    Then STDOUT should contain:
+      """
+      :öppppp
+      """
+
+    When I run `wp db search 'ムn' --before_context=2 --after_context=1`
     Then STDOUT should contain:
       """
       :llムnö
@@ -730,6 +768,16 @@ Feature: Search through the database
     And STDOUT should not contain:
       """
       :llムnöp
+      """
+
+    When I run `wp db search 'ムn' --regex --before_context=2 --after_context=2`
+    Then STDOUT should contain:
+      """
+      :llムnöp
+      """
+    And STDOUT should not contain:
+      """
+      :llムnöpp
       """
 
     When I run `wp db search 't\.c' --regex --before_context=1 --after_context=1`
