@@ -844,9 +844,11 @@ class DB_Command extends WP_CLI_Command {
 			}
 		} else {
 			$safe_search = preg_quote( $search, '#' );
-			$search_regex = '#(.{0,' . $before_context . '})(' . $safe_search .')(.{0,' . $after_context . '})#i';
 			if ( 0 === strpos( $wpdb->charset, 'utf8' ) ) {
-				$search_regex .= 'u';
+				$context_re = \cli\can_use_pcre_x() ? '\X' : '.';
+				$search_regex = '#(' . $context_re . '{0,' . $before_context . '})(' . $safe_search .')(' . $context_re . '{0,' . $after_context . '})#iu';
+			} else {
+				$search_regex = '#(.{0,' . $before_context . '})(' . $safe_search .')(.{0,' . $after_context . '})#i';
 			}
 			$esc_like_search = '%' . self::esc_like( $search ) . '%';
 		}
@@ -910,14 +912,13 @@ class DB_Command extends WP_CLI_Command {
 								foreach ( $matches[0] as $match_arr ) {
 									$match = $match_arr[0];
 									$offset = $match_arr[1];
-									// Offsets are in bytes, so need to use `strlen()` and  `substr()` before using `safe_substr()`. Note: not catering for combining chars.
+									// Offsets are in bytes, so need to use `strlen()` and  `substr()` before using `safe_substr()`.
 									$before = $before_context && $offset ? \cli\safe_substr( substr( $col_val, 0, $offset ), -$before_context, null /*length*/, false /*is_width*/, $encoding ) : '';
 									$after = $after_context ? \cli\safe_substr( substr( $col_val, $offset + strlen( $match ) ), 0, $after_context, false /*is_width*/, $encoding ) : '';
 									$bits[] = $before . $colors['match'][0] . $match . $colors['match'][1] . $after;
 								}
 							} else {
 								foreach ( $matches[0] as $key => $value ) {
-									// Note: not catering for combining chars.
 									$bits[] = $matches[1][ $key ] . $colors['match'][0] . $matches[2][ $key ] . $colors['match'][1] . $matches[3][ $key ];
 								}
 							}
