@@ -257,7 +257,8 @@ class DB_Command extends WP_CLI_Command {
 	 * ## OPTIONS
 	 *
 	 * [<file>]
-	 * : The name of the SQL file to export. If '-', then outputs to STDOUT. If omitted, it will be '{dbname}.sql'.
+	 * : The name of the SQL file to export. If '-', then outputs to STDOUT. If
+	 * omitted, it will be '{dbname}-{Y-m-d}-{random-hash}.sql'.
 	 *
 	 * [--<field>=<value>]
 	 * : Extra arguments to pass to mysqldump
