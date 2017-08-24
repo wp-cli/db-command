@@ -308,7 +308,7 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = $args[0];
 		} else {
 			$hash = substr( md5( mt_rand() ), 0, 7 );
-			$result_file = sprintf( '%s-%s.sql', DB_NAME, $hash );;
+			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash );;
 		}
 		$stdout = ( '-' === $result_file );
 		$porcelain = \WP_CLI\Utils\get_flag_value( $assoc_args, 'porcelain' );
