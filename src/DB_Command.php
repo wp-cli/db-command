@@ -276,31 +276,31 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     # Export database with drop query included
 	 *     $ wp db export --add-drop-table
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export certain tables
 	 *     $ wp db export --tables=wp_options,wp_users
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export all tables matching a wildcard
 	 *     $ wp db export --tables=$(wp db tables 'wp_user*' --format=csv)
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export all tables matching prefix
 	 *     $ wp db export --tables=$(wp db tables --all-tables-with-prefix --format=csv)
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Skip certain tables from the exported database
 	 *     $ wp db export --exclude_tables=wp_options,wp_users
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Skip all tables matching a wildcard from the exported database
 	 *     $ wp db export --exclude_tables=$(wp db tables 'wp_user*' --format=csv)
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Skip all tables matching prefix from the exported database
 	 *     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 * @alias dump
 	 */
