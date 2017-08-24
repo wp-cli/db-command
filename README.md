@@ -253,7 +253,8 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 **OPTIONS**
 
 	[<file>]
-		The name of the SQL file to export. If '-', then outputs to STDOUT. If omitted, it will be '{dbname}.sql'.
+		The name of the SQL file to export. If '-', then outputs to STDOUT. If
+		omitted, it will be '{dbname}-{Y-m-d}-{random-hash}.sql'.
 
 	[--<field>=<value>]
 		Extra arguments to pass to mysqldump
@@ -271,31 +272,31 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
     # Export database with drop query included
     $ wp db export --add-drop-table
-    Success: Exported to 'wordpress_dbase.sql'.
+    Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Export certain tables
     $ wp db export --tables=wp_options,wp_users
-    Success: Exported to 'wordpress_dbase.sql'.
+    Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Export all tables matching a wildcard
     $ wp db export --tables=$(wp db tables 'wp_user*' --format=csv)
-    Success: Exported to 'wordpress_dbase.sql'.
+    Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Export all tables matching prefix
     $ wp db export --tables=$(wp db tables --all-tables-with-prefix --format=csv)
-    Success: Exported to 'wordpress_dbase.sql'.
+    Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Skip certain tables from the exported database
     $ wp db export --exclude_tables=wp_options,wp_users
-    Success: Exported to 'wordpress_dbase.sql'.
+    Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Skip all tables matching a wildcard from the exported database
     $ wp db export --exclude_tables=$(wp db tables 'wp_user*' --format=csv)
-    Success: Exported to 'wordpress_dbase.sql'.
+    Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Skip all tables matching prefix from the exported database
     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
-    Success: Exported to 'wordpress_dbase.sql'.
+    Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
 
 
