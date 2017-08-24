@@ -257,7 +257,8 @@ class DB_Command extends WP_CLI_Command {
 	 * ## OPTIONS
 	 *
 	 * [<file>]
-	 * : The name of the SQL file to export. If '-', then outputs to STDOUT. If omitted, it will be '{dbname}.sql'.
+	 * : The name of the SQL file to export. If '-', then outputs to STDOUT. If
+	 * omitted, it will be '{dbname}-{Y-m-d}-{random-hash}.sql'.
 	 *
 	 * [--<field>=<value>]
 	 * : Extra arguments to pass to mysqldump
@@ -275,31 +276,31 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     # Export database with drop query included
 	 *     $ wp db export --add-drop-table
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export certain tables
 	 *     $ wp db export --tables=wp_options,wp_users
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export all tables matching a wildcard
 	 *     $ wp db export --tables=$(wp db tables 'wp_user*' --format=csv)
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export all tables matching prefix
 	 *     $ wp db export --tables=$(wp db tables --all-tables-with-prefix --format=csv)
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Skip certain tables from the exported database
 	 *     $ wp db export --exclude_tables=wp_options,wp_users
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Skip all tables matching a wildcard from the exported database
 	 *     $ wp db export --exclude_tables=$(wp db tables 'wp_user*' --format=csv)
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Skip all tables matching prefix from the exported database
 	 *     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
-	 *     Success: Exported to 'wordpress_dbase.sql'.
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 * @alias dump
 	 */
@@ -308,7 +309,7 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = $args[0];
 		} else {
 			$hash = substr( md5( mt_rand() ), 0, 7 );
-			$result_file = sprintf( '%s-%s.sql', DB_NAME, $hash );;
+			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash );;
 		}
 		$stdout = ( '-' === $result_file );
 		$porcelain = \WP_CLI\Utils\get_flag_value( $assoc_args, 'porcelain' );
