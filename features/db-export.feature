@@ -20,7 +20,7 @@ Feature: Export a WordPress database
       """
     And the wp_cli_test.sql file should exist
 
-  Scenario: Exclude tables when exporting the dtabase
+  Scenario: Exclude tables when exporting the database
     Given a WP install
 
     When I run `wp db export wp_cli_test.sql --exclude_tables=wp_users --porcelain`
@@ -32,4 +32,25 @@ Feature: Export a WordPress database
     And the wp_cli_test.sql file should contain:
       """
       wp_options
+      """
+
+  Scenario: Export database to STDOUT
+    Given a WP install
+
+    When I run `wp db export -`
+    Then STDOUT should contain:
+      """
+      -- MySQL dump
+      """
+
+    When I run `wp db export --stdout`
+    Then STDOUT should contain:
+      """
+      -- MySQL dump
+      """
+
+    When I try `wp db export - --stdout`
+    Then STDERR should be:
+      """
+      Error: The file name is not allowed when output mode is STDOUT.
       """

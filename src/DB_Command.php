@@ -269,6 +269,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--exclude_tables=<tables>]
 	 * : The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
 	 *
+	 * [--stdout]
+	 * : Output filename for the exported database.
+	 *
 	 * [--porcelain]
 	 * : Output filename for the exported database.
 	 *
@@ -320,7 +323,19 @@ class DB_Command extends WP_CLI_Command {
 			$hash = substr( md5( mt_rand() ), 0, 7 );
 			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash );;
 		}
-		$stdout = ( '-' === $result_file );
+
+		if ( \WP_CLI\Utils\get_flag_value( $assoc_args, 'stdout' ) && ! empty( $args[0] ) ) {
+			WP_CLI::error( 'The file name is not allowed when output mode is STDOUT.' );
+		}
+
+		if ( \WP_CLI\Utils\get_flag_value( $assoc_args, 'stdout' ) ) {
+			$stdout = true;
+		} elseif ( '-' === $result_file ) {
+			$stdout = true;
+		} else {
+			$stdout = false;
+		}
+
 		$porcelain = \WP_CLI\Utils\get_flag_value( $assoc_args, 'porcelain' );
 
 		// Bail if both porcelain and STDOUT are set.
@@ -360,6 +375,7 @@ class DB_Command extends WP_CLI_Command {
 
 		// Remove parameters not needed for SQL run.
 		unset( $assoc_args['porcelain'] );
+		unset( $assoc_args['stdout'] );
 
 		self::run( $escaped_command, $assoc_args );
 
