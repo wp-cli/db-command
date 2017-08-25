@@ -270,7 +270,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
 	 *
 	 * [--stdout]
-	 * : Output filename for the exported database.
+	 * : Output database to STDOUT.
 	 *
 	 * [--porcelain]
 	 * : Output filename for the exported database.
@@ -306,7 +306,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export database to STDOUT.
-	 *     $ wp db export -
+	 *     $ wp db export --stdout
 	 *     -- MySQL dump 10.13  Distrib 5.7.19, for osx10.12 (x86_64)
 	 *     --
 	 *     -- Host: localhost    Database: wpdev
