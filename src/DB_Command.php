@@ -302,6 +302,15 @@ class DB_Command extends WP_CLI_Command {
 	 *     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
+	 *     # Export database to STDOUT.
+	 *     $ wp db export -
+	 *     -- MySQL dump 10.13  Distrib 5.7.19, for osx10.12 (x86_64)
+	 *     --
+	 *     -- Host: localhost    Database: wpdev
+	 *     -- ------------------------------------------------------
+	 *     -- Server version	5.7.19
+	 *     ...
+	 *
 	 * @alias dump
 	 */
 	public function export( $args, $assoc_args ) {
