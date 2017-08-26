@@ -42,15 +42,3 @@ Feature: Export a WordPress database
       """
       -- MySQL dump
       """
-
-    When I run `wp db export --stdout`
-    Then STDOUT should contain:
-      """
-      -- MySQL dump
-      """
-
-    When I try `wp db export - --stdout`
-    Then STDERR should be:
-      """
-      Error: The file name is not allowed when output mode is STDOUT.
-      """
