@@ -883,20 +883,22 @@ class DB_Command extends WP_CLI_Command {
 				}
 				continue;
 			}
+			$table_sql = self::esc_sql_ident( $table );
 			$column_count += count( $text_columns );
 			if ( ! $primary_keys ) {
 				WP_CLI::warning( "No primary key for table '$table'. No row ids will be outputted." );
 				$primary_key = $primary_key_sql = '';
 			} else {
 				$primary_key = array_shift( $primary_keys );
-				$primary_key_sql = $primary_key . ', ';
+				$primary_key_sql = self::esc_sql_ident( $primary_key ) . ', ';
 			}
 
 			foreach ( $text_columns as $column ) {
+				$column_sql = self::esc_sql_ident( $column );
 				if ( $regex ) {
-					$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column} FROM {$table}" );
+					$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}" );
 				} else {
-					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column} FROM {$table} WHERE {$column} LIKE %s;", $esc_like_search ) );
+					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s;", $esc_like_search ) );
 				}
 				if ( $results ) {
 					$row_count += count( $results );
@@ -966,12 +968,12 @@ class DB_Command extends WP_CLI_Command {
 
 	private static function get_create_query() {
 
-		$create_query = sprintf( 'CREATE DATABASE `%s`', DB_NAME );
+		$create_query = sprintf( 'CREATE DATABASE %s', self::esc_sql_ident( DB_NAME ) );
 		if ( defined( 'DB_CHARSET' ) && constant( 'DB_CHARSET' ) ) {
-			$create_query .= sprintf( ' DEFAULT CHARSET `%s`', constant( 'DB_CHARSET' ) );
+			$create_query .= sprintf( ' DEFAULT CHARSET %s', self::esc_sql_ident( DB_CHARSET ) );
 		}
 		if ( defined( 'DB_COLLATE' ) && constant( 'DB_COLLATE' ) ) {
-			$create_query .= sprintf( ' DEFAULT COLLATE `%s`', constant( 'DB_COLLATE' ) );
+			$create_query .= sprintf( ' DEFAULT COLLATE %s', self::esc_sql_ident( DB_COLLATE ) );
 		}
 		return $create_query;
 	}
@@ -1005,10 +1007,11 @@ class DB_Command extends WP_CLI_Command {
 	private static function get_columns( $table ) {
 		global $wpdb;
 
+		$table_sql = self::esc_sql_ident( $table );
 		$primary_keys = $text_columns = $all_columns = array();
 		$suppress_errors = $wpdb->suppress_errors();
-		if ( ( $results = $wpdb->get_results( "DESCRIBE $table" ) ) ) {
-			foreach ( $wpdb->get_results( "DESCRIBE $table" ) as $col ) {
+		if ( ( $results = $wpdb->get_results( "DESCRIBE $table_sql" ) ) ) {
+			foreach ( $results as $col ) {
 				if ( 'PRI' === $col->Key ) {
 					$primary_keys[] = $col->Field;
 				}
@@ -1056,6 +1059,24 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		return $old;
+	}
+
+	/**
+	 * Escapes (backticks) MySQL identifiers (aka schema object names) - i.e. column names, table names, and database/index/alias/view etc names.
+	 * See https://dev.mysql.com/doc/refman/5.5/en/identifiers.html
+	 *
+	 * @param string|array $idents A single identifier or an array of identifiers.
+	 * @return string|array An escaped string if given a string, or an array of escaped strings if given an array of strings.
+	 */
+	private static function esc_sql_ident( $idents ) {
+		$backtick = function ( $v ) {
+			// Escape any backticks in the identifier by doubling.
+			return '`' . str_replace( '`', '``', $v ) . '`';
+		};
+		if ( is_string( $idents ) ) {
+			return $backtick( $idents );
+		}
+		return array_map( $backtick, $idents );
 	}
 
 	/**
