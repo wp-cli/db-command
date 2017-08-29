@@ -715,10 +715,10 @@ class DB_Command extends WP_CLI_Command {
 	 * ---
 	 *
 	 * [--regex]
-	 * : Runs the search as a regular expression (without delimiters). The search becomes case-sensitive (i.e. no PCRE flags are added, except 'u' if the database charset is UTF-8). Delimiters must be escaped if they occur in the expression.
+	 * : Runs the search as a regular expression (without delimiters). The search becomes case-sensitive (i.e. no PCRE flags are added). Delimiters must be escaped if they occur in the expression.
 	 *
 	 * [--regex-flags=<regex-flags>]
-	 * : Pass PCRE modifiers to the regex search (e.g. 'i' for case-insensitivity). Note that 'u' (UTF-8 mode) will not be automatically added.
+	 * : Pass PCRE modifiers to the regex search (e.g. 'i' for case-insensitivity).
 	 *
 	 * [--regex-delimiter=<regex-delimiter>]
 	 * : The delimiter to use for the regex. It must be escaped if it appears in the search string.
@@ -845,22 +845,14 @@ class DB_Command extends WP_CLI_Command {
 			if ( false === @preg_match( $search_regex, '' ) ) {
 				WP_CLI::error( "The regex '$search_regex' fails." );
 			}
-			$encoding = null;
-			if ( 0 === strpos( $wpdb->charset, 'utf8' ) ) {
-				$encoding = 'UTF-8';
-				if ( ! $regex_flags ) {
-					$search_regex .= 'u';
-				}
-			}
 		} else {
-			$safe_search = preg_quote( $search, '#' );
-			if ( 0 === strpos( $wpdb->charset, 'utf8' ) ) {
-				$context_re = \cli\can_use_pcre_x() ? '\X' : '.';
-				$search_regex = '#(' . $context_re . '{0,' . $before_context . '})(' . $safe_search .')(' . $context_re . '{0,' . $after_context . '})#iu';
-			} else {
-				$search_regex = '#(.{0,' . $before_context . '})(' . $safe_search .')(.{0,' . $after_context . '})#i';
-			}
+			$search_regex = '#' . preg_quote( $search, '#' ) . '#i';
 			$esc_like_search = '%' . self::esc_like( $search ) . '%';
+		}
+
+		$encoding = null;
+		if ( 0 === strpos( $wpdb->charset, 'utf8' ) ) {
+			$encoding = 'UTF-8';
 		}
 
 		$tables = WP_CLI\Utils\wp_get_table_names( $args, $assoc_args );
@@ -904,7 +896,7 @@ class DB_Command extends WP_CLI_Command {
 					$outputted_table_column_once = false;
 					foreach ( $results as $result ) {
 						$col_val = $result->$column;
-						if ( preg_match_all( $search_regex, $col_val, $matches, $regex ? PREG_OFFSET_CAPTURE : PREG_PATTERN_ORDER ) ) {
+						if ( preg_match_all( $search_regex, $col_val, $matches, PREG_OFFSET_CAPTURE ) ) {
 							if ( ! $matches_only && ( ! $table_column_once || ! $outputted_table_column_once ) && ! $one_line ) {
 								WP_CLI::log( $table_column_val );
 								$outputted_table_column_once = true;
@@ -912,25 +904,20 @@ class DB_Command extends WP_CLI_Command {
 							$pk_val = $primary_key ? ( $colors['id'][0] . $result->$primary_key . $colors['id'][1] . ':' ) : '';
 
 							$bits = array();
-							if ( $regex ) {
-								if ( null === $encoding ) {
-									$encoding = false;
-									if ( ( $before_context || $after_context ) && function_exists( 'mb_detect_encoding' ) ) {
-										$encoding = mb_detect_encoding( $col_val, null, true /*strict*/ );
-									}
+							$col_encoding = $encoding;
+							if ( null === $col_encoding ) {
+								$col_encoding = false;
+								if ( ( $before_context || $after_context ) && function_exists( 'mb_detect_encoding' ) ) {
+									$col_encoding = mb_detect_encoding( $col_val, null, true /*strict*/ );
 								}
-								foreach ( $matches[0] as $match_arr ) {
-									$match = $match_arr[0];
-									$offset = $match_arr[1];
-									// Offsets are in bytes, so need to use `strlen()` and  `substr()` before using `safe_substr()`.
-									$before = $before_context && $offset ? \cli\safe_substr( substr( $col_val, 0, $offset ), -$before_context, null /*length*/, false /*is_width*/, $encoding ) : '';
-									$after = $after_context ? \cli\safe_substr( substr( $col_val, $offset + strlen( $match ) ), 0, $after_context, false /*is_width*/, $encoding ) : '';
-									$bits[] = $before . $colors['match'][0] . $match . $colors['match'][1] . $after;
-								}
-							} else {
-								foreach ( $matches[0] as $key => $value ) {
-									$bits[] = $matches[1][ $key ] . $colors['match'][0] . $matches[2][ $key ] . $colors['match'][1] . $matches[3][ $key ];
-								}
+							}
+							foreach ( $matches[0] as $match_arr ) {
+								$match = $match_arr[0];
+								$offset = $match_arr[1];
+								// Offsets are in bytes, so need to use `strlen()` and `substr()` before using `safe_substr()`.
+								$before = $before_context && $offset ? \cli\safe_substr( substr( $col_val, 0, $offset ), -$before_context, null /*length*/, false /*is_width*/, $col_encoding ) : '';
+								$after = $after_context ? \cli\safe_substr( substr( $col_val, $offset + strlen( $match ) ), 0, $after_context, false /*is_width*/, $col_encoding ) : '';
+								$bits[] = $before . $colors['match'][0] . $match . $colors['match'][1] . $after;
 							}
 							$match_count += count( $bits );
 							$col_val = implode( ' [...] ', $bits );

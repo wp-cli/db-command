@@ -908,3 +908,29 @@ Feature: Search through the database
       """
       Warning: Unrecognized percent color code '%x' for 'match_color'.
       """
+
+  Scenario: Search with matches within context
+    Given a WP install
+    And I run `wp option update matches_in_context '1234_XYXYX_2345678_XYXYX_2345678901_XYXYX_2345'`
+
+    When I run `wp db search XYXYX --before_context=10 --after_context=10 --stats`
+    Then STDOUT should contain:
+      """
+      Success: Found 3 matches
+      """
+    And STDOUT should contain:
+      """
+      :1234_XYXYX_2345678_X [...] X_2345678_XYXYX_234567890 [...] 345678901_XYXYX_2345
+      """
+    And STDERR should be empty
+
+    When I run `wp db search XYXYX --before_context=10 --after_context=10 --regex --stats`
+    Then STDOUT should contain:
+      """
+      Success: Found 3 matches
+      """
+    And STDOUT should contain:
+      """
+      :1234_XYXYX_2345678_X [...] X_2345678_XYXYX_234567890 [...] 345678901_XYXYX_2345
+      """
+    And STDERR should be empty
