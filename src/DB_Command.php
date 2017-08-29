@@ -820,10 +820,6 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( ( $regex = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex', false ) ) ) {
 			$regex_flags = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-flags', false );
-			// http://php.net/manual/en/reference.pcre.pattern.modifiers.php
-			if ( $regex_flags && ! preg_match( '/^(?!.*(.).*\1)[imsxeADSUXJu]+$/', $regex_flags ) ) {
-				WP_CLI::error( "Incorrect PCRE modifiers." );
-			}
 			$regex_delimiter = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-delimiter', '/' );
 			if ( '' === $regex_delimiter ) {
 				$regex_delimiter = '/';
