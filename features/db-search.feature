@@ -708,6 +708,13 @@ Feature: Search through the database
       """
     Then the return code should be 1
 
+    When I try `wp db search 'unfindable' --regex --regex-delimiter='1'`
+    Then STDERR should be:
+      """
+      Error: The regex '1unfindable1' fails.
+      """
+    Then the return code should be 1
+
     When I run `wp db search '[0-9é]+?https:' --regex --regex-flags=u --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
