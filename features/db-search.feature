@@ -701,7 +701,7 @@ Feature: Search through the database
     When I run `wp db search 'unfindable' --regex`
     Then STDOUT should be empty
 
-    When I run `wp db search 'unfindable' --regex --regex-flags='abcd'`
+    When I try `wp db search 'unfindable' --regex --regex-flags='abcd'`
     Then the return code should be 1
 
     When I run `wp db search '[0-9é]+?https:' --regex --regex-flags=u --before_context=0 --after_context=0`
