@@ -721,10 +721,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Pass PCRE modifiers to the regex search (e.g. 'i' for case-insensitivity). Note that 'u' (UTF-8 mode) will not be automatically added.
 	 *
 	 * [--regex-delimiter=<regex-delimiter>]
-	 * : The delimiter to use for the regex. It must be escaped if it appears in the search string.
-	 * ---
-	 * default: /
-	 * ---
+	 * : The delimiter to use for the regex. It must be escaped if it appears in the search string. The default value is the result of `chr(1)`.
 	 *
 	 * [--table_column_once]
 	 * : Output the 'table:column' line once before all matching row lines in the table column rather than before each matching row.
@@ -820,9 +817,9 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( ( $regex = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex', false ) ) ) {
 			$regex_flags = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-flags', false );
-			$regex_delimiter = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-delimiter', '/' );
+			$regex_delimiter = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-delimiter', chr( 1 ) );
 			if ( '' === $regex_delimiter ) {
-				$regex_delimiter = '/';
+				$regex_delimiter = chr( 1 );
 			}
 		}
 
