@@ -792,7 +792,7 @@ class DB_Command extends WP_CLI_Command {
 	 *         ...
 	 *
 	 *     # Search through the database for the 'https?://' regular expression, printing stats.
-	 *     $ wp db search 'https?:\/\/' --regex --stats
+	 *     $ wp db search 'https?://' --regex --stats
 	 *     wp_comments:comment_author_url
 	 *     1:https://wordpress.org/
 	 *         ...
