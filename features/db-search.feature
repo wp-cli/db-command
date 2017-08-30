@@ -708,6 +708,13 @@ Feature: Search through the database
       """
     Then the return code should be 1
 
+    When I try `wp db search 'unfindable' --regex --regex-delimiter='1'`
+    Then STDERR should be:
+      """
+      Error: The regex '1unfindable1' fails.
+      """
+    Then the return code should be 1
+
     When I run `wp db search '[0-9é]+?https:' --regex --regex-flags=u --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
@@ -908,6 +915,36 @@ Feature: Search through the database
       """
       Warning: Unrecognized percent color code '%x' for 'match_color'.
       """
+
+  Scenario: Search should cater for field/table names that use reserved words or unusual characters
+    Given a WP install
+    And a esc_sql_ident.sql file:
+      """
+      CREATE TABLE `TABLE` (`KEY` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, `VALUES` TEXT, `back``tick` TEXT, `single'double"quote` TEXT, PRIMARY KEY (`KEY`) );
+      INSERT INTO `TABLE` (`VALUES`, `back``tick`, `single'double"quote`) VALUES ('v"v`v\'v\\v_v1', 'v"v`v\'v\\v_v1', 'v"v`v\'v\\v_v1' );
+      INSERT INTO `TABLE` (`VALUES`, `back``tick`, `single'double"quote`) VALUES ('v"v`v\'v\\v_v2', 'v"v`v\'v\\v_v2', 'v"v`v\'v\\v_v2' );
+      """
+
+    When I run `wp db query "SOURCE esc_sql_ident.sql;"`
+    Then STDERR should be empty
+
+    When I run `wp db search 'v_v' TABLE`
+    Then STDOUT should be:
+      """
+      TABLE:VALUES
+      1:v"v`v'v\v_v1
+      TABLE:VALUES
+      2:v"v`v'v\v_v2
+      TABLE:back`tick
+      1:v"v`v'v\v_v1
+      TABLE:back`tick
+      2:v"v`v'v\v_v2
+      TABLE:single'double"quote
+      1:v"v`v'v\v_v1
+      TABLE:single'double"quote
+      2:v"v`v'v\v_v2
+      """
+    And STDERR should be empty
 
   Scenario: Search with matches within context
     Given a WP install
