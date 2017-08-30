@@ -702,18 +702,22 @@ Feature: Search through the database
     Then STDOUT should be empty
 
     When I try `wp db search 'unfindable' --regex --regex-flags='abcd'`
-    Then STDERR should be:
+    Then STDERR should contain:
       """
-      Error: The regex '/unfindable/abcd' fails.
+      unfindable
       """
-    Then the return code should be 1
+    And STDERR should contain:
+      """
+      abcd
+      """
+    And the return code should be 1
 
     When I try `wp db search 'unfindable' --regex --regex-delimiter='1'`
     Then STDERR should be:
       """
       Error: The regex '1unfindable1' fails.
       """
-    Then the return code should be 1
+    And the return code should be 1
 
     When I run `wp db search '[0-9é]+?https:' --regex --regex-flags=u --before_context=0 --after_context=0`
     Then STDOUT should contain:
@@ -804,13 +808,8 @@ Feature: Search through the database
       st.com
       """
 
-    When I try `wp db search 'https://' --regex`
-    Then STDERR should contain:
-      """
-      Error: The regex '/https:///' fails.
-      """
-    And STDOUT should be empty
-    And the return code should be 1
+    When I run `wp db search 'https://' --regex`
+    Then the return code should be 0
 
   @require-wp-4.7
   Scenario: Search with output options
