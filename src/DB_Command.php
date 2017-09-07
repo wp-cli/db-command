@@ -213,7 +213,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     $ wp db query < debug.sql
 	 *
 	 *     # Check all tables in the database
-	 *     $ wp db query "CHECK TABLE $(wp db tables | paste -s -d',');"
+	 *     $ wp db query "CHECK TABLE $(wp db tables | paste -s -d, -);"
 	 *     +---------------------------------------+-------+----------+----------+
 	 *     | Table                                 | Op    | Msg_type | Msg_text |
 	 *     +---------------------------------------+-------+----------+----------+
