@@ -213,7 +213,7 @@ Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
     $ wp db query < debug.sql
 
     # Check all tables in the database
-    $ wp db query "CHECK TABLE $(wp db tables | paste -s -d',');"
+    $ wp db query "CHECK TABLE $(wp db tables | paste -s -d, -);"
     +---------------------------------------+-------+----------+----------+
     | Table                                 | Op    | Msg_type | Msg_text |
     +---------------------------------------+-------+----------+----------+
@@ -298,6 +298,15 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
+    # Export database to STDOUT.
+    $ wp db export -
+    -- MySQL dump 10.13  Distrib 5.7.19, for osx10.12 (x86_64)
+    --
+    -- Host: localhost    Database: wpdev
+    -- ------------------------------------------------------
+    -- Server version	5.7.19
+    ...
+
 
 
 ### wp db import
@@ -371,16 +380,13 @@ Defaults to searching through all tables registered to $wpdb. On multisite, this
 		---
 
 	[--regex]
-		Runs the search as a regular expression (without delimiters). The search becomes case-sensitive (i.e. no PCRE flags are added, except 'u' if the database charset is UTF-8). Delimiters must be escaped if they occur in the expression.
+		Runs the search as a regular expression (without delimiters). The search becomes case-sensitive (i.e. no PCRE flags are added). Delimiters must be escaped if they occur in the expression.
 
 	[--regex-flags=<regex-flags>]
-		Pass PCRE modifiers to the regex search (e.g. 'i' for case-insensitivity). Note that 'u' (UTF-8 mode) will not be automatically added.
+		Pass PCRE modifiers to the regex search (e.g. 'i' for case-insensitivity).
 
 	[--regex-delimiter=<regex-delimiter>]
-		The delimiter to use for the regex. It must be escaped if it appears in the search string.
-		---
-		default: /
-		---
+		The delimiter to use for the regex. It must be escaped if it appears in the search string. The default value is the result of `chr(1)`.
 
 	[--table_column_once]
 		Output the 'table:column' line once before all matching row lines in the table column rather than before each matching row.
@@ -451,7 +457,7 @@ They can be concatenated. For instance, the default match color of black on a mu
         ...
 
     # Search through the database for the 'https?://' regular expression, printing stats.
-    $ wp db search 'https?:\/\/' --regex --stats
+    $ wp db search 'https?://' --regex --stats
     wp_comments:comment_author_url
     1:https://wordpress.org/
         ...
