@@ -437,6 +437,7 @@ The percent color codes available are:
 '%8' Reverse
 '%U' Underline
 '%F' Blink (unlikely to work)
+
 They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background '%3%k' can be made black on a bright yellow background with '%Y%0%8'.
 
 **EXAMPLES**
