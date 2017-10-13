@@ -905,21 +905,43 @@ class DB_Command extends WP_CLI_Command {
 
 							$bits = array();
 							$col_encoding = $encoding;
-							if ( null === $col_encoding ) {
-								$col_encoding = false;
-								if ( ( $before_context || $after_context ) && function_exists( 'mb_detect_encoding' ) ) {
-									$col_encoding = mb_detect_encoding( $col_val, null, true /*strict*/ );
-								}
+							if ( ! $col_encoding && ( $before_context || $after_context ) && function_exists( 'mb_detect_encoding' ) ) {
+								$col_encoding = mb_detect_encoding( $col_val, null, true /*strict*/ );
 							}
-							foreach ( $matches[0] as $match_arr ) {
-								$match = $match_arr[0];
-								$offset = $match_arr[1];
+							$append_next = false;
+							$last_offset = 0;
+							$match_cnt = count( $matches[0] );
+							for ( $i = 0; $i < $match_cnt; $i++ ) {
+								$match = $matches[0][ $i ][0];
+								$offset = $matches[0][ $i ][1];
+								$log = $colors['match'][0] . $match . $colors['match'][1];
+								$before = $after = '';
+								$after_shortened = false;
+
 								// Offsets are in bytes, so need to use `strlen()` and `substr()` before using `safe_substr()`.
-								$before = $before_context && $offset ? \cli\safe_substr( substr( $col_val, 0, $offset ), -$before_context, null /*length*/, false /*is_width*/, $col_encoding ) : '';
-								$after = $after_context ? \cli\safe_substr( substr( $col_val, $offset + strlen( $match ) ), 0, $after_context, false /*is_width*/, $col_encoding ) : '';
-								$bits[] = $before . $colors['match'][0] . $match . $colors['match'][1] . $after;
+								if ( $before_context && $offset && ! $append_next ) {
+									$before = \cli\safe_substr( substr( $col_val, $last_offset, $offset - $last_offset ), -$before_context, null /*length*/, false /*is_width*/, $col_encoding );
+								}
+								if ( $after_context ) {
+									$end_offset = $offset + strlen( $match );
+									$after = \cli\safe_substr( substr( $col_val, $end_offset ), 0, $after_context, false /*is_width*/, $col_encoding );
+									// To lessen context duplication in output, shorten the after context if it overlaps with the next match.
+									if ( $i + 1 < $match_cnt && $end_offset + strlen( $after ) > $matches[0][ $i + 1 ][1] ) {
+										$after = substr( $after, 0, $matches[0][ $i + 1 ][1] - $end_offset );
+										$after_shortened = true;
+										// On the next iteration, will append with no before context.
+									}
+								}
+								if ( $append_next ) {
+									$cnt = count( $bits );
+									$bits[ $cnt - 1 ] .= $log . $after;
+								} else {
+									$bits[] = $before . $log . $after;
+								}
+								$append_next = $after_shortened;
+								$last_offset = $offset;
 							}
-							$match_count += count( $bits );
+							$match_count += $match_cnt;
 							$col_val = implode( ' [...] ', $bits );
 
 							WP_CLI::log( $matches_only ? $col_val : ( $one_line ? "{$table_column_val}:{$pk_val}{$col_val}" : "{$pk_val}{$col_val}" ) );
