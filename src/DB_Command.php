@@ -818,9 +818,11 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( ( $regex = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex', false ) ) ) {
 			$regex_flags = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-flags', false );
-			$regex_delimiter = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-delimiter', chr( 1 ) );
+			$default_regex_delimiter = false;
+			$regex_delimiter = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-delimiter', '' );
 			if ( '' === $regex_delimiter ) {
 				$regex_delimiter = chr( 1 );
+				$default_regex_delimiter = true;
 			}
 		}
 
@@ -841,7 +843,13 @@ class DB_Command extends WP_CLI_Command {
 				$search_regex .= $regex_flags;
 			}
 			if ( false === @preg_match( $search_regex, '' ) ) {
-				WP_CLI::error( "The regex '$search_regex' fails." );
+				if ( $default_regex_delimiter ) {
+					$flags_msg = $regex_flags ? "flags '$regex_flags'" : "no flags";
+					$msg = "The regex pattern '$search' with default delimiter 'chr(1)' and {$flags_msg} fails.";
+				} else {
+					$msg = "The regex '$search_regex' fails.";
+				}
+				WP_CLI::error( $msg );
 			}
 		} else {
 			$search_regex = '#' . preg_quote( $search, '#' ) . '#i';
