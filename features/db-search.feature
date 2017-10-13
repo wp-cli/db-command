@@ -974,8 +974,8 @@ Feature: Search through the database
   Scenario: Search with large data
     Given a WP install
     # Note "_utf8 X'CC88'" is combining umlaut. Doing it this way as non-ASCII stuff gets stripped due to (eventually) been put thru `escapeshellarg()` with a default C locale.
-    # Also restricted by MySQL's default `max_allowed_packet` size to 16 MB - 1 (0xFFFFFF).
-    And I run `wp db query "INSERT INTO wp_options (option_name, option_value) VALUES ('opt_large', CONCAT(REPEAT('a', 1024 * 1024 * 16 - 9), 'o', _utf8 X'CC88', 'XYXYX'));"`
+    # Also restricted by default MySQL values for the version-dependent size of the innodb redo log file (max 10% one transaction) and `max_allowed_packet` size (16MB).
+    And I run `wp db query "INSERT INTO wp_options (option_name, option_value) VALUES ('opt_large', CONCAT(REPEAT('a', 1024 * 1024 * 8 - 9), 'o', _utf8 X'CC88', 'XYXYX'));"`
 
     When I run `wp db search XYXYX --before_context=1 --stats`
     Then STDOUT should contain:
