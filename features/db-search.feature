@@ -719,6 +719,34 @@ Feature: Search through the database
       """
     And the return code should be 1
 
+    When I try `wp db search 'regex error)' --regex`
+    Then STDERR should be:
+      """
+      Error: The regex pattern 'regex error)' with default delimiter 'chr(1)' and no flags fails.
+      """
+    And the return code should be 1
+
+    When I try `wp db search 'regex error)' --regex --regex-flags=u`
+    Then STDERR should be:
+      """
+      Error: The regex pattern 'regex error)' with default delimiter 'chr(1)' and flags 'u' fails.
+      """
+    And the return code should be 1
+
+    When I try `wp db search 'regex error)' --regex --regex-delimiter=/`
+    Then STDERR should be:
+      """
+      Error: The regex '/regex error)/' fails.
+      """
+    And the return code should be 1
+
+    When I try `wp db search 'regex error)' --regex --regex-delimiter=/ --regex-flags=u`
+    Then STDERR should be:
+      """
+      Error: The regex '/regex error)/u' fails.
+      """
+    And the return code should be 1
+
     When I run `wp db search '[0-9é]+?https:' --regex --regex-flags=u --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
