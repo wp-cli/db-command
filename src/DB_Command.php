@@ -21,6 +21,8 @@ use \WP_CLI\Utils;
  *
  *     # Execute a SQL query stored in a file.
  *     $ wp db query < debug.sql
+ *
+ * @when after_wp_config_load
  */
 class DB_Command extends WP_CLI_Command {
 
@@ -469,6 +471,8 @@ class DB_Command extends WP_CLI_Command {
 	 *     # Export only tables for a single site
 	 *     $ wp db export --tables=$(wp db tables --url=sub.example.com --format=csv)
 	 *     Success: Exported to wordpress_dbase.sql
+	 *
+	 * @when after_wp_load
 	 */
 	public function tables( $args, $assoc_args ) {
 
@@ -568,11 +572,10 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     $ wp db size --size_format=mb
 	 *     6
+	 *
+	 * @when after_wp_load
 	 */
 	public function size( $args, $assoc_args ) {
-
-		// Avoid a constant redefinition in wp-config.
-		@WP_CLI::get_runner()-> load_wordpress();
 
 		global $wpdb;
 
@@ -668,11 +671,10 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     $ wp db prefix
 	 *     wp_
+	 *
+	 * @when after_wp_load
 	 */
 	public function prefix() {
-		// Avoid a constant redefinition in wp-config.
-		@WP_CLI::get_runner()->load_wordpress();
-
 		global $wpdb;
 
 		WP_CLI::log( $wpdb->prefix );
@@ -799,14 +801,12 @@ class DB_Command extends WP_CLI_Command {
 	 *         ...
 	 *     Success: Found 99146 matches in 10.752s (10.559s searching). Searched 12 tables, 53 columns, 1358907 rows. 1 table skipped: wp_term_relationships.
 	 *
+	 * @when after_wp_load
 	 */
 	public function search( $args, $assoc_args ) {
 		global $wpdb;
 
 		$start_run_time = microtime( true );
-
-		// Avoid a constant redefinition in wp-config.
-		@WP_CLI::get_runner()->load_wordpress();
 
 		$search = array_shift( $args );
 
