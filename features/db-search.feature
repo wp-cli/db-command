@@ -244,19 +244,21 @@ Feature: Search through the database
     When I run `wp db query "CREATE TABLE no_key ( awesome_stuff TEXT );"`
     And I run `wp db query "CREATE TABLE no_text ( id int(11) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id) );"`
 
-    When I run `wp db search example.com no_key`
+    When I try `wp db search example.com no_key`
     Then STDOUT should be empty
     And STDERR should be:
       """
       Warning: No primary key for table 'no_key'. No row ids will be outputted.
       """
+    And the return code should be 0
 
-    When I run `wp db search example.com no_text`
+    When I try `wp db search example.com no_text`
     Then STDOUT should be empty
     And STDERR should be:
       """
       Warning: No text columns for table 'no_text' - skipped.
       """
+    And the return code should be 0
 
   Scenario: Search on a multisite install
     Given a WP multisite install
@@ -937,11 +939,20 @@ Feature: Search through the database
       [33;1m1[0m:example.com
       """
 
-    When I run `wp db search example.com --match_color=%x`
+    When I try `wp db search example.com --match_color=%x`
     Then STDERR should be:
       """
       Warning: Unrecognized percent color code '%x' for 'match_color'.
       """
+    And STDOUT should contain:
+      """
+      example.com
+      """
+    And STDOUT should not contain:
+      """
+      
+      """
+    And the return code should be 0
 
   Scenario: Search should cater for field/table names that use reserved words or unusual characters
     Given a WP install
