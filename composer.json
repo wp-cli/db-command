@@ -24,7 +24,6 @@
         "wp-cli/wp-cli": "*"
     },
     "require-dev": {
-        "wp-cli/wp-cli": "dev-master",
         "behat/behat": "~2.5"
     },
     "extra": {
