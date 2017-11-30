@@ -4,6 +4,10 @@ Feature: Perform database operations
     Given an empty directory
     And WP files
     And wp-config.php
+    And a session_no file:
+      """
+      n
+      """
 
     When I try `wp option get home`
     Then STDOUT should be empty
@@ -20,6 +24,21 @@ Feature: Perform database operations
 
     When I try the previous command again
     Then the return code should be 1
+
+    When I run `wp db drop --yes`
+    Then STDOUT should be:
+      """
+      Success: Database dropped.
+      """
+
+    When I try the previous command again
+    Then the return code should be 1
+
+    When I run `wp db drop < session_no`
+    Then STDOUT should be:
+      """
+      Are you sure you want to drop the 'wp_cli_test' database? [y/n] 
+      """
 
   Scenario: DB Operations
     Given a WP install
@@ -137,7 +156,7 @@ Feature: Perform database operations
     Then STDOUT should not be empty
 
     When I run `wp db create`
-    Then STDERR should be empty
+    Then STDOUT should not be empty
 
     When I run `wp core install --title="WP-CLI Test" --url=example.com --admin_user=admin --admin_password=admin --admin_email=admin@example.com`
     Then STDOUT should not be empty
