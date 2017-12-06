@@ -54,7 +54,6 @@ Feature: List database tables
       wp_signups
       wp_site
       wp_sitemeta
-      wp_sitecategories
       wp_registration_log
       wp_blog_versions
       """
