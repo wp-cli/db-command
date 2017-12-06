@@ -11,9 +11,36 @@ Quick links: [Using](#using) | [Installing](#installing) | [Contributing](#contr
 
 This package implements the following commands:
 
+### wp db
+
+Performs basic database operations using credentials stored in wp-config.php.
+
+~~~
+wp db
+~~~
+
+**EXAMPLES**
+
+    # Create a new database.
+    $ wp db create
+    Success: Database created.
+
+    # Drop an existing database.
+    $ wp db drop --yes
+    Success: Database dropped.
+
+    # Reset the current database.
+    $ wp db reset --yes
+    Success: Database reset.
+
+    # Execute a SQL query stored in a file.
+    $ wp db query < debug.sql
+
+
+
 ### wp db create
 
-Create a new database.
+Creates a new database.
 
 ~~~
 wp db create 
@@ -32,7 +59,7 @@ wp-config.php.
 
 ### wp db drop
 
-Delete the existing database.
+Deletes the existing database.
 
 ~~~
 wp db drop [--yes]
@@ -56,7 +83,7 @@ wp-config.php.
 
 ### wp db reset
 
-Remove all tables from the database.
+Removes all tables from the database.
 
 ~~~
 wp db reset [--yes]
@@ -80,7 +107,7 @@ specified in wp-config.php.
 
 ### wp db check
 
-Check the current status of the database.
+Checks the current status of the database.
 
 ~~~
 wp db check 
@@ -102,7 +129,7 @@ for more details on the `CHECK TABLE` statement.
 
 ### wp db optimize
 
-Optimize the database.
+Optimizes the database.
 
 ~~~
 wp db optimize 
@@ -124,7 +151,7 @@ for more details on the `OPTIMIZE TABLE` statement.
 
 ### wp db prefix
 
-Display the database table prefix.
+Displays the database table prefix.
 
 ~~~
 wp db prefix 
@@ -141,7 +168,7 @@ Display the database table prefix, as defined by the database handler's interpre
 
 ### wp db repair
 
-Repair the database.
+Repairs the database.
 
 ~~~
 wp db repair 
@@ -163,7 +190,7 @@ more details on the `REPAIR TABLE` statement.
 
 ### wp db cli
 
-Open a MySQL console using credentials from wp-config.php
+Opens a MySQL console using credentials from wp-config.php
 
 ~~~
 wp db cli [--database=<database>] [--default-character-set=<character-set>] [--<field>=<value>]
@@ -190,7 +217,7 @@ wp db cli [--database=<database>] [--default-character-set=<character-set>] [--<
 
 ### wp db query
 
-Execute a SQL query against the database.
+Executes a SQL query against the database.
 
 ~~~
 wp db query [<sql>] [--<field>=<value>]
@@ -311,7 +338,7 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
 ### wp db import
 
-Import a database from a file or from STDIN.
+Imports a database from a file or from STDIN.
 
 ~~~
 wp db import [<file>] [--skip-optimization]
@@ -340,7 +367,7 @@ defined in the SQL.
 
 ### wp db search
 
-Find a string in the database.
+Finds a string in the database.
 
 ~~~
 wp db search <search> [<tables>...] [--network] [--all-tables-with-prefix] [--all-tables] [--before_context=<num>] [--after_context=<num>] [--regex] [--regex-flags=<regex-flags>] [--regex-delimiter=<regex-delimiter>] [--table_column_once] [--one_line] [--matches_only] [--stats] [--table_column_color=<color_code>] [--id_color=<color_code>] [--match_color=<color_code>]
@@ -468,7 +495,7 @@ They can be concatenated. For instance, the default match color of black on a mu
 
 ### wp db tables
 
-List the database tables.
+Lists the database tables.
 
 ~~~
 wp db tables [<table>...] [--scope=<scope>] [--network] [--all-tables-with-prefix] [--all-tables] [--format=<format>]
@@ -524,7 +551,7 @@ Defaults to all tables registered to the $wpdb database handler.
 
 ### wp db size
 
-Display the database name and size.
+Displays the database name and size.
 
 ~~~
 wp db size [--size_format] [--tables] [--format] [--scope=<scope>] [--network] [--all-tables-with-prefix] [--all-tables]
