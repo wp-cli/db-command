@@ -596,6 +596,8 @@ class DB_Command extends WP_CLI_Command {
 		$rows = array();
 		$fields = array( 'Name', 'Size' );
 
+		$default_unit = ( empty( $size_format ) ) ? ' B' : '';
+
 		if ( $tables ) {
 
 			// Add all of the table sizes
@@ -612,7 +614,7 @@ class DB_Command extends WP_CLI_Command {
 				// Add the table size to the list.
 				$rows[] = array(
 					'Name'  => $table_name,
-					'Size'  => strtoupper( size_format( $table_bytes ) ),
+					'Size'  => strtoupper( $table_bytes ) . $default_unit,
 				);
 			}
 		} else {
@@ -627,39 +629,43 @@ class DB_Command extends WP_CLI_Command {
 			// Add the database size to the list.
 			$rows[] = array(
 				'Name'  => DB_NAME,
-				'Size'  => strtoupper( size_format( $db_bytes ) ),
+				'Size'  => strtoupper( $db_bytes ) . $default_unit,
 				);
 		}
 
-		if ( ! empty( $size_format ) && isset( $db_bytes ) && ! $tables ) {
+		if ( ! empty( $size_format ) ) {
+			foreach( $rows as $index => $row ) {
+					// These added WP 4.4.0.
+					if ( ! defined( 'KB_IN_BYTES' ) ) {
+						define( 'KB_IN_BYTES', 1024 );
+					}
+					if ( ! defined( 'MB_IN_BYTES' ) ) {
+						define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
+					}
 
-			// These added WP 4.4.0.
-			if ( ! defined( 'KB_IN_BYTES' ) ) {
-				define( 'KB_IN_BYTES', 1024 );
+					// Display the database size as a number.
+					switch( $size_format ) {
+						case 'mb':
+							$divisor = MB_IN_BYTES;
+							break;
+
+						case 'kb':
+							$divisor = KB_IN_BYTES;
+							break;
+
+						case 'b':
+						default:
+							$divisor = 1;
+							break;
+					}
+
+					$rows[ $index ]['Size'] = ceil( $row['Size'] / $divisor ) . " " . strtoupper( $size_format );
 			}
-			if ( ! defined( 'MB_IN_BYTES' ) ) {
-				define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
-			}
+		}
 
-			// Display the database size as a number.
-			switch( $size_format ) {
-				case 'mb':
-					$divisor = MB_IN_BYTES;
-					break;
-
-				case 'kb':
-					$divisor = KB_IN_BYTES;
-					break;
-
-				case 'b':
-				default:
-					$divisor = 1;
-					break;
-			}
-
-			WP_CLI::Line( ceil( $db_bytes / $divisor ) );
+		if ( ! empty( $size_format) && ! $tables ) {
+			WP_CLI::Line( filter_var( $rows[0]['Size'], FILTER_SANITIZE_NUMBER_INT ) );
 		} else {
-
 			// Display the rows.
 			$args = array(
 				'format' => $format,
