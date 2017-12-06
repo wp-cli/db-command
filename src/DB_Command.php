@@ -575,100 +575,100 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * @when after_wp_load
 	 */
-	 public function size( $args, $assoc_args ) {
+	public function size( $args, $assoc_args ) {
 
- 		global $wpdb;
+		global $wpdb;
 
- 		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
- 		$size_format = WP_CLI\Utils\get_flag_value( $assoc_args, 'size_format' );
- 		$tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'tables' );
- 		$tables = ! empty( $tables );
+		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
+		$size_format = WP_CLI\Utils\get_flag_value( $assoc_args, 'size_format' );
+		$tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'tables' );
+		$tables = ! empty( $tables );
 
- 		unset( $assoc_args['format'] );
- 		unset( $assoc_args['size_format'] );
- 		unset( $assoc_args['tables'] );
+		unset( $assoc_args['format'] );
+		unset( $assoc_args['size_format'] );
+		unset( $assoc_args['tables'] );
 
- 		if ( empty( $args ) && empty( $assoc_args ) ) {
- 			$assoc_args['scope'] = 'all';
- 		}
+		if ( empty( $args ) && empty( $assoc_args ) ) {
+			$assoc_args['scope'] = 'all';
+		}
 
- 		// Build rows for the formatter.
- 		$rows = array();
- 		$fields = array( 'Name', 'Size' );
+		// Build rows for the formatter.
+		$rows = array();
+		$fields = array( 'Name', 'Size' );
 
- 		if ( $tables ) {
+		if ( $tables ) {
 
- 			// Add all of the table sizes
- 			foreach( WP_CLI\Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
+			// Add all of the table sizes
+			foreach( WP_CLI\Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
 
- 				// Get the table size.
- 				$table_bytes = $wpdb->get_var( $wpdb->prepare(
- 					"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' and Table_Name = '%s' GROUP BY Table_Name LIMIT 1",
- 					DB_NAME,
- 					$table_name
- 					)
- 				);
+				// Get the table size.
+				$table_bytes = $wpdb->get_var( $wpdb->prepare(
+					"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' and Table_Name = '%s' GROUP BY Table_Name LIMIT 1",
+					DB_NAME,
+					$table_name
+					)
+				);
 
- 				// Add the table size to the list.
- 				$rows[] = array(
- 					'Name'  => $table_name,
- 					'Size'  => strtoupper( $table_bytes ) . " " . 'B',
- 				);
- 			}
- 		} else {
+				// Add the table size to the list.
+				$rows[] = array(
+					'Name'  => $table_name,
+					'Size'  => strtoupper( $table_bytes ) . " " . 'B',
+				);
+			}
+		} else {
 
- 			// Get the database size.
- 			$db_bytes = $wpdb->get_var( $wpdb->prepare(
- 				"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' GROUP BY table_schema;",
- 				DB_NAME
- 				)
- 			);
+			// Get the database size.
+			$db_bytes = $wpdb->get_var( $wpdb->prepare(
+				"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' GROUP BY table_schema;",
+				DB_NAME
+				)
+			);
 
- 			// Add the database size to the list.
- 			$rows[] = array(
- 				'Name'  => DB_NAME,
- 				'Size'  => strtoupper( $db_bytes ) . " " . 'B',
- 				);
- 		}
+			// Add the database size to the list.
+			$rows[] = array(
+				'Name'  => DB_NAME,
+				'Size'  => strtoupper( $db_bytes ) . " " . 'B',
+				);
+		}
 
- 		if ( ! empty( $size_format ) ) {
- 			foreach( $rows as $index => $row ) {
- 					// These added WP 4.4.0.
- 					if ( ! defined( 'KB_IN_BYTES' ) ) {
- 						define( 'KB_IN_BYTES', 1024 );
- 					}
- 					if ( ! defined( 'MB_IN_BYTES' ) ) {
- 						define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
- 					}
+		if ( ! empty( $size_format ) ) {
+			foreach( $rows as $index => $row ) {
+					// These added WP 4.4.0.
+					if ( ! defined( 'KB_IN_BYTES' ) ) {
+						define( 'KB_IN_BYTES', 1024 );
+					}
+					if ( ! defined( 'MB_IN_BYTES' ) ) {
+						define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
+					}
 
- 					// Display the database size as a number.
- 					switch( $size_format ) {
- 						case 'mb':
- 							$divisor = MB_IN_BYTES;
- 							break;
+					// Display the database size as a number.
+					switch( $size_format ) {
+						case 'mb':
+							$divisor = MB_IN_BYTES;
+							break;
 
- 						case 'kb':
- 							$divisor = KB_IN_BYTES;
- 							break;
+						case 'kb':
+							$divisor = KB_IN_BYTES;
+							break;
 
- 						case 'b':
- 						default:
- 							$divisor = 1;
- 							break;
- 					}
+						case 'b':
+						default:
+							$divisor = 1;
+							break;
+					}
 
- 					$rows[ $index ]['Size'] = $row['Size'] / $divisor . " " . ucfirst( $size_format );
- 			}
- 		}
+					$rows[ $index ]['Size'] = $row['Size'] / $divisor . " " . ucfirst( $size_format );
+			}
+		}
 
- 		// Display the rows.
- 		$args = array(
- 			'format' => $format,
- 		);
+		// Display the rows.
+		$args = array(
+			'format' => $format,
+		);
 
- 		$formatter = new \WP_CLI\Formatter( $args, $fields );
- 		$formatter->display_items( $rows );
- 	}
+		$formatter = new \WP_CLI\Formatter( $args, $fields );
+		$formatter->display_items( $rows );
+	}
 
 	/**
 	 * Displays the database table prefix.
