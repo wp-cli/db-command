@@ -596,6 +596,8 @@ class DB_Command extends WP_CLI_Command {
 		$rows = array();
 		$fields = array( 'Name', 'Size' );
 
+		$default_unit = ( empty( $size_format ) ) ? ' B' : '';
+
 		if ( $tables ) {
 
 			// Add all of the table sizes
@@ -612,7 +614,7 @@ class DB_Command extends WP_CLI_Command {
 				// Add the table size to the list.
 				$rows[] = array(
 					'Name'  => $table_name,
-					'Size'  => strtoupper( $table_bytes ) . " " . 'B',
+					'Size'  => strtoupper( $table_bytes ) . $default_unit,
 				);
 			}
 		} else {
@@ -627,7 +629,7 @@ class DB_Command extends WP_CLI_Command {
 			// Add the database size to the list.
 			$rows[] = array(
 				'Name'  => DB_NAME,
-				'Size'  => strtoupper( $db_bytes ) . " " . 'B',
+				'Size'  => strtoupper( $db_bytes ) . $default_unit,
 				);
 		}
 
@@ -657,17 +659,21 @@ class DB_Command extends WP_CLI_Command {
 							break;
 					}
 
-					$rows[ $index ]['Size'] = $row['Size'] / $divisor . " " . ucfirst( $size_format );
+					$rows[ $index ]['Size'] = ceil( $row['Size'] / $divisor ) . " " . strtoupper( $size_format );
 			}
 		}
 
-		// Display the rows.
-		$args = array(
-			'format' => $format,
-		);
+		if ( ! empty( $size_format) && ! $tables ) {
+			WP_CLI::Line( filter_var( $rows[0]['Size'], FILTER_SANITIZE_NUMBER_INT ) );
+		} else {
+			// Display the rows.
+			$args = array(
+				'format' => $format,
+			);
 
-		$formatter = new \WP_CLI\Formatter( $args, $fields );
-		$formatter->display_items( $rows );
+			$formatter = new \WP_CLI\Formatter( $args, $fields );
+			$formatter->display_items( $rows );
+		}
 	}
 
 	/**
