@@ -3,7 +3,7 @@
 use \WP_CLI\Utils;
 
 /**
- * Perform basic database operations using credentials stored in wp-config.php
+ * Performs basic database operations using credentials stored in wp-config.php.
  *
  * ## EXAMPLES
  *
@@ -27,7 +27,7 @@ use \WP_CLI\Utils;
 class DB_Command extends WP_CLI_Command {
 
 	/**
-	 * Create a new database.
+	 * Creates a new database.
 	 *
 	 * Runs `CREATE_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 	 * `DB_USER` and `DB_PASSWORD` database credentials specified in
@@ -46,7 +46,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Delete the existing database.
+	 * Deletes the existing database.
 	 *
 	 * Runs `DROP_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 	 * `DB_USER` and `DB_PASSWORD` database credentials specified in
@@ -71,7 +71,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Remove all tables from the database.
+	 * Removes all tables from the database.
 	 *
 	 * Runs `DROP_DATABASE` and `CREATE_DATABASE` SQL statements using
 	 * `DB_HOST`, `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
@@ -97,7 +97,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Check the current status of the database.
+	 * Checks the current status of the database.
 	 *
 	 * Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
@@ -120,7 +120,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Optimize the database.
+	 * Optimizes the database.
 	 *
 	 * Runs `mysqlcheck` utility with `--optimize=true` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
@@ -143,7 +143,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Repair the database.
+	 * Repairs the database.
 	 *
 	 * Runs `mysqlcheck` utility with `--repair=true` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
@@ -166,7 +166,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Open a MySQL console using credentials from wp-config.php
+	 * Opens a MySQL console using credentials from wp-config.php
 	 *
 	 * ## OPTIONS
 	 *
@@ -196,7 +196,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Execute a SQL query against the database.
+	 * Executes a SQL query against the database.
 	 *
 	 * Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 	 *  and `DB_PASSWORD` database credentials specified in wp-config.php.
@@ -374,7 +374,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Import a database from a file or from STDIN.
+	 * Imports a database from a file or from STDIN.
 	 *
 	 * Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
 	 * `DB_PASSWORD` database credentials specified in wp-config.php. This
@@ -424,7 +424,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * List the database tables.
+	 * Lists the database tables.
 	 *
 	 * Defaults to all tables registered to the $wpdb database handler.
 	 *
@@ -495,7 +495,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Display the database name and size.
+	 * Displays the database name and size.
 	 *
 	 * Display the database name and size for `DB_NAME` specified in wp-config.php.
 	 * The size defaults to a human-readable number.
@@ -671,7 +671,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Display the database table prefix.
+	 * Displays the database table prefix.
 	 *
 	 * Display the database table prefix, as defined by the database handler's interpretation of the current site.
 	 *
@@ -689,7 +689,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Find a string in the database.
+	 * Finds a string in the database.
 	 *
 	 * Searches through all or a selection of database tables for a given string, Outputs colorized references to the string.
 	 *
@@ -1022,7 +1022,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Get the column names of a db table differentiated into key columns and text columns and all columns.
+	 * Gets the column names of a db table differentiated into key columns and text columns and all columns.
 	 *
 	 * @param string $table The table name.
 	 * @return array A 3 element array consisting of an array of primary key column names, an array of text column names, and an array containing all column names.
@@ -1049,7 +1049,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Whether a column is considered text or not.
+	 * Determines whether a column is considered text or not.
 	 *
 	 * @param string Column type.
 	 * @bool True if text column, false otherwise.
