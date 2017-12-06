@@ -967,8 +967,8 @@ class DB_Command extends WP_CLI_Command {
 
 							WP_CLI::log( $matches_only ? $col_val : ( $one_line ? "{$table_column_val}:{$pk_val}{$col_val}" : "{$pk_val}{$col_val}" ) );
 
-							if ( true == $delete_records ) {
-								if ( ! empty( $primary_key ) ) {
+							if ( $delete_records ) {
+								if ( ! empty( $column_sql ) ) {
 									if ( $wpdb->prefix . 'options' == $table && 1 == $result->$primary_key ) {
 										WP_CLI::warning( "Removing this record could break your site, skipping the deletion." );
 									} else {
@@ -976,7 +976,7 @@ class DB_Command extends WP_CLI_Command {
 											$primary_key => $result->$primary_key,
 										) );
 
-										WP_CLI::warning( "Record deleted!" );
+										WP_CLI::success( "Record deleted!" );
 									}
 								} else {
 									WP_CLI::warning( "No primary key for this record, skipping the deletion." );

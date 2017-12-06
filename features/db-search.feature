@@ -260,6 +260,17 @@ Feature: Search through the database
       """
     And the return code should be 0
 
+    When I run `wp db search example.com --delete-records`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value
+      2:http://example.com
+      """
+    And STDERR should contain:
+      """
+      Warning: Removing this record could break your site, skipping the deletion.
+      """
+
   Scenario: Search on a multisite install
     Given a WP multisite install
     And I run `wp site create --slug=foo`
