@@ -1,6 +1,6 @@
 {
     "name": "wp-cli/db-command",
-    "description": "Perform basic database operations using credentials stored in wp-config.php.",
+    "description": "Performs basic database operations using credentials stored in wp-config.php.",
     "type": "wp-cli-package",
     "homepage": "https://github.com/wp-cli/db-command",
     "support": {
