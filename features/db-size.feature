@@ -13,7 +13,7 @@ Feature: Display database size
 
     And STDOUT should contain:
       """
-      KB
+      B
       """
 
   Scenario: Display only table sizes for a WordPress install
@@ -22,7 +22,7 @@ Feature: Display database size
     When I run `wp db size --tables`
     Then STDOUT should contain:
       """
-      wp_posts	80 KB
+      wp_posts	81920 B
       """
 
     But STDOUT should not contain:
