@@ -264,9 +264,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:http://example.com
-      wp_options:option_value
-      2:http://example.com
+      http://example.com
       Success: Record deleted!
       """
     And STDERR should contain:
