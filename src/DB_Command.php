@@ -757,6 +757,13 @@ class DB_Command extends WP_CLI_Command {
 	 * [--id_color=<color_code>]
 	 * : Percent color code to use for the row id output. For a list of available percent color codes, see below. Default '%Y' (bright yellow).
 	 *
+	 *
+	 * [--delete-records]
+	 * : Delete the record found from database.
+	 *
+	 * [--yes]
+	 * : Answer yes to the confirmation message.
+	 *
 	 * [--match_color=<color_code>]
 	 * : Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
 	 *
@@ -846,6 +853,11 @@ class DB_Command extends WP_CLI_Command {
 		$one_line = \WP_CLI\Utils\get_flag_value( $assoc_args, 'one_line', false );
 		$matches_only = \WP_CLI\Utils\get_flag_value( $assoc_args, 'matches_only', false );
 		$stats = \WP_CLI\Utils\get_flag_value( $assoc_args, 'stats', false );
+		$delete_records = \WP_CLI\Utils\get_flag_value( $assoc_args, 'delete-records', false );
+
+		if ( $delete_records ) {
+			WP_CLI::confirm( 'Are you sure you want to delete the records found by this search?', $assoc_args );
+		}
 
 		$column_count = $row_count = $match_count = 0;
 		$skipped = array();
@@ -967,6 +979,22 @@ class DB_Command extends WP_CLI_Command {
 							$col_val = implode( ' [...] ', $bits );
 
 							WP_CLI::log( $matches_only ? $col_val : ( $one_line ? "{$table_column_val}:{$pk_val}{$col_val}" : "{$pk_val}{$col_val}" ) );
+
+							if ( $delete_records ) {
+								if ( ! empty( $column_sql ) ) {
+									if ( $wpdb->prefix . 'options' == $table && 1 == $result->$primary_key ) {
+										WP_CLI::warning( 'Removing this record could break your site, skipping the deletion.' );
+									} else {
+										$wpdb->delete( $table, array(
+											$primary_key => $result->$primary_key,
+										) );
+
+										WP_CLI::success( 'Record deleted!' );
+									}
+								} else {
+									WP_CLI::warning( 'No primary key for this record, skipping the deletion.' );
+								}
+							}
 						}
 					}
 				}
