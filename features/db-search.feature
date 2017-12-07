@@ -263,8 +263,14 @@ Feature: Search through the database
     When I try `wp db search "^http://example.com$" --regex --delete-records --yes`
     Then STDOUT should contain:
       """
-      wp_options:option_value
       http://example.com
+      """
+    And STDOUT should contain:
+      """
+      wp_options:option_value
+      """
+    And STDOUT should contain:
+      """
       Success: Record deleted!
       """
     And STDERR should contain:
