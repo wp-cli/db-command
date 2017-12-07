@@ -260,16 +260,20 @@ Feature: Search through the database
       """
     And the return code should be 0
 
-    When I run `wp db search example.com --delete-records`
+    When I try `wp db search "^http://example.com$" --regex --delete-records --yes`
     Then STDOUT should contain:
       """
       wp_options:option_value
+      1:http://example.com
+      wp_options:option_value
       2:http://example.com
+      Success: Record deleted!
       """
     And STDERR should contain:
       """
       Warning: Removing this record could break your site, skipping the deletion.
       """
+    And the return code should be 0
 
   Scenario: Search on a multisite install
     Given a WP multisite install
