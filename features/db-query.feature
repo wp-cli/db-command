@@ -20,4 +20,20 @@ Feature: Query the database with WordPress' MySQL config
       COUNT(ID)
       2
       """
-    And STDERR should be empty
+
+  Scenario: Database querying with passed-in options
+    Given a WP install
+
+    When I run `wp db query "SELECT COUNT(ID) FROM wp_posts;" --dbuser=wp_cli_test --html`
+    Then STDOUT should contain:
+      """
+      <TABLE
+      """
+
+    When I try `wp db query "SELECT COUNT(ID) FROM wp_posts;" --dbuser=no_such_user`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty

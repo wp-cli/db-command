@@ -8,6 +8,10 @@ Feature: Perform database operations
       """
       n
       """
+    And a session_yes file:
+      """
+      y
+      """
 
     When I try `wp option get home`
     Then STDOUT should be empty
@@ -40,6 +44,66 @@ Feature: Perform database operations
       Are you sure you want to drop the 'wp_cli_test' database? [y/n] 
       """
 
+    When I run `wp db reset < session_yes`
+    Then STDOUT should be:
+      """
+      Are you sure you want to reset the 'wp_cli_test' database? [y/n] Success: Database reset.
+      """
+
+  Scenario: DB CRUD with passed-in dbuser/dbpass
+    Given an empty directory
+    And WP files
+    And wp-config.php
+
+    When I try `wp option get home`
+    Then STDOUT should be empty
+    And STDERR should be:
+      """
+      Error: Can’t select database. We were able to connect to the database server (which means your username and password is okay) but not able to select the `wp_cli_test` database.
+      """
+
+    When I run `wp db create --dbuser=wp_cli_test`
+    Then STDOUT should be:
+      """
+      Success: Database created.
+      """
+
+    When I try `wp db create --dbuser=no_such_user`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
+    When I run `wp db drop --yes --dbpass=password1`
+    Then STDOUT should be:
+      """
+      Success: Database dropped.
+      """
+
+    When I try `wp db drop --yes --dbpass=no_such_pass`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
+    When I run `wp db reset --yes --dbuser=wp_cli_test --dbpass=password1`
+    Then STDOUT should be:
+      """
+	  Success: Database reset.
+      """
+
+    When I try `wp db reset --yes --dbuser=no_such_user`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
   Scenario: DB Operations
     Given a WP install
 
@@ -48,6 +112,49 @@ Feature: Perform database operations
 
     When I run `wp db repair`
     Then STDOUT should not be empty
+
+  Scenario: DB Operations with passed-in options
+    Given a WP install
+
+    When I run `wp db optimize --dbuser=wp_cli_test`
+    Then STDOUT should not be empty
+
+    When I try `wp db optimize --dbuser=no_such_user`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
+    # Verbose option prints to STDERR.
+    When I try `wp db optimize --verbose`
+	Then the return code should be 0
+    And STDERR should contain:
+      """
+      Connecting
+      """
+    And STDOUT should not be empty
+
+    When I run `wp db repair --dbpass=password1`
+    Then STDOUT should not be empty
+
+    When I try `wp db repair --dbpass=no_such_pass`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
+    # Verbose option prints to STDERR.
+    When I try `wp db repair --verbose`
+	Then the return code should be 0
+    And STDERR should contain:
+      """
+      Connecting
+      """
+    And STDOUT should not be empty
 
   Scenario: DB Query
     Given a WP install
