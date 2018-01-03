@@ -42,3 +42,20 @@ Feature: Export a WordPress database
       """
       -- MySQL dump
       """
+
+  Scenario: Export database with passed-in options
+    Given a WP install
+
+    When I run `wp db export - --dbpass=password1 --skip-comments`
+    Then STDOUT should not contain:
+      """
+      -- 
+      """
+
+    When I try `wp db export - --dbpass=no_such_pass`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty

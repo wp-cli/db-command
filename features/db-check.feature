@@ -12,4 +12,95 @@ Feature: Check the database
       """
       Success: Database checked.
       """
-    And STDERR should be empty
+
+  Scenario: Run db check with passed-in options
+    Given a WP install
+
+    When I run `wp db check --dbuser=wp_cli_test`
+    Then STDOUT should contain:
+      """
+      Success: Database checked.
+      """
+
+    When I run `wp db check --dbpass=password1`
+    Then STDOUT should contain:
+      """
+      Success: Database checked.
+      """
+
+    When I run `wp db check --dbuser=wp_cli_test --dbpass=password1`
+    Then STDOUT should contain:
+      """
+      Success: Database checked.
+      """
+
+    When I try `wp db check --dbuser=no_such_user`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
+    When I try `wp db check --dbpass=no_such_pass`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
+    # Verbose option prints to STDERR.
+    When I try `wp db check --dbuser=wp_cli_test --verbose`
+	Then the return code should be 0
+    And STDERR should contain:
+      """
+      Connecting
+      """
+    And STDOUT should contain:
+      """
+      Success: Database checked.
+      """
+
+    # '--user' is ignored.
+    When I try `wp db check --user=no_such_user`
+    Then STDOUT should contain:
+      """
+      Success: Database checked.
+      """
+
+    # '--password' works, but MySQL prints warning to STDERR
+    When I try `wp db check --password=password1`
+	Then the return code should be 0
+    And STDERR should contain:
+      """
+      insecure
+      """
+    And STDOUT should contain:
+      """
+      Success: Database checked.
+      """
+
+    # Bad '--password' works in that it fails.
+    When I try `wp db check --password=no_such_pass`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
+    # '--dbpass' overrides '--password'.
+    When I run `wp db check --dbpass=password1 --password=no_such_pass`
+    Then STDOUT should contain:
+      """
+      Success: Database checked.
+      """
+
+    When I try `wp db check --dbpass=no_such_pass --password=password1`
+	Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
