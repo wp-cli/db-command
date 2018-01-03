@@ -35,7 +35,7 @@ Feature: Check the database
       """
 
     When I try `wp db check --dbuser=no_such_user`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -43,7 +43,7 @@ Feature: Check the database
     And STDOUT should be empty
 
     When I try `wp db check --dbpass=no_such_pass`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -52,7 +52,7 @@ Feature: Check the database
 
     # Verbose option prints to STDERR.
     When I try `wp db check --dbuser=wp_cli_test --verbose`
-	Then the return code should be 0
+    Then the return code should be 0
     And STDERR should contain:
       """
       Connecting
@@ -71,7 +71,7 @@ Feature: Check the database
 
     # '--password' works, but MySQL prints warning to STDERR
     When I try `wp db check --password=password1`
-	Then the return code should be 0
+    Then the return code should be 0
     And STDERR should contain:
       """
       insecure
@@ -81,9 +81,9 @@ Feature: Check the database
       Success: Database checked.
       """
 
-    # Bad '--password' works in that it fails.
+    # Bad '--password' works in that it causes access fail.
     When I try `wp db check --password=no_such_pass`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -98,7 +98,7 @@ Feature: Check the database
       """
 
     When I try `wp db check --dbpass=no_such_pass --password=password1`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied

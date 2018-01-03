@@ -37,7 +37,7 @@ Feature: Import a WordPress database
       """
 
     When I try `wp db import --dbuser=wp_cli_test --dbpass=no_such_pass`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
