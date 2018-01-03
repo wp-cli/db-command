@@ -69,7 +69,7 @@ Feature: Perform database operations
       """
 
     When I try `wp db create --dbuser=no_such_user`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -83,7 +83,7 @@ Feature: Perform database operations
       """
 
     When I try `wp db drop --yes --dbpass=no_such_pass`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -93,11 +93,11 @@ Feature: Perform database operations
     When I run `wp db reset --yes --dbuser=wp_cli_test --dbpass=password1`
     Then STDOUT should be:
       """
-	  Success: Database reset.
+      Success: Database reset.
       """
 
     When I try `wp db reset --yes --dbuser=no_such_user`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -120,7 +120,7 @@ Feature: Perform database operations
     Then STDOUT should not be empty
 
     When I try `wp db optimize --dbuser=no_such_user`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -129,7 +129,7 @@ Feature: Perform database operations
 
     # Verbose option prints to STDERR.
     When I try `wp db optimize --verbose`
-	Then the return code should be 0
+    Then the return code should be 0
     And STDERR should contain:
       """
       Connecting
@@ -140,7 +140,7 @@ Feature: Perform database operations
     Then STDOUT should not be empty
 
     When I try `wp db repair --dbpass=no_such_pass`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -149,7 +149,7 @@ Feature: Perform database operations
 
     # Verbose option prints to STDERR.
     When I try `wp db repair --verbose`
-	Then the return code should be 0
+    Then the return code should be 0
     And STDERR should contain:
       """
       Connecting
