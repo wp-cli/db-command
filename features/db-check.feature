@@ -69,13 +69,11 @@ Feature: Check the database
       Success: Database checked.
       """
 
-    # '--password' works, but MySQL prints warning to STDERR
+    # '--password' works, but MySQL may (depending on version) print warning to STDERR
     When I try `wp db check --password=password1`
     Then the return code should be 0
-    And STDERR should contain:
-      """
-      insecure
-      """
+    # Match STDERR containing "insecure" or empty STDERR.
+    And STDERR should match /^(?:.+insecure.+|)$/
     And STDOUT should contain:
       """
       Success: Database checked.
