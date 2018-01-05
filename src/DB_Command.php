@@ -36,10 +36,10 @@ class DB_Command extends WP_CLI_Command {
 	 * ## OPTIONS
 	 *
 	 * [--dbuser=<value>]
-	 * : Username to pass to mysqlcheck. Defaults to DB_USER.
+	 * : Username to pass to mysql. Defaults to DB_USER.
 	 *
 	 * [--dbpass=<value>]
-	 * : Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -63,10 +63,10 @@ class DB_Command extends WP_CLI_Command {
 	 * ## OPTIONS
 	 *
 	 * [--dbuser=<value>]
-	 * : Username to pass to mysqlcheck. Defaults to DB_USER.
+	 * : Username to pass to mysql. Defaults to DB_USER.
 	 *
 	 * [--dbpass=<value>]
-	 * : Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
 	 * [--yes]
 	 * : Answer yes to the confirmation message.
@@ -94,10 +94,10 @@ class DB_Command extends WP_CLI_Command {
 	 * ## OPTIONS
 	 *
 	 * [--dbuser=<value>]
-	 * : Username to pass to mysqlcheck. Defaults to DB_USER.
+	 * : Username to pass to mysql. Defaults to DB_USER.
 	 *
 	 * [--dbpass=<value>]
-	 * : Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
 	 * [--yes]
 	 * : Answer yes to the confirmation message.
@@ -232,13 +232,13 @@ class DB_Command extends WP_CLI_Command {
 	 * : Use a specific character set. Defaults to DB_CHARSET when defined.
 	 *
 	 * [--dbuser=<value>]
-	 * : Username to pass to the MySQL executable. Defaults to DB_USER.
+	 * : Username to pass to mysql. Defaults to DB_USER.
 	 *
 	 * [--dbpass=<value>]
-	 * : Password to pass to the MySQL executable. Defaults to DB_PASSWORD.
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to the MySQL executable.
+	 * : Extra arguments to pass to mysql.
 	 *
 	 * ## EXAMPLES
 	 *
