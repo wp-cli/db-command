@@ -841,35 +841,37 @@ class DB_Command extends WP_CLI_Command {
 	 * : Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
 	 *
 	 * The percent color codes available are:
-	 * '%y' Yellow (dark) (mustard)
-	 * '%g' Green (dark)
-	 * '%b' Blue (dark)
-	 * '%r' Red (dark)
-	 * '%m' Magenta (dark)
-	 * '%c' Cyan (dark)
-	 * '%w' White (dark) (light gray)
-	 * '%k' Black
-	 * '%Y' Yellow (bright)
-	 * '%G' Green (bright)
-	 * '%B' Blue (bright)
-	 * '%R' Red (bright)
-	 * '%M' Magenta (bright)
-	 * '%C' Cyan (bright)
-	 * '%W' White
-	 * '%K' Black (bright) (dark gray)
-	 * '%3' Yellow background (dark) (mustard)
-	 * '%2' Green background (dark)
-	 * '%4' Blue background (dark)
-	 * '%1' Red background (dark)
-	 * '%5' Magenta background (dark)
-	 * '%6' Cyan background (dark)
-	 * '%7' White background (dark) (light gray)
-	 * '%0' Black background
-	 * '%8' Reverse
-	 * '%U' Underline
-	 * '%F' Blink (unlikely to work)
+	 * | Code | Color
+	 * | ---- | -----
+	 * | '%y' | Yellow (dark) (mustard)
+	 * | '%g' | Green (dark)
+	 * | '%b' | Blue (dark)
+	 * | '%r' | Red (dark)
+	 * | '%m' | Magenta (dark)
+	 * | '%c' | Cyan (dark)
+	 * | '%w' | White (dark) (light gray)
+	 * | '%k' | Black
+	 * | '%Y' | Yellow (bright)
+	 * | '%G' | Green (bright)
+	 * | '%B' | Blue (bright)
+	 * | '%R' | Red (bright)
+	 * | '%M' | Magenta (bright)
+	 * | '%C' | Cyan (bright)
+	 * | '%W' | White
+	 * | '%K' | Black (bright) (dark gray)
+	 * | '%3' | Yellow background (dark) (mustard)
+	 * | '%2' | Green background (dark)
+	 * | '%4' | Blue background (dark)
+	 * | '%1' | Red background (dark)
+	 * | '%5' | Magenta background (dark)
+	 * | '%6' | Cyan background (dark)
+	 * | '%7' | White background (dark) (light gray)
+	 * | '%0' | Black background
+	 * | '%8' | Reverse
+	 * | '%U' | Underline
+	 * | '%F' | Blink (unlikely to work)
 	 *
-	 * They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background '%3%k' can be made black on a bright yellow background with '%Y%0%8'.
+	 * They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background `%3%k` can be made black on a bright yellow background with `%Y%0%8`.
 	 *
 	 * ## EXAMPLES
 	 *
