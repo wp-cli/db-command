@@ -21,7 +21,7 @@
         "files": [ "db-command.php" ]
     },
     "require": {
-        "wp-cli/wp-cli": "*"
+        "wp-cli/wp-cli": ">=1.5.0"
     },
     "require-dev": {
         "behat/behat": "~2.5"
