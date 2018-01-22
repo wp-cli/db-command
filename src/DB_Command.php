@@ -950,7 +950,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 		} else {
 			$search_regex = '#' . preg_quote( $search, '#' ) . '#i';
-			$esc_like_search = '%' . self::esc_like( $search ) . '%';
+			$esc_like_search = '%' . Utils\esc_like( $search ) . '%';
 		}
 
 		$encoding = null;
@@ -1177,27 +1177,6 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Escapes a MySQL string for inclusion in a `LIKE` clause. BC wrapper around different WP versions of this.
-	 *
-	 * @param string $old String to escape.
-	 * @param string Escaped string.
-	 */
-	private static function esc_like( $old ) {
-		global $wpdb;
-
-		// Remove notices in 4.0 and support backwards compatibility
-		if ( method_exists( $wpdb, 'esc_like' ) ) {
-			// 4.0
-			$old = $wpdb->esc_like( $old );
-		} else {
-			// 3.9 or less
-			$old = like_escape( esc_sql( $old ) );
-		}
-
-		return $old;
 	}
 
 	/**
