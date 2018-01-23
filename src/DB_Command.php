@@ -725,10 +725,10 @@ class DB_Command extends WP_CLI_Command {
 						define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
 					}
 				        if ( ! defined( 'GB_IN_BYTES' ) ) {
-						define( 'GB_IN_BYTES', 1024 * KB_IN_BYTES );
+						define( 'GB_IN_BYTES', 1024 * MB_IN_BYTES );
 					}
 				        if ( ! defined( 'TB_IN_BYTES' ) ) {
-						define( 'TB_IN_BYTES', 1024 * KB_IN_BYTES );
+						define( 'TB_IN_BYTES', 1024 * GB_IN_BYTES );
 					}
 
 					// Display the database size as a number.
