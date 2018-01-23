@@ -590,8 +590,8 @@ class DB_Command extends WP_CLI_Command {
 	 *  - b (bytes)
 	 *  - kb (kilobytes)
 	 *  - mb (megabytes)
-	 *  - gb (gigabyte)
-	 *  - tb (terabyte)
+	 *  - gb (gigabytes)
+	 *  - tb (terabytes)
 	 *  ---
 	 *
 	 * [--tables]
