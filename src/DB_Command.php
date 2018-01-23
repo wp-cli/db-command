@@ -590,6 +590,8 @@ class DB_Command extends WP_CLI_Command {
 	 *  - b (bytes)
 	 *  - kb (kilobytes)
 	 *  - mb (megabytes)
+	 *  - gb (gigabyte)
+	 *  - tb (terabyte)
 	 *  ---
 	 *
 	 * [--tables]
@@ -722,9 +724,23 @@ class DB_Command extends WP_CLI_Command {
 					if ( ! defined( 'MB_IN_BYTES' ) ) {
 						define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
 					}
+				        if ( ! defined( 'GB_IN_BYTES' ) ) {
+						define( 'GB_IN_BYTES', 1024 * KB_IN_BYTES );
+					}
+				        if ( ! defined( 'TB_IN_BYTES' ) ) {
+						define( 'TB_IN_BYTES', 1024 * KB_IN_BYTES );
+					}
 
 					// Display the database size as a number.
 					switch( $size_format ) {
+						case 'tb':
+						         $divisor = TB_IN_BYTES;
+							 break;
+							
+						case 'gb':
+						         $divisor = GB_IN_BYTES;
+							 break;
+							
 						case 'mb':
 							$divisor = MB_IN_BYTES;
 							break;
