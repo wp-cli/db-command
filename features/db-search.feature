@@ -62,6 +62,25 @@ Feature: Search through the database
       wp_options:option_value
       1:example.com
       """
+    And STDOUT should not contain:
+      """
+      wp_not
+      """
+    And STDOUT should not contain:
+      """
+      pw_options
+      """
+    And STDOUT should not contain:
+      """
+      e_ample.c%m
+      """
+
+    When I run `wp db search example.com wp_options wp_not --before_context=0 --after_context=0 --all-tables`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value
+      1:example.com
+      """
     And STDOUT should contain:
       """
       wp_not:awesome_stuff
@@ -236,7 +255,7 @@ Feature: Search through the database
     When I try `wp db search example.com no_such_table`
     Then STDERR should be:
       """
-      Error: No such table 'no_such_table'.
+      Error: Couldn't find any tables matching: no_such_table
       """
     And STDOUT should be empty
     And the return code should be 1
@@ -244,7 +263,7 @@ Feature: Search through the database
     When I run `wp db query "CREATE TABLE no_key ( awesome_stuff TEXT );"`
     And I run `wp db query "CREATE TABLE no_text ( id int(11) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id) );"`
 
-    When I try `wp db search example.com no_key`
+    When I try `wp db search example.com no_key --all-tables`
     Then STDOUT should be empty
     And STDERR should be:
       """
@@ -252,7 +271,7 @@ Feature: Search through the database
       """
     And the return code should be 0
 
-    When I try `wp db search example.com no_text`
+    When I try `wp db search example.com no_text --all-tables`
     Then STDOUT should be empty
     And STDERR should be:
       """
@@ -966,7 +985,7 @@ Feature: Search through the database
     When I run `wp db query "SOURCE esc_sql_ident.sql;"`
     Then STDERR should be empty
 
-    When I run `wp db search 'v_v' TABLE`
+    When I run `wp db search 'v_v' TABLE --all-tables`
     Then STDOUT should be:
       """
       TABLE:VALUES

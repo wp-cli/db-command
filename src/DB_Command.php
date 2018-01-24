@@ -517,7 +517,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
 	 *
 	 * [--network]
-	 * : List all the tables in a multisite install. Overrides --scope=<scope>.
+	 * : List all the tables in a multisite install.
 	 *
 	 * [--all-tables-with-prefix]
 	 * : List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
@@ -611,7 +611,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
 	 *
 	 * [--network]
-	 * : List all the tables in a multisite install. Overrides --scope=<scope>.
+	 * : List all the tables in a multisite install.
 	 *
 	 * [--all-tables-with-prefix]
 	 * : List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
