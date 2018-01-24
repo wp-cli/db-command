@@ -30,6 +30,17 @@ Feature: List database tables
       wp_postmeta,wp_posts
       """
 
+    When I run `wp db query "CREATE TABLE xx_wp_posts ( id int )"`
+    And I run `wp db tables '*_posts'`
+    Then STDOUT should be:
+      """
+      wp_posts
+      """
+    And STDOUT should not contain:
+      """
+      xx_wp_posts
+      """
+
   @require-wp-3.9
   Scenario: List database tables on a multisite WordPress install
     Given a WP multisite install
