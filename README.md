@@ -43,12 +43,20 @@ wp db
 Creates a new database.
 
 ~~~
-wp db create 
+wp db create [--dbuser=<value>] [--dbpass=<value>]
 ~~~
 
 Runs `CREATE_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 `DB_USER` and `DB_PASSWORD` database credentials specified in
 wp-config.php.
+
+**OPTIONS**
+
+	[--dbuser=<value>]
+		Username to pass to mysql. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysql. Defaults to DB_PASSWORD.
 
 **EXAMPLES**
 
@@ -62,7 +70,7 @@ wp-config.php.
 Deletes the existing database.
 
 ~~~
-wp db drop [--yes]
+wp db drop [--dbuser=<value>] [--dbpass=<value>] [--yes]
 ~~~
 
 Runs `DROP_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
@@ -70,6 +78,12 @@ Runs `DROP_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 wp-config.php.
 
 **OPTIONS**
+
+	[--dbuser=<value>]
+		Username to pass to mysql. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysql. Defaults to DB_PASSWORD.
 
 	[--yes]
 		Answer yes to the confirmation message.
@@ -86,7 +100,7 @@ wp-config.php.
 Removes all tables from the database.
 
 ~~~
-wp db reset [--yes]
+wp db reset [--dbuser=<value>] [--dbpass=<value>] [--yes]
 ~~~
 
 Runs `DROP_DATABASE` and `CREATE_DATABASE` SQL statements using
@@ -94,6 +108,12 @@ Runs `DROP_DATABASE` and `CREATE_DATABASE` SQL statements using
 specified in wp-config.php.
 
 **OPTIONS**
+
+	[--dbuser=<value>]
+		Username to pass to mysql. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysql. Defaults to DB_PASSWORD.
 
 	[--yes]
 		Answer yes to the confirmation message.
@@ -110,7 +130,7 @@ specified in wp-config.php.
 Checks the current status of the database.
 
 ~~~
-wp db check 
+wp db check [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>]
 ~~~
 
 Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
@@ -119,6 +139,17 @@ specified in wp-config.php.
 
 [See docs](http://dev.mysql.com/doc/refman/5.7/en/check-table.html)
 for more details on the `CHECK TABLE` statement.
+
+**OPTIONS**
+
+	[--dbuser=<value>]
+		Username to pass to mysqlcheck. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
+
+	[--<field>=<value>]
+		Extra arguments to pass to mysqlcheck.
 
 **EXAMPLES**
 
@@ -132,7 +163,7 @@ for more details on the `CHECK TABLE` statement.
 Optimizes the database.
 
 ~~~
-wp db optimize 
+wp db optimize [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>]
 ~~~
 
 Runs `mysqlcheck` utility with `--optimize=true` using `DB_HOST`,
@@ -141,6 +172,17 @@ specified in wp-config.php.
 
 [See docs](http://dev.mysql.com/doc/refman/5.7/en/optimize-table.html)
 for more details on the `OPTIMIZE TABLE` statement.
+
+**OPTIONS**
+
+	[--dbuser=<value>]
+		Username to pass to mysqlcheck. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
+
+	[--<field>=<value>]
+		Extra arguments to pass to mysqlcheck.
 
 **EXAMPLES**
 
@@ -171,7 +213,7 @@ Display the database table prefix, as defined by the database handler's interpre
 Repairs the database.
 
 ~~~
-wp db repair 
+wp db repair [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>]
 ~~~
 
 Runs `mysqlcheck` utility with `--repair=true` using `DB_HOST`,
@@ -180,6 +222,17 @@ specified in wp-config.php.
 
 [See docs](http://dev.mysql.com/doc/refman/5.7/en/repair-table.html) for
 more details on the `REPAIR TABLE` statement.
+
+**OPTIONS**
+
+	[--dbuser=<value>]
+		Username to pass to mysqlcheck. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
+
+	[--<field>=<value>]
+		Extra arguments to pass to mysqlcheck.
 
 **EXAMPLES**
 
@@ -193,7 +246,7 @@ more details on the `REPAIR TABLE` statement.
 Opens a MySQL console using credentials from wp-config.php
 
 ~~~
-wp db cli [--database=<database>] [--default-character-set=<character-set>] [--<field>=<value>]
+wp db cli [--database=<database>] [--default-character-set=<character-set>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>]
 ~~~
 
 **OPTIONS**
@@ -204,8 +257,14 @@ wp db cli [--database=<database>] [--default-character-set=<character-set>] [--<
 	[--default-character-set=<character-set>]
 		Use a specific character set. Defaults to DB_CHARSET when defined.
 
+	[--dbuser=<value>]
+		Username to pass to mysql. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysql. Defaults to DB_PASSWORD.
+
 	[--<field>=<value>]
-		Extra arguments to pass to the MySQL executable.
+		Extra arguments to pass to mysql.
 
 **EXAMPLES**
 
@@ -220,7 +279,7 @@ wp db cli [--database=<database>] [--default-character-set=<character-set>] [--<
 Executes a SQL query against the database.
 
 ~~~
-wp db query [<sql>] [--<field>=<value>]
+wp db query [<sql>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>]
 ~~~
 
 Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
@@ -230,6 +289,12 @@ Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 
 	[<sql>]
 		A SQL query. If not passed, will try to read from STDIN.
+
+	[--dbuser=<value>]
+		Username to pass to mysql. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysql. Defaults to DB_PASSWORD.
 
 	[--<field>=<value>]
 		Extra arguments to pass to mysql.
@@ -271,7 +336,7 @@ Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--porcelain]
+wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--porcelain]
 ~~~
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
@@ -283,8 +348,14 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 		The name of the SQL file to export. If '-', then outputs to STDOUT. If
 		omitted, it will be '{dbname}-{Y-m-d}-{random-hash}.sql'.
 
+	[--dbuser=<value>]
+		Username to pass to mysqldump. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysqldump. Defaults to DB_PASSWORD.
+
 	[--<field>=<value>]
-		Extra arguments to pass to mysqldump
+		Extra arguments to pass to mysqldump.
 
 	[--tables=<tables>]
 		The comma separated list of specific tables to export. Excluding this parameter will export all tables in the database.
@@ -341,7 +412,7 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 Imports a database from a file or from STDIN.
 
 ~~~
-wp db import [<file>] [--skip-optimization]
+wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--skip-optimization]
 ~~~
 
 Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
@@ -353,6 +424,12 @@ defined in the SQL.
 
 	[<file>]
 		The name of the SQL file to import. If '-', then reads from STDIN. If omitted, it will look for '{dbname}.sql'.
+
+	[--dbuser=<value>]
+		Username to pass to mysql. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysql. Defaults to DB_PASSWORD.
 
 	[--skip-optimization]
 		When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
@@ -437,35 +514,38 @@ Defaults to searching through all tables registered to $wpdb. On multisite, this
 		Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
 
 The percent color codes available are:
-'%y' Yellow (dark) (mustard)
-'%g' Green (dark)
-'%b' Blue (dark)
-'%r' Red (dark)
-'%m' Magenta (dark)
-'%c' Cyan (dark)
-'%w' White (dark) (light gray)
-'%k' Black
-'%Y' Yellow (bright)
-'%G' Green (bright)
-'%B' Blue (bright)
-'%R' Red (bright)
-'%M' Magenta (bright)
-'%C' Cyan (bright)
-'%W' White
-'%K' Black (bright) (dark gray)
-'%3' Yellow background (dark) (mustard)
-'%2' Green background (dark)
-'%4' Blue background (dark)
-'%1' Red background (dark)
-'%5' Magenta background (dark)
-'%6' Cyan background (dark)
-'%7' White background (dark) (light gray)
-'%0' Black background
-'%8' Reverse
-'%U' Underline
-'%F' Blink (unlikely to work)
 
-They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background '%3%k' can be made black on a bright yellow background with '%Y%0%8'.
+| Code | Color
+| ---- | -----
+|  %y  | Yellow (dark) (mustard)
+|  %g  | Green (dark)
+|  %b  | Blue (dark)
+|  %r  | Red (dark)
+|  %m  | Magenta (dark)
+|  %c  | Cyan (dark)
+|  %w  | White (dark) (light gray)
+|  %k  | Black
+|  %Y  | Yellow (bright)
+|  %G  | Green (bright)
+|  %B  | Blue (bright)
+|  %R  | Red (bright)
+|  %M  | Magenta (bright)
+|  %C  | Cyan (bright)
+|  %W  | White
+|  %K  | Black (bright) (dark gray)
+|  %3  | Yellow background (dark) (mustard)
+|  %2  | Green background (dark)
+|  %4  | Blue background (dark)
+|  %1  | Red background (dark)
+|  %5  | Magenta background (dark)
+|  %6  | Cyan background (dark)
+|  %7  | White background (dark) (light gray)
+|  %0  | Black background
+|  %8  | Reverse
+|  %U  | Underline
+|  %F  | Blink (unlikely to work)
+
+They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background `%3%k` can be made black on a bright yellow background with `%Y%0%8`.
 
 **EXAMPLES**
 
@@ -512,7 +592,7 @@ Defaults to all tables registered to the $wpdb database handler.
 		Can be all, global, ms_global, blog, or old tables. Defaults to all.
 
 	[--network]
-		List all the tables in a multisite install. Overrides --scope=<scope>.
+		List all the tables in a multisite install.
 
 	[--all-tables-with-prefix]
 		List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
@@ -570,6 +650,8 @@ The size defaults to a human-readable number.
 		 - b (bytes)
 		 - kb (kilobytes)
 		 - mb (megabytes)
+		 - gb (gigabytes)
+		 - tb (terabytes)
 		 ---
 
 	[--tables]
@@ -589,7 +671,7 @@ The size defaults to a human-readable number.
 		Can be all, global, ms_global, blog, or old tables. Defaults to all.
 
 	[--network]
-		List all the tables in a multisite install. Overrides --scope=<scope>.
+		List all the tables in a multisite install.
 
 	[--all-tables-with-prefix]
 		List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
