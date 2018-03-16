@@ -366,11 +366,11 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export certain posts without create table statements
-	 *     $ wp db export --no-create-info=true --tables=wp_posts --where="ID in (100,101,102)"
+	 *     $ wp db export --no-create-info --tables=wp_posts --where="ID in (100,101,102)"
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export relating meta for certain posts without create table statements
-	 *     $ wp db export --no-create-info=true --tables=wp_postmeta --where="post_id in (100,101,102)"
+	 *     $ wp db export --no-create-info --tables=wp_postmeta --where="post_id in (100,101,102)"
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Skip certain tables from the exported database
@@ -744,11 +744,11 @@ class DB_Command extends WP_CLI_Command {
 						case 'tb':
 						         $divisor = TB_IN_BYTES;
 							 break;
-
+							
 						case 'gb':
 						         $divisor = GB_IN_BYTES;
 							 break;
-
+							
 						case 'mb':
 							$divisor = MB_IN_BYTES;
 							break;
@@ -865,7 +865,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
 	 *
 	 * The percent color codes available are:
-	 *
+	 * 
 	 * | Code | Color
 	 * | ---- | -----
 	 * |  %y  | Yellow (dark) (mustard)
