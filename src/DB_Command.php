@@ -365,6 +365,14 @@ class DB_Command extends WP_CLI_Command {
 	 *     $ wp db export --tables=$(wp db tables --all-tables-with-prefix --format=csv)
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
+	 *     # Export certain posts without create table statements
+	 *     $ wp db export --no-create-info=true --tables=wp_posts --where="ID in (100,101,102)"
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
+	 *
+	 *     # Export relating meta for certain posts without create table statements
+	 *     $ wp db export --no-create-info=true --tables=wp_postmeta --where="post_id in (100,101,102)"
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
+	 *
 	 *     # Skip certain tables from the exported database
 	 *     $ wp db export --exclude_tables=wp_options,wp_users
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
