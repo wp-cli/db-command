@@ -68,6 +68,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--dbpass=<value>]
 	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
+	 * [--re-create]
+	 * : Recreates the database.
+	 *
 	 * [--yes]
 	 * : Answer yes to the confirmation message.
 	 *
@@ -79,7 +82,15 @@ class DB_Command extends WP_CLI_Command {
 	public function drop( $_, $assoc_args ) {
 		WP_CLI::confirm( "Are you sure you want to drop the '" . DB_NAME . "' database?", $assoc_args );
 
-		self::run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ), self::get_dbuser_dbpass_args( $assoc_args ) );
+		$mysql_args = self::get_dbuser_dbpass_args( $assoc_args );
+
+		self::run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ), $mysql_args );
+
+		$recreate = \WP_CLI\Utils\get_flag_value( $assoc_args, 're-create' );
+
+		if ( $recreate ) {
+			self::run_query( self::get_create_query(), $mysql_args );
+		}
 
 		WP_CLI::success( "Database dropped." );
 	}
