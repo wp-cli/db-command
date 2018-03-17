@@ -106,18 +106,18 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     $ wp db reset --yes
 	 *     Success: Database reset.
+	 *
+	 * @when after_wp_load
 	 */
 	public function reset( $_, $assoc_args ) {
-		global $wpdb;
-
 		WP_CLI::confirm( "Are you sure you want to reset the '" . DB_NAME . "' database?", $assoc_args );
 
-		$tables = WP_CLI\Utils\wp_get_table_names( $wpdb->prefix );
+		$tables = WP_CLI\Utils\wp_get_table_names( array(), array( 'all-tables-with-prefix' ) );
 
 		$mysql_args = self::get_dbuser_dbpass_args( $assoc_args );
 
 		foreach ( $tables as $table ) {
-			self::run_query( sprintf( 'DROP TABLE IF EXISTS `%s`', $table ), $mysql_args );
+			self::run_query( sprintf( 'DROP TABLE IF EXISTS `%s`.`%s`', DB_NAME, $table ), $mysql_args );
 		}
 
 		WP_CLI::success( "Database reset." );
@@ -577,6 +577,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$tables = WP_CLI\Utils\wp_get_table_names( $args, $assoc_args );
+		$tables = WP_CLI\Utils\wp_get_table_names( $args );
 
 		if ( 'csv' === $format ) {
 			WP_CLI::line( implode( ',', $tables ) );
