@@ -24,6 +24,26 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  Scenario: Import from database name path by default with passed-in dbuser/dbpass
+    Given a WP install
+
+    When I run `wp db export wp_cli_test.sql`
+    Then the wp_cli_test.sql file should exist
+
+    When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'wp_cli_test.sql'.
+      """
+
+    When I try `wp db import --dbuser=wp_cli_test --dbpass=no_such_pass`
+    Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
   Scenario: Help runs properly at various points of a functional WP install
     Given an empty directory
 

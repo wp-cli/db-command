@@ -1,6 +1,6 @@
 {
     "name": "wp-cli/db-command",
-    "description": "Perform basic database operations using credentials stored in wp-config.php.",
+    "description": "Performs basic database operations using credentials stored in wp-config.php.",
     "type": "wp-cli-package",
     "homepage": "https://github.com/wp-cli/db-command",
     "support": {
@@ -17,14 +17,15 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "autoload": {
-        "psr-4": {"": "src/"},
+        "psr-4": {
+            "": "src/"
+        },
         "files": [ "db-command.php" ]
     },
-    "require": {
-        "wp-cli/wp-cli": "*"
-    },
+    "require": {},
     "require-dev": {
-        "behat/behat": "~2.5"
+        "behat/behat": "~2.5",
+        "wp-cli/wp-cli": "^1.5"
     },
     "extra": {
         "branch-alias": {

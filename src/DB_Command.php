@@ -761,11 +761,11 @@ class DB_Command extends WP_CLI_Command {
 						case 'tb':
 						         $divisor = TB_IN_BYTES;
 							 break;
-
+							
 						case 'gb':
 						         $divisor = GB_IN_BYTES;
 							 break;
-
+							
 						case 'mb':
 							$divisor = MB_IN_BYTES;
 							break;
@@ -882,7 +882,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
 	 *
 	 * The percent color codes available are:
-	 *
+	 * 
 	 * | Code | Color
 	 * | ---- | -----
 	 * |  %y  | Yellow (dark) (mustard)
