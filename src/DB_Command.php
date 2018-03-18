@@ -119,6 +119,44 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
+	 * Removes all tables that have `$table_prefix` from the database.
+	 *
+	 * Runs `DROP_TABLE` for each table that have `$table_prefix`
+	 * specified in wp-config.php.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysql. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
+	 *
+	 * [--yes]
+	 * : Answer yes to the confirmation message.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp db clean --yes
+	 *     Success: Tables dropped.
+	 *
+	 * @when after_wp_load
+	 */
+	public function clean( $_, $assoc_args ) {
+		WP_CLI::confirm( "Are you sure you want to drop all the tables on '" . DB_NAME . "' that uses the WordPress database prefix?", $assoc_args );
+
+		$mysql_args = self::get_dbuser_dbpass_args( $assoc_args );
+
+		$tables = WP_CLI\Utils\wp_get_table_names( array(), array( 'all-tables-with-prefix' ) );
+
+		foreach ( $tables as $table ) {
+			self::run_query( sprintf( 'DROP TABLE IF EXISTS `%s`.`%s`', DB_NAME, $table ), $mysql_args );
+		}
+
+		WP_CLI::success( "Tables dropped." );
+	}
+
+	/**
 	 * Checks the current status of the database.
 	 *
 	 * Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
@@ -744,11 +782,11 @@ class DB_Command extends WP_CLI_Command {
 						case 'tb':
 						         $divisor = TB_IN_BYTES;
 							 break;
-							
+
 						case 'gb':
 						         $divisor = GB_IN_BYTES;
 							 break;
-							
+
 						case 'mb':
 							$divisor = MB_IN_BYTES;
 							break;
@@ -865,7 +903,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
 	 *
 	 * The percent color codes available are:
-	 * 
+	 *
 	 * | Code | Color
 	 * | ---- | -----
 	 * |  %y  | Yellow (dark) (mustard)
