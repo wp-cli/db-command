@@ -41,7 +41,7 @@ Feature: Perform database operations
     When I run `wp db drop < session_no`
     Then STDOUT should be:
       """
-      Are you sure you want to drop the 'wp_cli_test' database? [y/n] 
+      Are you sure you want to drop the 'wp_cli_test' database? [y/n]
       """
 
     When I run `wp db reset < session_yes`
@@ -103,6 +103,22 @@ Feature: Perform database operations
       Access denied
       """
     And STDOUT should be empty
+
+
+    When I run `wp db clean --yes --dbuser=wp_cli_test --dbpass=password1`
+    Then STDOUT should be:
+      """
+      Success: Tables dropped.
+      """
+
+    When I try `wp db clean --yes --dbuser=no_such_user`
+    Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
 
   Scenario: DB Operations
     Given a WP install
@@ -231,6 +247,12 @@ Feature: Perform database operations
     Then STDOUT should contain:
       """
       1
+      """
+
+    When I run `wp db clean --yes`
+    Then STDOUT should contain:
+      """
+      Success: Tables dropped.
       """
 
   Scenario: DB export no charset
