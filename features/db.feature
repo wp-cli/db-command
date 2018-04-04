@@ -128,22 +128,10 @@ Feature: Perform database operations
       """
     And STDOUT should be empty
 
-    When I run `wp db tables --all-tables`
+    When I run `wp db tables custom_table --all-tables`
     Then STDOUT should be:
       """
       custom_table
-      wp_commentmeta
-      wp_comments
-      wp_links
-      wp_options
-      wp_postmeta
-      wp_posts
-      wp_term_relationships
-      wp_term_taxonomy
-      wp_termmeta
-      wp_terms
-      wp_usermeta
-      wp_users
       """
     And the return code should be 0
 
