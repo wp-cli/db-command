@@ -43,6 +43,10 @@ Feature: List database tables
     Then STDOUT should contain:
       """
       wp_blog_versions
+      """
+    # Leave out wp_blogmeta for old WP compat.
+    And STDOUT should contain:
+      """
       wp_blogs
       wp_commentmeta
       wp_comments
