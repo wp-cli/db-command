@@ -104,11 +104,12 @@ Feature: Perform database operations
       """
     And STDOUT should be empty
 
-    When I run `wp db import /tmp/wp-cli-behat.sql`
-    Then STDOUT should contain:
-      """
-      Success: Imported
-      """
+  Scenario: Clean up a WordPress install without dropping its database entirely but tables with prefix.
+    Given a WP install
+
+    When I run `wp db query "create table custom_table as select * from wp_users;"`
+    Then STDOUT should be empty
+    And the return code should be 0
 
     When I run `wp db clean --yes --dbuser=wp_cli_test --dbpass=password1`
     Then STDOUT should be:
@@ -123,6 +124,13 @@ Feature: Perform database operations
       Access denied
       """
     And STDOUT should be empty
+
+    When I run `wp db tables --all-tables`
+    Then STDOUT should be:
+      """
+      custom_table
+      """
+    And the return code should be 0
 
   Scenario: DB Operations
     Given a WP install
