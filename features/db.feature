@@ -117,6 +117,9 @@ Feature: Perform database operations
       Success: Tables dropped.
       """
 
+    When I run `wp core install --title="WP-CLI Test" --url=example.com --admin_user=admin --admin_password=admin --admin_email=admin@example.com`
+    Then STDOUT should not be empty
+
     When I try `wp db clean --yes --dbuser=no_such_user`
     Then the return code should not be 0
     And STDERR should contain:
@@ -129,6 +132,18 @@ Feature: Perform database operations
     Then STDOUT should be:
       """
       custom_table
+      wp_commentmeta
+      wp_comments
+      wp_links
+      wp_options
+      wp_postmeta
+      wp_posts
+      wp_term_relationships
+      wp_term_taxonomy
+      wp_termmeta
+      wp_terms
+      wp_usermeta
+      wp_users
       """
     And the return code should be 0
 
