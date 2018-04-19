@@ -14,11 +14,11 @@ Feature: Query the database with WordPress' MySQL config
       Error: Plugin loaded.
       """
 
-    When I run `wp db query "SELECT COUNT(ID) FROM wp_posts;"`
+    When I run `wp db query "SELECT COUNT(ID) FROM wp_users;"`
     Then STDOUT should be:
       """
       COUNT(ID)
-      2
+      1
       """
 
   Scenario: Database querying with passed-in options
