@@ -30,7 +30,7 @@ Feature: Display information about a given table.
       | post_mime_type        | varchar(100)        | NO   |     |                     |                |
       | comment_count         | bigint(20)          | NO   |     | 0                   |                |
 
-  Scenario: Display information about the wp_posts table
+  Scenario: Display information about non-existing table
     Given a WP install
 
     When I try `wp db columns wp_foobar`
