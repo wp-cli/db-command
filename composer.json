@@ -47,7 +47,8 @@
             "db import",
             "db search",
             "db tables",
-            "db size"
+            "db size",
+            "db columns"
         ]
     }
 }

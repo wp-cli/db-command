@@ -1,5 +1,6 @@
 <?php
 
+use WP_CLI\Formatter;
 use \WP_CLI\Utils;
 
 /**
@@ -744,11 +745,11 @@ class DB_Command extends WP_CLI_Command {
 						case 'tb':
 						         $divisor = TB_IN_BYTES;
 							 break;
-							
+
 						case 'gb':
 						         $divisor = GB_IN_BYTES;
 							 break;
-							
+
 						case 'mb':
 							$divisor = MB_IN_BYTES;
 							break;
@@ -775,7 +776,7 @@ class DB_Command extends WP_CLI_Command {
 				'format' => $format,
 			);
 
-			$formatter = new \WP_CLI\Formatter( $args, $fields );
+			$formatter = new Formatter( $args, $fields );
 			$formatter->display_items( $rows );
 		}
 	}
@@ -865,7 +866,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
 	 *
 	 * The percent color codes available are:
-	 * 
+	 *
 	 * | Code | Color
 	 * | ---- | -----
 	 * |  %y  | Yellow (dark) (mustard)
@@ -1100,6 +1101,79 @@ class DB_Command extends WP_CLI_Command {
 			);
 			WP_ClI::success( $stats_msg );
 		}
+	}
+
+	/**
+	 * Display information about a given table.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<table>]
+	 * : Table name
+	 *
+	 * [--format]
+	 * : table, csv, json
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - json
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp db columns wp_posts
+	 *     +-----------------------+---------------------+------+-----+---------------------+----------------+
+	 *     |         Field         |        Type         | Null | Key |       Default       |     Extra      |
+	 *     +-----------------------+---------------------+------+-----+---------------------+----------------+
+	 *     | ID                    | bigint(20) unsigned | NO   | PRI |                     | auto_increment |
+	 *     | post_author           | bigint(20) unsigned | NO   | MUL | 0                   |                |
+	 *     | post_date             | datetime            | NO   |     | 0000-00-00 00:00:00 |                |
+	 *     | post_date_gmt         | datetime            | NO   |     | 0000-00-00 00:00:00 |                |
+	 *     | post_content          | longtext            | NO   |     |                     |                |
+	 *     | post_title            | text                | NO   |     |                     |                |
+	 *     | post_excerpt          | text                | NO   |     |                     |                |
+	 *     | post_status           | varchar(20)         | NO   |     | publish             |                |
+	 *     | comment_status        | varchar(20)         | NO   |     | open                |                |
+	 *     | ping_status           | varchar(20)         | NO   |     | open                |                |
+	 *     | post_password         | varchar(255)        | NO   |     |                     |                |
+	 *     | post_name             | varchar(200)        | NO   | MUL |                     |                |
+	 *     | to_ping               | text                | NO   |     |                     |                |
+	 *     | pinged                | text                | NO   |     |                     |                |
+	 *     | post_modified         | datetime            | NO   |     | 0000-00-00 00:00:00 |                |
+	 *     | post_modified_gmt     | datetime            | NO   |     | 0000-00-00 00:00:00 |                |
+	 *     | post_content_filtered | longtext            | NO   |     |                     |                |
+	 *     | post_parent           | bigint(20) unsigned | NO   | MUL | 0                   |                |
+	 *     | guid                  | varchar(255)        | NO   |     |                     |                |
+	 *     | menu_order            | int(11)             | NO   |     | 0                   |                |
+	 *     | post_type             | varchar(20)         | NO   | MUL | post                |                |
+	 *     | post_mime_type        | varchar(100)        | NO   |     |                     |                |
+	 *     | comment_count         | bigint(20)          | NO   |     | 0                   |                |
+	 *     +-----------------------+---------------------+------+-----+---------------------+----------------+
+	 *
+	 * @when after_wp_load
+	 * @alias fields
+	 */
+	public function columns( $args, $assoc_args ) {
+		global $wpdb;
+
+		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
+
+		WP_CLI\Utils\wp_get_table_names( [ $args[0] ], [] );
+
+		// Get the database size.
+		$columns = $wpdb->get_results(
+			'SHOW COLUMNS FROM ' . $args[0]
+		);
+
+		// Display the rows.
+		$formatter_args = array(
+			'format' => $format,
+		);
+
+		$formatter = new Formatter($formatter_args, array( 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' ) );
+		$formatter->display_items( $columns );
 	}
 
 	private static function get_create_query() {
