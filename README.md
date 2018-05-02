@@ -723,6 +723,40 @@ The size defaults to a human-readable number.
     $ wp db size --size_format=mb
     6
 
+
+
+### wp db columns
+
+Display information about a given table.
+
+~~~
+wp db columns [<table>] [--format]
+~~~
+
+**OPTIONS**
+
+	[<table>]
+		Table name
+
+	[--format]
+		table, csv, json
+		---
+		default: table
+		options:
+		  - table
+		  - csv
+		  - json
+		---
+
+**EXAMPLES**
+
+    $ wp db columns
+    +-------------------+------+
+    | Name              | Size |
+    +-------------------+------+
+    | wordpress_default | 6 MB |
+    +-------------------+------+
+
 ## Installing
 
 This package is included with WP-CLI itself, no additional installation necessary.
