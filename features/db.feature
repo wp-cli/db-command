@@ -104,6 +104,37 @@ Feature: Perform database operations
       """
     And STDOUT should be empty
 
+  Scenario: Clean up a WordPress install without dropping its database entirely but tables with prefix.
+    Given a WP install
+
+    When I run `wp db query "create table custom_table as select * from wp_users;"`
+    Then STDOUT should be empty
+    And the return code should be 0
+
+    When I run `wp db clean --yes --dbuser=wp_cli_test --dbpass=password1`
+    Then STDOUT should be:
+      """
+      Success: Tables dropped.
+      """
+
+    When I run `wp core install --title="WP-CLI Test" --url=example.com --admin_user=admin --admin_password=admin --admin_email=admin@example.com`
+    Then STDOUT should not be empty
+
+    When I try `wp db clean --yes --dbuser=no_such_user`
+    Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Access denied
+      """
+    And STDOUT should be empty
+
+    When I run `wp db tables custom_table --all-tables`
+    Then STDOUT should be:
+      """
+      custom_table
+      """
+    And the return code should be 0
+
   Scenario: DB Operations
     Given a WP install
 
