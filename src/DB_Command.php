@@ -1120,7 +1120,6 @@ class DB_Command extends WP_CLI_Command {
 	 *   - csv
 	 *   - json
 	 *   - yaml
-	 *   - csv
 	 * ---
 	 *
 	 * ## EXAMPLES

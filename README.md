@@ -747,7 +747,6 @@ wp db columns [<table>] [--format]
 		  - csv
 		  - json
 		  - yaml
-		  - csv
 		---
 
 **EXAMPLES**
