@@ -1104,21 +1104,23 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Display information about a given table.
+	 * Displays information about a given table.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [<table>]
-	 * : Table name
+	 * : Name of the database table.
 	 *
 	 * [--format]
-	 * : table, csv, json
+	 * : Render output in a particular format.
 	 * ---
 	 * default: table
 	 * options:
 	 *   - table
 	 *   - csv
 	 *   - json
+	 *   - yaml
+	 *   - csv
 	 * ---
 	 *
 	 * ## EXAMPLES
