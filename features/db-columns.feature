@@ -1,5 +1,6 @@
 Feature: Display information about a given table.
 
+  @require-wp-4.2
   Scenario: Display information about the wp_posts table
     Given a WP install
 
