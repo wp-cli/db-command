@@ -144,17 +144,36 @@ class DB_Command extends WP_CLI_Command {
 	 * @when after_wp_load
 	 */
 	public function clean( $_, $assoc_args ) {
-		WP_CLI::confirm( "Are you sure you want to drop all the tables on '" . DB_NAME . "' that uses the WordPress database prefix?", $assoc_args );
+		global $wpdb;
+
+		WP_CLI::confirm(
+			sprintf(
+				"Are you sure you want to drop all the tables on '%s' that use the current site's database prefix ('%s')?",
+				DB_NAME,
+				$wpdb->get_blog_prefix()
+			),
+			$assoc_args
+		);
 
 		$mysql_args = self::get_dbuser_dbpass_args( $assoc_args );
 
-		$tables = WP_CLI\Utils\wp_get_table_names( array(), array( 'all-tables-with-prefix' ) );
+		$tables = WP_CLI\Utils\wp_get_table_names(
+			array(),
+			array( 'all-tables-with-prefix' )
+		);
 
 		foreach ( $tables as $table ) {
-			self::run_query( sprintf( 'DROP TABLE IF EXISTS `%s`.`%s`', DB_NAME, $table ), $mysql_args );
+			self::run_query(
+				sprintf(
+					'DROP TABLE IF EXISTS `%s`.`%s`',
+					DB_NAME,
+					$table
+				),
+				$mysql_args
+			);
 		}
 
-		WP_CLI::success( "Tables dropped." );
+		WP_CLI::success( 'Tables dropped.' );
 	}
 
 	/**
