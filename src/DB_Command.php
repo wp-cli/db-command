@@ -119,10 +119,10 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Removes all tables that have `$table_prefix` from the database.
+	 * Removes all tables with `$table_prefix` from the database.
 	 *
-	 * Runs `DROP_TABLE` for each table that have `$table_prefix`
-	 * specified in wp-config.php.
+	 * Runs `DROP_TABLE` for each table that has a `$table_prefix` as specified
+	 * in wp-config.php.
 	 *
 	 * ## OPTIONS
 	 *
@@ -137,6 +137,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
+	 *     # Delete all tables that match the current site prefix.
 	 *     $ wp db clean --yes
 	 *     Success: Tables dropped.
 	 *
