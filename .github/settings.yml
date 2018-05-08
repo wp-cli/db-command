@@ -50,3 +50,5 @@ labels:
     color: c5def5
   - name: command:db-size
     color: c5def5
+  - name: command:db-columns
+    color: c5def5
