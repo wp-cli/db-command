@@ -1163,17 +1163,16 @@ class DB_Command extends WP_CLI_Command {
 
 		WP_CLI\Utils\wp_get_table_names( array( $args[0] ), array() );
 
-		// Get the database size.
 		$columns = $wpdb->get_results(
 			'SHOW COLUMNS FROM ' . $args[0]
 		);
 
-		// Display the rows.
-		$formatter_args = array(
+		$formatter_fields = array( 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' );
+		$formatter_args   = array(
 			'format' => $format,
 		);
 
-		$formatter = new Formatter($formatter_args, array( 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' ) );
+		$formatter = new Formatter( $formatter_args, $formatter_fields );
 		$formatter->display_items( $columns );
 	}
 
