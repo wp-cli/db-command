@@ -1155,7 +1155,6 @@ class DB_Command extends WP_CLI_Command {
 	 *     +-----------------------+---------------------+------+-----+---------------------+----------------+
 	 *
 	 * @when after_wp_load
-	 * @alias fields
 	 */
 	public function columns( $args, $assoc_args ) {
 		global $wpdb;
