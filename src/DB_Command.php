@@ -1161,7 +1161,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
 
-		WP_CLI\Utils\wp_get_table_names( [ $args[0] ], [] );
+		WP_CLI\Utils\wp_get_table_names( array( $args[0] ), array() );
 
 		// Get the database size.
 		$columns = $wpdb->get_results(
