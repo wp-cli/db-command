@@ -23,6 +23,9 @@ use \WP_CLI\Utils;
  *     # Execute a SQL query stored in a file.
  *     $ wp db query < debug.sql
  *
+ *     # You can pass extra arguments through to MySQL options of the MySQL command.
+ *     $ wp db export --column-statistics=0
+ *
  * @when after_wp_config_load
  */
 class DB_Command extends WP_CLI_Command {
@@ -452,6 +455,11 @@ class DB_Command extends WP_CLI_Command {
 	 *     -- ------------------------------------------------------
 	 *     -- Server version	5.7.19
 	 *     ...
+	 *
+	 *     # To avoid error `Unknown table 'COLUMN_STATISTICS' in information_schema` on MySQL client 8.x,
+	 *     # You can pass extra arguments through to MySQL like following.
+	 *     $ wp db export --column-statistics=0
+	 *     Success: Exported to 'wordpress-2018-07-14-769cdd7.sql'.
 	 *
 	 * @alias dump
 	 */
