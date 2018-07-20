@@ -659,6 +659,15 @@ class DB_Command extends WP_CLI_Command {
 	 *  - mb (megabytes)
 	 *  - gb (gigabytes)
 	 *  - tb (terabytes)
+	 *  - B   (ISO Byte setting, with no conversion)
+	 *  - KB  (ISO Kilobyte setting, with 1 kB  = 1,000 B)
+	 *  - KiB (ISO Kibibyte setting, with 1 KiB = 1,024 B)
+	 *  - MB  (ISO Megabyte setting, with 1 MB  = 1,000 kB)
+	 *  - MiB (ISO Mebibyte setting, with 1 MiB = 1,024 KiB)
+	 *  - GB  (ISO Gigabyte setting, with 1 GB  = 1,000 MB)
+	 *  - GiB (ISO Gibibyte setting, with 1 GiB = 1,024 MiB)
+	 *  - TB  (ISO Terabyte setting, with 1 TB  = 1,000 GB)
+	 *  - TiB (ISO Tebibyte setting, with 1 TiB = 1,024 GiB)
 	 *  ---
 	 *
 	 * [--tables]
@@ -800,29 +809,51 @@ class DB_Command extends WP_CLI_Command {
 
 					// Display the database size as a number.
 					switch( $size_format ) {
+						case 'TB':
+						         $divisor = pow( 1000, 4 );
+							 break;
+
+						case 'GB':
+						         $divisor = pow( 1000, 3 );
+							 break;
+
+						case 'MB':
+						         $divisor = pow( 1000, 2 );
+							 break;
+
+						case 'KB':
+						         $divisor = 1000;
+							 break;
+
 						case 'tb':
+						case 'TiB':
 						         $divisor = TB_IN_BYTES;
 							 break;
 
 						case 'gb':
+						case 'GiB':
 						         $divisor = GB_IN_BYTES;
 							 break;
 
 						case 'mb':
+						case 'MiB':
 							$divisor = MB_IN_BYTES;
 							break;
 
 						case 'kb':
+						case 'KiB':
 							$divisor = KB_IN_BYTES;
 							break;
 
 						case 'b':
+						case 'B':
 						default:
 							$divisor = 1;
 							break;
 					}
+					$size_format_display = preg_replace( '/IB$/u', 'iB', strtoupper( $size_format ) );
 
-					$rows[ $index ]['Size'] = ceil( $row['Size'] / $divisor ) . " " . strtoupper( $size_format );
+					$rows[ $index ]['Size'] = ceil( $row['Size'] / $divisor ) . " " . $size_format_display;
 			}
 		}
 
