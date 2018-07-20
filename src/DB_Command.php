@@ -474,7 +474,15 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$command = '/usr/bin/env mysqldump --no-defaults %s';
+		$mysqldump_version = exec( "/usr/bin/env mysqldump --version --no-defaults" );
+		$mysqldump_version = preg_replace( "/^.+([0-9]+\.[0-9]+\.[0-9]+)(.+)$/", "$1", $mysqldump_version );
+
+		if ( version_compare( $mysqldump_version, '8.0', '>=' ) ) {
+			$command = '/usr/bin/env mysqldump --no-defaults --column-statistics=0 %s';
+		} else {
+			$command = '/usr/bin/env mysqldump --no-defaults %s';
+		}
+
 		$command_esc_args = array( DB_NAME );
 
 		if ( isset( $assoc_args['tables'] ) ) {
