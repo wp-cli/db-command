@@ -36,13 +36,11 @@ Feature: Display database size
     When I run `wp db size --size_format=b`
     Then STDOUT should be a number
 
-
   Scenario: Display only database size in kilobytes for a WordPress install
     Given a WP install
 
     When I run `wp db size --size_format=kb`
     Then STDOUT should be a number
-
 
   Scenario: Display only database size in megabytes for a WordPress install
     Given a WP install
@@ -50,13 +48,11 @@ Feature: Display database size
     When I run `wp db size --size_format=mb`
     Then STDOUT should be a number
 
-
   Scenario: Display only database size in gigabytes for a WordPress install
     Given a WP install
 
     When I run `wp db size --size_format=gb`
     Then STDOUT should be a number
-
 
   Scenario: Display only database size in terabytes for a WordPress install
     Given a WP install
@@ -64,13 +60,11 @@ Feature: Display database size
     When I run `wp db size --size_format=tb`
     Then STDOUT should be a number
 
-
   Scenario: Display only database size in Kibibytes for a WordPress install
     Given a WP install
 
     When I run `wp db size --size_format=KB`
     Then STDOUT should be a number
-
 
   Scenario: Display only database size in Mebibytes for a WordPress install
     Given a WP install
@@ -78,13 +72,11 @@ Feature: Display database size
     When I run `wp db size --size_format=MB`
     Then STDOUT should be a number
 
-
   Scenario: Display only database size in Gibibytes for a WordPress install
     Given a WP install
 
     When I run `wp db size --size_format=GB`
     Then STDOUT should be a number
-
 
   Scenario: Display only database size in Tebibytes for a WordPress install
     Given a WP install
