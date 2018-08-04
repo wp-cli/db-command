@@ -22,10 +22,11 @@
         },
         "files": [ "db-command.php" ]
     },
-    "require": {},
+    "require": {
+        "wp-cli/wp-cli": "^2"
+    },
     "require-dev": {
-        "behat/behat": "~2.5",
-        "wp-cli/wp-cli": "^1.5"
+        "wp-cli/wp-cli-tests": "^0"
     },
     "extra": {
         "branch-alias": {
@@ -49,6 +50,19 @@
             "db tables",
             "db size",
             "db columns"
+        ]
+    },
+    "scripts": {
+        "lint": "run-linter-tests",
+        "phpcs": "run-phpcs-tests",
+        "phpunit": "run-php-unit-tests",
+        "behat": "run-behat-tests",
+        "prepare-tests": "install-package-tests",
+        "test": [
+            "@lint",
+            "@phpcs",
+            "@phpunit",
+            "@behat"
         ]
     }
 }
