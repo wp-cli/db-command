@@ -196,7 +196,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
 	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to mysqlcheck.
+	 * : Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -230,7 +230,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
 	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to mysqlcheck.
+	 * : Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -264,7 +264,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
 	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to mysqlcheck.
+	 * : Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -297,7 +297,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to mysql.
+	 * : Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -333,7 +333,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to mysql.
+	 * : Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -395,7 +395,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Password to pass to mysqldump. Defaults to DB_PASSWORD.
 	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to mysqldump.
+	 * : Extra arguments to pass to mysqldump. [Refer to mysqldump docs](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
 	 *
 	 * [--tables=<tables>]
 	 * : The comma separated list of specific tables to export. Excluding this parameter will export all tables in the database.
