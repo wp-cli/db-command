@@ -864,7 +864,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
-		if ( ! empty( $size_format) && ! $tables ) {
+		if ( ! empty( $size_format) && ! $tables && ! $format ) {
 			WP_CLI::Line( filter_var( $rows[0]['Size'], FILTER_SANITIZE_NUMBER_INT ) );
 		} else {
 			// Display the rows.
