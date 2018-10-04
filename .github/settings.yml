@@ -22,6 +22,8 @@ labels:
     color: c2e0c6
   - name: command:db
     color: c5def5
+  - name: command:db-clean
+    color: c5def5
   - name: command:db-create
     color: c5def5
   - name: command:db-drop
