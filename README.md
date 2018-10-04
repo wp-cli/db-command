@@ -38,6 +38,36 @@ wp db
 
 
 
+### wp db clean
+
+Removes all tables with `$table_prefix` from the database.
+
+~~~
+wp db clean [--dbuser=<value>] [--dbpass=<value>] [--yes]
+~~~
+
+Runs `DROP_TABLE` for each table that has a `$table_prefix` as specified
+in wp-config.php.
+
+**OPTIONS**
+
+	[--dbuser=<value>]
+		Username to pass to mysql. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysql. Defaults to DB_PASSWORD.
+
+	[--yes]
+		Answer yes to the confirmation message.
+
+**EXAMPLES**
+
+    # Delete all tables that match the current site prefix.
+    $ wp db clean --yes
+    Success: Tables dropped.
+
+
+
 ### wp db create
 
 Creates a new database.
@@ -660,6 +690,15 @@ The size defaults to a human-readable number.
 		 - mb (megabytes)
 		 - gb (gigabytes)
 		 - tb (terabytes)
+		 - B   (ISO Byte setting, with no conversion)
+		 - KB  (ISO Kilobyte setting, with 1 KB  = 1,000 B)
+		 - KiB (ISO Kibibyte setting, with 1 KiB = 1,024 B)
+		 - MB  (ISO Megabyte setting, with 1 MB  = 1,000 KB)
+		 - MiB (ISO Mebibyte setting, with 1 MiB = 1,024 KiB)
+		 - GB  (ISO Gigabyte setting, with 1 GB  = 1,000 MB)
+		 - GiB (ISO Gibibyte setting, with 1 GiB = 1,024 MiB)
+		 - TB  (ISO Terabyte setting, with 1 TB  = 1,000 GB)
+		 - TiB (ISO Tebibyte setting, with 1 TiB = 1,024 GiB)
 		 ---
 
 	[--tables]
