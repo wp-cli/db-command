@@ -29,6 +29,7 @@
         "bundled": true,
         "commands": [
             "db",
+            "db clean",
             "db create",
             "db drop",
             "db reset",
