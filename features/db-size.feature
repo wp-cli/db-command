@@ -83,3 +83,23 @@ Feature: Display database size
 
     When I run `wp db size --size_format=TB`
     Then STDOUT should be a number
+
+  Scenario: Display database size in bytes with specific format for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --size_format=b --format=csv`
+    Then STDOUT should contain:
+      """
+      Name,Size
+      wp_cli_test,"
+      """
+
+    But STDOUT should not be a number
+
+    When I run `wp db size --size_format=b --format=json`
+    Then STDOUT should contain:
+      """
+      [{"Name":"wp_cli_test","Size":"
+      """
+
+    But STDOUT should not be a number
