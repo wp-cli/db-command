@@ -1019,6 +1019,16 @@ class DB_Command extends WP_CLI_Command {
 	 *         ...
 	 *     Success: Found 99146 matches in 10.752s (10.559s searching). Searched 12 tables, 53 columns, 1358907 rows. 1 table skipped: wp_term_relationships.
 	 *
+	 *     # SQL search database table 'wp_options' where 'option_name' match 'foo'
+	 *     wp db query 'SELECT * FROM wp_options WHERE option_name like "%foo%"' --skip-column-names
+	 *     +----+--------------+--------------------------------+-----+
+	 *     | 98 | foo_options  | a:1:{s:12:"_multiwidget";i:1;} | yes |
+	 *     | 99 | foo_settings | a:0:{}                         | yes |
+	 *     +----+--------------+--------------------------------+-----+
+	 * 
+	 *     # SQL search and delete records from database table 'wp_options' where 'option_name' match 'foo'
+	 *     wp db query "DELETE from wp_options where option_id in ($(wp db query "SELECT GROUP_CONCAT(option_id SEPARATOR ',') from wp_options where option_name like '%foo%';" --silent --skip-column-names))"
+	 * 
 	 * @when after_wp_load
 	 */
 	public function search( $args, $assoc_args ) {
