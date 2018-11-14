@@ -539,6 +539,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--dbpass=<value>]
 	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
+	 * [--<field>=<value>]
+	 * : Extra arguments to pass to mysqldump. [Refer to mysqldump docs](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
+	 *
 	 * [--skip-optimization]
 	 * : When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
 	 *
@@ -555,10 +558,7 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
 
-		$mysql_args = array(
-			'database' => DB_NAME,
-		);
-		$mysql_args = array_merge( self::get_dbuser_dbpass_args( $assoc_args ), $mysql_args );
+		$assoc_args['database'] = DB_NAME;
 
 		if ( '-' !== $result_file ) {
 			if ( ! is_readable( $result_file ) ) {
@@ -569,10 +569,14 @@ class DB_Command extends WP_CLI_Command {
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
 
-			$mysql_args['execute'] = sprintf( $query, $result_file );
+			if ( isset( $assoc_args['skip-optimization'] ) ) {
+				unset( $assoc_args['skip-optimization'] );
+			}
+
+			$assoc_args['execute'] = sprintf( $query, $result_file );
 		}
 
-		self::run( '/usr/bin/env mysql --no-defaults --no-auto-rehash', $mysql_args );
+		self::run( '/usr/bin/env mysql --no-defaults --no-auto-rehash', $assoc_args );
 
 		WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
 	}
@@ -1025,10 +1029,10 @@ class DB_Command extends WP_CLI_Command {
 	 *     | 98 | foo_options  | a:1:{s:12:"_multiwidget";i:1;} | yes |
 	 *     | 99 | foo_settings | a:0:{}                         | yes |
 	 *     +----+--------------+--------------------------------+-----+
-	 * 
+	 *
 	 *     # SQL search and delete records from database table 'wp_options' where 'option_name' match 'foo'
 	 *     wp db query "DELETE from wp_options where option_id in ($(wp db query "SELECT GROUP_CONCAT(option_id SEPARATOR ',') from wp_options where option_name like '%foo%';" --silent --skip-column-names))"
-	 * 
+	 *
 	 * @when after_wp_load
 	 */
 	public function search( $args, $assoc_args ) {
