@@ -44,6 +44,20 @@ Feature: Import a WordPress database
       """
     And STDOUT should be empty
 
+  Scenario: Import database with passed-in options
+    Given a WP install
+
+    Given a debug.sql file:
+      """
+      INSERT INTO `wp_options` (`option_id`, `option_name`, `option_value`, `autoload`) VALUES (999, 'testoption',  'testval',  'yes'),(999, 'testoption',  'testval',  'yes');
+      """
+
+    When I try `wp db import debug.sql --force`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'debug.sql'.
+      """
+
   Scenario: Help runs properly at various points of a functional WP install
     Given an empty directory
 
