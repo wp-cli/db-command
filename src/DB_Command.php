@@ -540,7 +540,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to mysqldump. [Refer to mysqldump docs](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
+	 * : Extra arguments to pass to mysql. [Refer to mysql binary docs](https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html).
 	 *
 	 * [--skip-optimization]
 	 * : When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
