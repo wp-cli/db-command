@@ -1436,22 +1436,108 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Helper to pluck `mysql` opitons from associative args array.
+	 * Helper to pluck `mysql` options from associative args array.
 	 *
 	 * @param array $assoc_args Associative args array.
-	 * @return array Array with `mysql` opitons set if in passed-in associative args array.
+	 * @return array Array with `mysql` options set if in passed-in associative args array.
 	 */
 	private static function get_mysql_args( $assoc_args ) {
 
-		$allowed_mysql_option = [ 'auto-rehash', 'auto-vertical-output', 'batch', 'binary-as-hex', 'binary-mode', 'bind-address', 'character-sets-dir', 'column-names', 'column-type-info', 'comments', 'compress', 'connect-expired-password', 'connect_timeout', 'database', 'debug', 'debug-check', 'debug-info', 'default-auth', 'default-character-set', 'defaults-extra-file', 'defaults-file', 'defaults-group-suffix', 'delimiter', 'enable-cleartext-plugin', 'execute', 'force', 'get-server-public-key', 'help', 'histignore', 'host', 'html', 'ignore-spaces', 'init-command', 'line-numbers', 'local-infile', 'login-path', 'max_allowed_packet', 'max_join_size', 'named-commands', 'net_buffer_length', 'no-beep', 'one-database', 'pager', 'pipe', 'plugin-dir', 'port', 'print-defaults', 'protocol', 'quick', 'raw', 'reconnect', 'i-am-a-dummy', 'safe-updates', 'secure-auth', 'select_limit', 'server-public-key-path', 'shared-memory-base-name', 'show-warnings', 'sigint-ignore', 'silent', 'skip-auto-rehash', 'skip-column-names', 'skip-line-numbers', 'skip-named-commands', 'skip-pager', 'skip-reconnect', 'socket', 'ssl-ca', 'ssl-capath', 'ssl-cert', 'ssl-cipher', 'ssl-crl', 'ssl-crlpath', 'ssl-fips-mode', 'ssl-key', 'ssl-mode', 'syslog', 'table', 'tee', 'tls-version', 'unbuffered', 'verbose', 'version', 'vertical', 'wait', 'xml' ];
+		$allowed_mysql_options = [
+			'auto-rehash',
+			'auto-vertical-output',
+			'batch',
+			'binary-as-hex',
+			'binary-mode',
+			'bind-address',
+			'character-sets-dir',
+			'column-names',
+			'column-type-info',
+			'comments',
+			'compress',
+			'connect-expired-password',
+			'connect_timeout',
+			'database',
+			'debug',
+			'debug-check',
+			'debug-info',
+			'default-auth',
+			'default-character-set',
+			'defaults-extra-file',
+			'defaults-file',
+			'defaults-group-suffix',
+			'delimiter',
+			'enable-cleartext-plugin',
+			'execute',
+			'force',
+			'get-server-public-key',
+			'help',
+			'histignore',
+			'host',
+			'html',
+			'ignore-spaces',
+			'init-command',
+			'line-numbers',
+			'local-infile',
+			'login-path',
+			'max_allowed_packet',
+			'max_join_size',
+			'named-commands',
+			'net_buffer_length',
+			'no-beep',
+			'one-database',
+			'pager',
+			'pipe',
+			'plugin-dir',
+			'port',
+			'print-defaults',
+			'protocol',
+			'quick',
+			'raw',
+			'reconnect',
+			'i-am-a-dummy',
+			'safe-updates',
+			'secure-auth',
+			'select_limit',
+			'server-public-key-path',
+			'shared-memory-base-name',
+			'show-warnings',
+			'sigint-ignore',
+			'silent',
+			'skip-auto-rehash',
+			'skip-column-names',
+			'skip-line-numbers',
+			'skip-named-commands',
+			'skip-pager',
+			'skip-reconnect',
+			'socket',
+			'ssl-ca',
+			'ssl-capath',
+			'ssl-cert',
+			'ssl-cipher',
+			'ssl-crl',
+			'ssl-crlpath',
+			'ssl-fips-mode',
+			'ssl-key',
+			'ssl-mode',
+			'syslog',
+			'table',
+			'tee',
+			'tls-version',
+			'unbuffered',
+			'verbose',
+			'version',
+			'vertical',
+			'wait',
+			'xml'
+		];
 
 		$mysql_args = array();
 
 		foreach ( $assoc_args as $mysql_option_key => $mysql_option_value ) {
-			// check flags is valid flag or not.
-			if ( in_array( $mysql_option_key,  $allowed_mysql_option, true ) && ! empty( $mysql_option_value ) ) {
+			// Check flags to make sure they only contain valid options.
+			if ( in_array( $mysql_option_key,  $allowed_mysql_options, true ) && ! empty( $mysql_option_value ) ) {
 				$mysql_args[$mysql_option_key] = $mysql_option_value;
-
 			}
 		}
 
