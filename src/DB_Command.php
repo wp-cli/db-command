@@ -539,6 +539,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--dbpass=<value>]
 	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
+	 * [--<field>=<value>]
+	 * : Extra arguments to pass to mysql. [Refer to mysql binary docs](https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html).
+	 *
 	 * [--skip-optimization]
 	 * : When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
 	 *
@@ -571,6 +574,8 @@ class DB_Command extends WP_CLI_Command {
 
 			$mysql_args['execute'] = sprintf( $query, $result_file );
 		}
+		// Check if any mysql option pass.
+		$mysql_args = array_merge( $mysql_args, self::get_mysql_args( $assoc_args ) );
 
 		self::run( '/usr/bin/env mysql --no-defaults --no-auto-rehash', $mysql_args );
 
@@ -1025,10 +1030,10 @@ class DB_Command extends WP_CLI_Command {
 	 *     | 98 | foo_options  | a:1:{s:12:"_multiwidget";i:1;} | yes |
 	 *     | 99 | foo_settings | a:0:{}                         | yes |
 	 *     +----+--------------+--------------------------------+-----+
-	 * 
+	 *
 	 *     # SQL search and delete records from database table 'wp_options' where 'option_name' match 'foo'
 	 *     wp db query "DELETE from wp_options where option_id in ($(wp db query "SELECT GROUP_CONCAT(option_id SEPARATOR ',') from wp_options where option_name like '%foo%';" --silent --skip-column-names))"
-	 * 
+	 *
 	 * @when after_wp_load
 	 */
 	public function search( $args, $assoc_args ) {
@@ -1428,5 +1433,114 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		return $colors;
+	}
+
+	/**
+	 * Helper to pluck `mysql` options from associative args array.
+	 *
+	 * @param array $assoc_args Associative args array.
+	 * @return array Array with `mysql` options set if in passed-in associative args array.
+	 */
+	private static function get_mysql_args( $assoc_args ) {
+
+		$allowed_mysql_options = [
+			'auto-rehash',
+			'auto-vertical-output',
+			'batch',
+			'binary-as-hex',
+			'binary-mode',
+			'bind-address',
+			'character-sets-dir',
+			'column-names',
+			'column-type-info',
+			'comments',
+			'compress',
+			'connect-expired-password',
+			'connect_timeout',
+			'database',
+			'debug',
+			'debug-check',
+			'debug-info',
+			'default-auth',
+			'default-character-set',
+			'defaults-extra-file',
+			'defaults-file',
+			'defaults-group-suffix',
+			'delimiter',
+			'enable-cleartext-plugin',
+			'execute',
+			'force',
+			'get-server-public-key',
+			'help',
+			'histignore',
+			'host',
+			'html',
+			'ignore-spaces',
+			'init-command',
+			'line-numbers',
+			'local-infile',
+			'login-path',
+			'max_allowed_packet',
+			'max_join_size',
+			'named-commands',
+			'net_buffer_length',
+			'no-beep',
+			'one-database',
+			'pager',
+			'pipe',
+			'plugin-dir',
+			'port',
+			'print-defaults',
+			'protocol',
+			'quick',
+			'raw',
+			'reconnect',
+			'i-am-a-dummy',
+			'safe-updates',
+			'secure-auth',
+			'select_limit',
+			'server-public-key-path',
+			'shared-memory-base-name',
+			'show-warnings',
+			'sigint-ignore',
+			'silent',
+			'skip-auto-rehash',
+			'skip-column-names',
+			'skip-line-numbers',
+			'skip-named-commands',
+			'skip-pager',
+			'skip-reconnect',
+			'socket',
+			'ssl-ca',
+			'ssl-capath',
+			'ssl-cert',
+			'ssl-cipher',
+			'ssl-crl',
+			'ssl-crlpath',
+			'ssl-fips-mode',
+			'ssl-key',
+			'ssl-mode',
+			'syslog',
+			'table',
+			'tee',
+			'tls-version',
+			'unbuffered',
+			'verbose',
+			'version',
+			'vertical',
+			'wait',
+			'xml'
+		];
+
+		$mysql_args = array();
+
+		foreach ( $assoc_args as $mysql_option_key => $mysql_option_value ) {
+			// Check flags to make sure they only contain valid options.
+			if ( in_array( $mysql_option_key,  $allowed_mysql_options, true ) && ! empty( $mysql_option_value ) ) {
+				$mysql_args[$mysql_option_key] = $mysql_option_value;
+			}
+		}
+
+		return $mysql_args;
 	}
 }
