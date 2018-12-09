@@ -828,7 +828,7 @@ class DB_Command extends WP_CLI_Command {
 						define( 'TB_IN_BYTES', 1024 * GB_IN_BYTES );
 					}
 
-					if( $human_readable ) {
+					if ( $human_readable ) {
 						$size_key = floor( log( $row['Size'] ) / log( 1024 ) );
 					    $sizes = array( 'B', 'KB', 'MB', 'GB', 'TB' );
 
