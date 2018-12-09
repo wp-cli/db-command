@@ -685,6 +685,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--tables]
 	 * : Display each table name and size instead of the database size.
 	 *
+	 * [--human-readable]
+	 * : Display database sizes in human readable formats.
+	 *
 	 * [--format]
 	 * : table, csv, json
 	 * ---
@@ -751,11 +754,17 @@ class DB_Command extends WP_CLI_Command {
 
 		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
 		$size_format = WP_CLI\Utils\get_flag_value( $assoc_args, 'size_format' );
+		$human_readable = WP_CLI\Utils\get_flag_value( $assoc_args, 'human-readable', false );
 		$tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'tables' );
 		$tables = ! empty( $tables );
 
+		if( ! is_null( $size_format ) && $human_readable ) {
+			WP_CLI::error( "The size_format and human-readable arguments were both passed." );
+		}
+
 		unset( $assoc_args['format'] );
 		unset( $assoc_args['size_format'] );
+		unset( $assoc_args['human-readable'] );
 		unset( $assoc_args['tables'] );
 
 		if ( empty( $args ) && empty( $assoc_args ) ) {
@@ -766,7 +775,7 @@ class DB_Command extends WP_CLI_Command {
 		$rows = array();
 		$fields = array( 'Name', 'Size' );
 
-		$default_unit = ( empty( $size_format ) ) ? ' B' : '';
+		$default_unit = ( empty( $size_format ) && ! $human_readable ) ? ' B' : '';
 
 		if ( $tables ) {
 
@@ -803,7 +812,7 @@ class DB_Command extends WP_CLI_Command {
 				);
 		}
 
-		if ( ! empty( $size_format ) ) {
+		if ( ! empty( $size_format ) || $human_readable ) {
 			foreach( $rows as $index => $row ) {
 					// These added WP 4.4.0.
 					if ( ! defined( 'KB_IN_BYTES' ) ) {
@@ -817,6 +826,13 @@ class DB_Command extends WP_CLI_Command {
 					}
 				        if ( ! defined( 'TB_IN_BYTES' ) ) {
 						define( 'TB_IN_BYTES', 1024 * GB_IN_BYTES );
+					}
+
+					if( $human_readable ) {
+						$size_key = floor( log( $row['Size'] ) / log( 1024 ) );
+					    $sizes = array( 'B', 'KB', 'MB', 'GB', 'TB' );
+
+						$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[ 0 ];
 					}
 
 					// Display the database size as a number.
