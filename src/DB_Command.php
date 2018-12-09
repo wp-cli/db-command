@@ -759,7 +759,7 @@ class DB_Command extends WP_CLI_Command {
 		$tables = ! empty( $tables );
 
 		if( ! is_null( $size_format ) && $human_readable ) {
-			WP_CLI::error( "The size_format and human-readable arguments were both passed." );
+			WP_CLI::error( "Cannot use --size_format and --human-readable arguments at the same time." );
 		}
 
 		unset( $assoc_args['format'] );
