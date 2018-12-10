@@ -30,6 +30,55 @@ Feature: Display database size
       wp_cli_test
       """
 
+  Scenario: Display only database size in a human readable format for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --human-readable`
+    Then STDOUT should contain:
+      """
+      wp_cli_test
+      """
+
+    And STDOUT should contain:
+      """
+      KB
+      """
+
+    When I try `wp db size --human-readable --size_format=b`
+    Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Cannot use --size_format and --human-readable arguments at the same time.
+      """
+    And STDOUT should be empty
+
+  Scenario: Display only table sizes in a human readable format for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --tables --human-readable`
+    Then STDOUT should contain:
+      """
+      wp_posts
+      """
+
+    And STDOUT should contain:
+      """
+      KB
+      """
+
+    But STDOUT should not contain:
+      """
+      wp_cli_test
+      """
+
+    When I try `wp db size --tables --human-readable --size_format=b`
+    Then the return code should not be 0
+    And STDERR should contain:
+      """
+      Cannot use --size_format and --human-readable arguments at the same time.
+      """
+    And STDOUT should be empty
+
   Scenario: Display only database size in bytes for a WordPress install
     Given a WP install
 
