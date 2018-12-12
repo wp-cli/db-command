@@ -829,7 +829,7 @@ class DB_Command extends WP_CLI_Command {
 					}
 
 					if ( $human_readable ) {
-						$size_key = floor( log( $row['Size'] ) / log( 1024 ) );
+						$size_key = floor( log( $row['Size'] ) / log( 1000 ) );
 					    $sizes = array( 'B', 'KB', 'MB', 'GB', 'TB' );
 
 						$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[ 0 ];
