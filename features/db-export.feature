@@ -49,7 +49,7 @@ Feature: Export a WordPress database
     When I run `wp db export - --dbpass=password1 --skip-comments`
     Then STDOUT should not contain:
       """
-      -- 
+      -- Table structure
       """
 
     When I try `wp db export - --dbpass=no_such_pass`
