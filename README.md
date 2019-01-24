@@ -179,7 +179,7 @@ for more details on the `CHECK TABLE` statement.
 		Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
 
 	[--<field>=<value>]
-		Extra arguments to pass to mysqlcheck.
+		Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 
 **EXAMPLES**
 
@@ -212,7 +212,7 @@ for more details on the `OPTIMIZE TABLE` statement.
 		Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
 
 	[--<field>=<value>]
-		Extra arguments to pass to mysqlcheck.
+		Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 
 **EXAMPLES**
 
@@ -262,7 +262,7 @@ more details on the `REPAIR TABLE` statement.
 		Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
 
 	[--<field>=<value>]
-		Extra arguments to pass to mysqlcheck.
+		Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 
 **EXAMPLES**
 
@@ -294,7 +294,7 @@ wp db cli [--database=<database>] [--default-character-set=<character-set>] [--d
 		Password to pass to mysql. Defaults to DB_PASSWORD.
 
 	[--<field>=<value>]
-		Extra arguments to pass to mysql.
+		Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 
 **EXAMPLES**
 
@@ -327,7 +327,7 @@ Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 		Password to pass to mysql. Defaults to DB_PASSWORD.
 
 	[--<field>=<value>]
-		Extra arguments to pass to mysql.
+		Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 
 **EXAMPLES**
 
@@ -385,7 +385,7 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 		Password to pass to mysqldump. Defaults to DB_PASSWORD.
 
 	[--<field>=<value>]
-		Extra arguments to pass to mysqldump.
+		Extra arguments to pass to mysqldump. [Refer to mysqldump docs](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
 
 	[--tables=<tables>]
 		The comma separated list of specific tables to export. Excluding this parameter will export all tables in the database.
@@ -450,7 +450,7 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 Imports a database from a file or from STDIN.
 
 ~~~
-wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--skip-optimization]
+wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--skip-optimization]
 ~~~
 
 Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
@@ -468,6 +468,9 @@ defined in the SQL.
 
 	[--dbpass=<value>]
 		Password to pass to mysql. Defaults to DB_PASSWORD.
+
+	[--<field>=<value>]
+		Extra arguments to pass to mysql. [Refer to mysql binary docs](https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html).
 
 	[--skip-optimization]
 		When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
@@ -608,6 +611,16 @@ They can be concatenated. For instance, the default match color of black on a mu
     1:https://wordpress.org/
         ...
     Success: Found 99146 matches in 10.752s (10.559s searching). Searched 12 tables, 53 columns, 1358907 rows. 1 table skipped: wp_term_relationships.
+
+    # SQL search database table 'wp_options' where 'option_name' match 'foo'
+    wp db query 'SELECT * FROM wp_options WHERE option_name like "%foo%"' --skip-column-names
+    +----+--------------+--------------------------------+-----+
+    | 98 | foo_options  | a:1:{s:12:"_multiwidget";i:1;} | yes |
+    | 99 | foo_settings | a:0:{}                         | yes |
+    +----+--------------+--------------------------------+-----+
+
+    # SQL search and delete records from database table 'wp_options' where 'option_name' match 'foo'
+    wp db query "DELETE from wp_options where option_id in ($(wp db query "SELECT GROUP_CONCAT(option_id SEPARATOR ',') from wp_options where option_name like '%foo%';" --silent --skip-column-names))"
 
 
 
