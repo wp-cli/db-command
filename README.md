@@ -672,7 +672,7 @@ Defaults to all tables registered to the $wpdb database handler.
 Displays the database name and size.
 
 ~~~
-wp db size [--size_format=<format>] [--tables] [--human-readable] [--format] [--scope=<scope>] [--network] [--all-tables-with-prefix] [--all-tables]
+wp db size [--size_format=<format>] [--tables] [--human-readable] [--format=<format>] [--scope=<scope>] [--network] [--all-tables-with-prefix] [--all-tables]
 ~~~
 
 Display the database name and size for `DB_NAME` specified in wp-config.php.
@@ -723,14 +723,15 @@ Available size formats include:
 	[--human-readable]
 		Display database sizes in human readable formats.
 
-	[--format]
-		table, csv, json
+	[--format=<format>]
+		Render output in a particular format.
 		---
 		default: table
 		options:
 		  - table
 		  - csv
 		  - json
+		  - yaml
 		---
 
 	[--scope=<scope>]
