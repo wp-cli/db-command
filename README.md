@@ -699,7 +699,6 @@ Available size formats include:
 	[--size_format=<format>]
 		Display the database size only, as a bare number.
 		---
-		default: b
 		options:
 		  - b
 		  - kb
