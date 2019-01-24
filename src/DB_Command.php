@@ -682,21 +682,21 @@ class DB_Command extends WP_CLI_Command {
 	 * ---
 	 * default: b
 	 * options:
-	 *  - b
-	 *  - kb
-	 *  - mb
-	 *  - gb
-	 *  - tb
-	 *  - B
-	 *  - KB
-	 *  - KiB
-	 *  - MB
-	 *  - MiB
-	 *  - GB
-	 *  - GiB
-	 *  - TB
-	 *  - TiB
-	 *  ---
+	 *   - b
+	 *   - kb
+	 *   - mb
+	 *   - gb
+	 *   - tb
+	 *   - B
+	 *   - KB
+	 *   - KiB
+	 *   - MB
+	 *   - MiB
+	 *   - GB
+	 *   - GiB
+	 *   - TB
+	 *   - TiB
+	 * ---
 	 *
 	 * [--tables]
 	 * : Display each table name and size instead of the database size.
