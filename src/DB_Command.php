@@ -706,7 +706,6 @@ class DB_Command extends WP_CLI_Command {
 	 * [--format=<format>]
 	 * : Render output in a particular format.
 	 * ---
-	 * default: table
 	 * options:
 	 *   - table
 	 *   - csv

@@ -738,7 +738,6 @@ Available size formats include:
 	[--format=<format>]
 		Render output in a particular format.
 		---
-		default: table
 		options:
 		  - table
 		  - csv
