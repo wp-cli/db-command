@@ -680,7 +680,6 @@ class DB_Command extends WP_CLI_Command {
 	 * [--size_format=<format>]
 	 * : Display the database size only, as a bare number.
 	 * ---
-	 * default: b
 	 * options:
 	 *   - b
 	 *   - kb
