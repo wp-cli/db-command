@@ -659,28 +659,43 @@ class DB_Command extends WP_CLI_Command {
 	 * Display the database name and size for `DB_NAME` specified in wp-config.php.
 	 * The size defaults to a human-readable number.
 	 *
+	 * Available size formats include:
+	 * * b (bytes)
+	 * * kb (kilobytes)
+	 * * mb (megabytes)
+	 * * gb (gigabytes)
+	 * * tb (terabytes)
+	 * * B   (ISO Byte setting, with no conversion)
+	 * * KB  (ISO Kilobyte setting, with 1 KB  = 1,000 B)
+	 * * KiB (ISO Kibibyte setting, with 1 KiB = 1,024 B)
+	 * * MB  (ISO Megabyte setting, with 1 MB  = 1,000 KB)
+	 * * MiB (ISO Mebibyte setting, with 1 MiB = 1,024 KiB)
+	 * * GB  (ISO Gigabyte setting, with 1 GB  = 1,000 MB)
+	 * * GiB (ISO Gibibyte setting, with 1 GiB = 1,024 MiB)
+	 * * TB  (ISO Terabyte setting, with 1 TB  = 1,000 GB)
+	 * * TiB (ISO Tebibyte setting, with 1 TiB = 1,024 GiB)
+	 *
 	 * ## OPTIONS
 	 *
-	 * [--size_format]
+	 * [--size_format=<format>]
 	 * : Display the database size only, as a bare number.
 	 * ---
-	 * default: b
 	 * options:
-	 *  - b (bytes)
-	 *  - kb (kilobytes)
-	 *  - mb (megabytes)
-	 *  - gb (gigabytes)
-	 *  - tb (terabytes)
-	 *  - B   (ISO Byte setting, with no conversion)
-	 *  - KB  (ISO Kilobyte setting, with 1 KB  = 1,000 B)
-	 *  - KiB (ISO Kibibyte setting, with 1 KiB = 1,024 B)
-	 *  - MB  (ISO Megabyte setting, with 1 MB  = 1,000 KB)
-	 *  - MiB (ISO Mebibyte setting, with 1 MiB = 1,024 KiB)
-	 *  - GB  (ISO Gigabyte setting, with 1 GB  = 1,000 MB)
-	 *  - GiB (ISO Gibibyte setting, with 1 GiB = 1,024 MiB)
-	 *  - TB  (ISO Terabyte setting, with 1 TB  = 1,000 GB)
-	 *  - TiB (ISO Tebibyte setting, with 1 TiB = 1,024 GiB)
-	 *  ---
+	 *   - b
+	 *   - kb
+	 *   - mb
+	 *   - gb
+	 *   - tb
+	 *   - B
+	 *   - KB
+	 *   - KiB
+	 *   - MB
+	 *   - MiB
+	 *   - GB
+	 *   - GiB
+	 *   - TB
+	 *   - TiB
+	 * ---
 	 *
 	 * [--tables]
 	 * : Display each table name and size instead of the database size.
@@ -688,14 +703,14 @@ class DB_Command extends WP_CLI_Command {
 	 * [--human-readable]
 	 * : Display database sizes in human readable formats.
 	 *
-	 * [--format]
-	 * : table, csv, json
+	 * [--format=<format>]
+	 * : Render output in a particular format.
 	 * ---
-	 * default: table
 	 * options:
 	 *   - table
 	 *   - csv
 	 *   - json
+	 *   - yaml
 	 * ---
 	 *
 	 * [--scope=<scope>]
