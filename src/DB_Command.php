@@ -946,7 +946,7 @@ class DB_Command extends WP_CLI_Command {
 				"Found %d %s in %.3fs (%.3fs searching). Searched %d %s, %d %s, %d %s. %d %s.",
 				$match_count, $match_str, $run_time, $search_time, $table_count, $table_str, $column_count, $column_str, $row_count, $row_str, $skipped_count, $skipped_str
 			);
-			WP_ClI::success( $stats_msg );
+			WP_CLI::success( $stats_msg );
 		}
 	}
 
