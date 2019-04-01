@@ -773,6 +773,7 @@ class DB_Command extends WP_CLI_Command {
 		$tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'tables' );
 		$tables = ! empty( $tables );
 		$all_tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'all-tables' );
+		$all_tables_with_prefix = WP_CLI\Utils\get_flag_value( $assoc_args, 'all-tables-with-prefix' );
 
 		if( ! is_null( $size_format ) && $human_readable ) {
 			WP_CLI::error( "Cannot use --size_format and --human-readable arguments at the same time." );
@@ -793,7 +794,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$default_unit = ( empty( $size_format ) && ! $human_readable ) ? ' B' : '';
 
-		if ( $tables ) {
+		if ( $tables || $all_tables || $all_tables_with_prefix ) {
 
 			// Add all of the table sizes
 			foreach( WP_CLI\Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
@@ -814,37 +815,18 @@ class DB_Command extends WP_CLI_Command {
 			}
 		} else {
 
-			// Display all tables size information.
-			if ( $all_tables ) {
-				foreach( WP_CLI\Utils\wp_get_table_names( [], [ 'all-tables' => true ] ) as $table_name ) {
-					// Get the table size.
-					$table_bytes = $wpdb->get_var( $wpdb->prepare(
-						"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' and Table_Name = '%s' GROUP BY Table_Name LIMIT 1",
-						DB_NAME,
-						$table_name
-					)
-					);
-
-					// Add the table size to the list.
-					$rows[] = array(
-						'Name'  => $table_name,
-						'Size'  => strtoupper( $table_bytes ) . $default_unit,
-					);
-				}
-			} else {
-				// Get the database size.
-				$db_bytes = $wpdb->get_var( $wpdb->prepare(
-					"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' GROUP BY table_schema;",
-					DB_NAME
+			// Get the database size.
+			$db_bytes = $wpdb->get_var( $wpdb->prepare(
+				"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' GROUP BY table_schema;",
+				DB_NAME
 				)
-				);
+			);
 
-				// Add the database size to the list.
-				$rows[] = array(
-					'Name'  => DB_NAME,
-					'Size'  => strtoupper( $db_bytes ) . $default_unit,
+			// Add the database size to the list.
+			$rows[] = array(
+				'Name'  => DB_NAME,
+				'Size'  => strtoupper( $db_bytes ) . $default_unit,
 				);
-			}
 		}
 
 		if ( ! empty( $size_format ) || $human_readable ) {
@@ -920,7 +902,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
-		if ( ! empty( $size_format) && ! $tables && ! $format && ! $human_readable && true !== $all_tables ) {
+		if ( ! empty( $size_format) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
 			WP_CLI::Line( filter_var( $rows[0]['Size'], FILTER_SANITIZE_NUMBER_INT ) );
 		} else {
 			// Display the rows.

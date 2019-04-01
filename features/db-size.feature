@@ -153,10 +153,21 @@ Feature: Display database size
 
     But STDOUT should not be a number
 
-  Scenario: Display only all table sizes for a WordPress install
+  Scenario: Display all table sizes for a WordPress install
     Given a WP install
 
     When I run `wp db size --all-tables --size_format=kb`
+    Then STDOUT should contain:
+      """
+      wp_posts
+      """
+
+    And STDOUT should contain:
+      """
+      KB
+      """
+
+    When I run `wp db size --all-tables-with-prefix --size_format=kb`
     Then STDOUT should contain:
       """
       wp_posts
