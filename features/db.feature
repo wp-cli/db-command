@@ -12,7 +12,7 @@ Feature: Perform database operations
       """
       y
       """
-    And wp-debug.php file:
+    And a wp-debug.php file:
       """
       <?php
       define( 'WP_DEBUG', true );
@@ -27,7 +27,7 @@ Feature: Perform database operations
     Then STDOUT should be empty
     And STDERR should contain:
       """
-      Can’t select database. We were able to connect to the database server (which means your username and password is okay) but not able to select the `wp_cli_test` database.
+      We were able to connect to the database server (which means your username and password is okay) but not able to select the `wp_cli_test` database.
       """
 
     When I run `wp db create`
@@ -64,7 +64,7 @@ Feature: Perform database operations
     Given an empty directory
     And WP files
     And wp-config.php
-    And wp-debug.php file:
+    And a wp-debug.php file:
       """
       <?php
       define( 'WP_DEBUG', true );
@@ -77,9 +77,9 @@ Feature: Perform database operations
 
     When I try `wp option get home`
     Then STDOUT should be empty
-    And STDERR should be:
+    And STDERR should contain:
       """
-      Can’t select database. We were able to connect to the database server (which means your username and password is okay) but not able to select the `wp_cli_test` database.
+      We were able to connect to the database server (which means your username and password is okay) but not able to select the `wp_cli_test` database.
       """
 
     When I run `wp db create --dbuser=wp_cli_test`
