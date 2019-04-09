@@ -772,6 +772,8 @@ class DB_Command extends WP_CLI_Command {
 		$human_readable = WP_CLI\Utils\get_flag_value( $assoc_args, 'human-readable', false );
 		$tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'tables' );
 		$tables = ! empty( $tables );
+		$all_tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'all-tables' );
+		$all_tables_with_prefix = WP_CLI\Utils\get_flag_value( $assoc_args, 'all-tables-with-prefix' );
 
 		if( ! is_null( $size_format ) && $human_readable ) {
 			WP_CLI::error( "Cannot use --size_format and --human-readable arguments at the same time." );
@@ -792,7 +794,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$default_unit = ( empty( $size_format ) && ! $human_readable ) ? ' B' : '';
 
-		if ( $tables ) {
+		if ( $tables || $all_tables || $all_tables_with_prefix ) {
 
 			// Add all of the table sizes
 			foreach( WP_CLI\Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
@@ -900,7 +902,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
-		if ( ! empty( $size_format) && ! $tables && ! $format && ! $human_readable ) {
+		if ( ! empty( $size_format) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
 			WP_CLI::Line( filter_var( $rows[0]['Size'], FILTER_SANITIZE_NUMBER_INT ) );
 		} else {
 			// Display the rows.
