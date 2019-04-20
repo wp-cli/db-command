@@ -875,29 +875,29 @@ class DB_Command extends WP_CLI_Command {
 					// Display the database size as a number.
 				switch ( $size_format ) {
 					case 'TB':
-							 $divisor = pow( 1000, 4 );
+							$divisor = pow( 1000, 4 );
 						break;
 
 					case 'GB':
-							 $divisor = pow( 1000, 3 );
+							$divisor = pow( 1000, 3 );
 						break;
 
 					case 'MB':
-							 $divisor = pow( 1000, 2 );
+							$divisor = pow( 1000, 2 );
 						break;
 
 					case 'KB':
-							 $divisor = 1000;
+							$divisor = 1000;
 						break;
 
 					case 'tb':
 					case 'TiB':
-							 $divisor = TB_IN_BYTES;
+							$divisor = TB_IN_BYTES;
 						break;
 
 					case 'gb':
 					case 'GiB':
-							 $divisor = GB_IN_BYTES;
+							$divisor = GB_IN_BYTES;
 						break;
 
 					case 'mb':
@@ -1102,7 +1102,8 @@ class DB_Command extends WP_CLI_Command {
 		$after_context = \WP_CLI\Utils\get_flag_value( $assoc_args, 'after_context', 40 );
 		$after_context = '' === $after_context ? $after_context : (int) $after_context;
 
-		if ( ( $regex = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex', false ) ) ) {
+		$regex = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex', false )
+		if ( false !== $regex ) {
 			$regex_flags             = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-flags', false );
 			$default_regex_delimiter = false;
 			$regex_delimiter         = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-delimiter', '' );
@@ -1126,7 +1127,9 @@ class DB_Command extends WP_CLI_Command {
 		$matches_only      = \WP_CLI\Utils\get_flag_value( $assoc_args, 'matches_only', false );
 		$stats             = \WP_CLI\Utils\get_flag_value( $assoc_args, 'stats', false );
 
-		$column_count = $row_count = $match_count = 0;
+		$column_count = 0;
+		$row_count    = 0;
+		$match_count  = 0
 		$skipped      = array();
 
 		if ( $regex ) {
@@ -1178,7 +1181,8 @@ class DB_Command extends WP_CLI_Command {
 			$column_count += count( $text_columns );
 			if ( ! $primary_keys ) {
 				WP_CLI::warning( "No primary key for table '$table'. No row ids will be outputted." );
-				$primary_key = $primary_key_sql = '';
+				$primary_key '';
+				$primary_key_sql = '';
 			} else {
 				$primary_key     = array_shift( $primary_keys );
 				$primary_key_sql = self::esc_sql_ident( $primary_key ) . ', ';
@@ -1216,7 +1220,8 @@ class DB_Command extends WP_CLI_Command {
 								$match           = $matches[0][ $i ][0];
 								$offset          = $matches[0][ $i ][1];
 								$log             = $colors['match'][0] . $match . $colors['match'][1];
-								$before          = $after = '';
+								$before          = '';
+								after            = '';
 								$after_shortened = false;
 
 								// Offsets are in bytes, so need to use `strlen()` and `substr()` before using `safe_substr()`.
@@ -1407,10 +1412,12 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	private static function get_dbuser_dbpass_args( $assoc_args ) {
 		$mysql_args = array();
-		if ( null !== ( $dbuser = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dbuser' ) ) ) {
+		$dbuser     = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dbuser' );
+		if ( null !== $dbuser ) {
 			$mysql_args['dbuser'] = $dbuser;
 		}
-		if ( null !== ( $dbpass = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dbpass' ) ) ) {
+		$dbpass = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dbpass' );
+		if ( null !== $dbpass ) {
 			$mysql_args['dbpass'] = $dbpass;
 		}
 		return $mysql_args;
@@ -1426,7 +1433,9 @@ class DB_Command extends WP_CLI_Command {
 		global $wpdb;
 
 		$table_sql       = self::esc_sql_ident( $table );
-		$primary_keys    = $text_columns = $all_columns = array();
+		$primary_keys    = array();
+		$text_columns    = array();
+		$all_columns     = array();
 		$suppress_errors = $wpdb->suppress_errors();
 		if ( ( $results = $wpdb->get_results( "DESCRIBE $table_sql" ) ) ) {
 			foreach ( $results as $col ) {
