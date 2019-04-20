@@ -50,5 +50,9 @@
 			</property>
 		</properties>
 	</rule>
-
+	
+	<!-- Exclude existing classes from the prefix rule as it would break BC to prefix them now. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound">
+		<exclude-pattern>*/src/DB_Command\.php$</exclude-pattern>
+	</rule>
 </ruleset>
