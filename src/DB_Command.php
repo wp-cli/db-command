@@ -1425,7 +1425,9 @@ class DB_Command extends WP_CLI_Command {
 		$text_columns    = array();
 		$all_columns     = array();
 		$suppress_errors = $wpdb->suppress_errors();
-		if ( ( $results = $wpdb->get_results( "DESCRIBE $table_sql" ) ) ) {
+
+		$results = $wpdb->get_results( "DESCRIBE $table_sql" );
+		if ( $results ) {
 			foreach ( $results as $col ) {
 				if ( 'PRI' === $col->Key ) {
 					$primary_keys[] = $col->Field;
