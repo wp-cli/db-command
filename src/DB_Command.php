@@ -204,14 +204,10 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database checked.
 	 */
 	public function check( $_, $assoc_args ) {
+		$assoc_args['check'] = true;
 		self::run(
 			Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ),
-			array_merge(
-				$assoc_args,
-				array(
-					'check' => true,
-				)
-			)
+			$assoc_args,
 		);
 
 		WP_CLI::success( 'Database checked.' );
@@ -244,14 +240,10 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database optimized.
 	 */
 	public function optimize( $_, $assoc_args ) {
+		$assoc_args['optimize'] = true;
 		self::run(
 			Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ),
-			array_merge(
-				$assoc_args,
-				array(
-					'optimize' => true,
-				)
-			)
+			$assoc_args,
 		);
 
 		WP_CLI::success( 'Database optimized.' );
@@ -284,14 +276,10 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database repaired.
 	 */
 	public function repair( $_, $assoc_args ) {
+		$assoc_args['repair'] = true;
 		self::run(
 			Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ),
-			array_merge(
-				$assoc_args,
-				array(
-					'repair' => true,
-				)
-			)
+			$assoc_args,
 		);
 
 		WP_CLI::success( 'Database repaired.' );
