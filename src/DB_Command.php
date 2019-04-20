@@ -1209,7 +1209,7 @@ class DB_Command extends WP_CLI_Command {
 								$offset          = $matches[0][ $i ][1];
 								$log             = $colors['match'][0] . $match . $colors['match'][1];
 								$before          = '';
-								after            = '';
+								$after           = '';
 								$after_shortened = false;
 
 								// Offsets are in bytes, so need to use `strlen()` and `substr()` before using `safe_substr()`.
