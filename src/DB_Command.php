@@ -1117,7 +1117,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$column_count = 0;
 		$row_count    = 0;
-		$match_count  = 0
+		$match_count  = 0;
 		$skipped      = array();
 
 		if ( $regex ) {
