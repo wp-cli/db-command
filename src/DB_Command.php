@@ -1169,7 +1169,7 @@ class DB_Command extends WP_CLI_Command {
 			$column_count += count( $text_columns );
 			if ( ! $primary_keys ) {
 				WP_CLI::warning( "No primary key for table '$table'. No row ids will be outputted." );
-				$primary_key '';
+				$primary_key     = '';
 				$primary_key_sql = '';
 			} else {
 				$primary_key     = array_shift( $primary_keys );
