@@ -1509,7 +1509,8 @@ class DB_Command extends WP_CLI_Command {
 		$color_codes_regex = '/^(?:%[' . $color_codes . '])*$/';
 
 		foreach ( array_keys( $colors ) as $color_col ) {
-			if ( false !== ( $col_color_flag = \WP_CLI\Utils\get_flag_value( $assoc_args, $color_col . '_color', false ) ) ) {
+			$col_color_flag = \WP_CLI\Utils\get_flag_value( $assoc_args, $color_col . '_color', false );
+			if ( false !== $col_color_flag ) {
 				if ( ! preg_match( $color_codes_regex, $col_color_flag, $matches ) ) {
 					WP_CLI::warning( "Unrecognized percent color code '$col_color_flag' for '{$color_col}_color'." );
 				} else {
