@@ -1090,7 +1090,7 @@ class DB_Command extends WP_CLI_Command {
 		$after_context = \WP_CLI\Utils\get_flag_value( $assoc_args, 'after_context', 40 );
 		$after_context = '' === $after_context ? $after_context : (int) $after_context;
 
-		$regex = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex', false )
+		$regex = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex', false );
 		if ( false !== $regex ) {
 			$regex_flags             = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-flags', false );
 			$default_regex_delimiter = false;
