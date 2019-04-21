@@ -1,9 +1,10 @@
 <?php
 
-use \WP_CLI\Utils;
+use WP_CLI\Formatter;
+use WP_CLI\Utils;
 
 /**
- * Perform basic database operations using credentials stored in wp-config.php
+ * Performs basic database operations using credentials stored in wp-config.php.
  *
  * ## EXAMPLES
  *
@@ -21,15 +22,25 @@ use \WP_CLI\Utils;
  *
  *     # Execute a SQL query stored in a file.
  *     $ wp db query < debug.sql
+ *
+ * @when after_wp_config_load
  */
 class DB_Command extends WP_CLI_Command {
 
 	/**
-	 * Create a new database.
+	 * Creates a new database.
 	 *
 	 * Runs `CREATE_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 	 * `DB_USER` and `DB_PASSWORD` database credentials specified in
 	 * wp-config.php.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysql. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -38,19 +49,25 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function create( $_, $assoc_args ) {
 
-		self::run_query( self::get_create_query() );
+		self::run_query( self::get_create_query(), self::get_dbuser_dbpass_args( $assoc_args ) );
 
-		WP_CLI::success( "Database created." );
+		WP_CLI::success( 'Database created.' );
 	}
 
 	/**
-	 * Delete the existing database.
+	 * Deletes the existing database.
 	 *
 	 * Runs `DROP_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 	 * `DB_USER` and `DB_PASSWORD` database credentials specified in
 	 * wp-config.php.
 	 *
 	 * ## OPTIONS
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysql. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
 	 * [--yes]
 	 * : Answer yes to the confirmation message.
@@ -63,19 +80,25 @@ class DB_Command extends WP_CLI_Command {
 	public function drop( $_, $assoc_args ) {
 		WP_CLI::confirm( "Are you sure you want to drop the '" . DB_NAME . "' database?", $assoc_args );
 
-		self::run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ) );
+		self::run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ), self::get_dbuser_dbpass_args( $assoc_args ) );
 
-		WP_CLI::success( "Database dropped." );
+		WP_CLI::success( 'Database dropped.' );
 	}
 
 	/**
-	 * Remove all tables from the database.
+	 * Removes all tables from the database.
 	 *
 	 * Runs `DROP_DATABASE` and `CREATE_DATABASE` SQL statements using
 	 * `DB_HOST`, `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
 	 * specified in wp-config.php.
 	 *
 	 * ## OPTIONS
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysql. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
 	 * [--yes]
 	 * : Answer yes to the confirmation message.
@@ -88,14 +111,74 @@ class DB_Command extends WP_CLI_Command {
 	public function reset( $_, $assoc_args ) {
 		WP_CLI::confirm( "Are you sure you want to reset the '" . DB_NAME . "' database?", $assoc_args );
 
-		self::run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ) );
-		self::run_query( self::get_create_query() );
+		$mysql_args = self::get_dbuser_dbpass_args( $assoc_args );
 
-		WP_CLI::success( "Database reset." );
+		self::run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ), $mysql_args );
+		self::run_query( self::get_create_query(), $mysql_args );
+
+		WP_CLI::success( 'Database reset.' );
 	}
 
 	/**
-	 * Check the current status of the database.
+	 * Removes all tables with `$table_prefix` from the database.
+	 *
+	 * Runs `DROP_TABLE` for each table that has a `$table_prefix` as specified
+	 * in wp-config.php.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysql. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
+	 *
+	 * [--yes]
+	 * : Answer yes to the confirmation message.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     # Delete all tables that match the current site prefix.
+	 *     $ wp db clean --yes
+	 *     Success: Tables dropped.
+	 *
+	 * @when after_wp_load
+	 */
+	public function clean( $_, $assoc_args ) {
+		global $wpdb;
+
+		WP_CLI::confirm(
+			sprintf(
+				"Are you sure you want to drop all the tables on '%s' that use the current site's database prefix ('%s')?",
+				DB_NAME,
+				$wpdb->get_blog_prefix()
+			),
+			$assoc_args
+		);
+
+		$mysql_args = self::get_dbuser_dbpass_args( $assoc_args );
+
+		$tables = Utils\wp_get_table_names(
+			array(),
+			array( 'all-tables-with-prefix' )
+		);
+
+		foreach ( $tables as $table ) {
+			self::run_query(
+				sprintf(
+					'DROP TABLE IF EXISTS `%s`.`%s`',
+					DB_NAME,
+					$table
+				),
+				$mysql_args
+			);
+		}
+
+		WP_CLI::success( 'Tables dropped.' );
+	}
+
+	/**
+	 * Checks the current status of the database.
 	 *
 	 * Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
@@ -104,21 +187,34 @@ class DB_Command extends WP_CLI_Command {
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/check-table.html)
 	 * for more details on the `CHECK TABLE` statement.
 	 *
+	 * ## OPTIONS
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysqlcheck. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
+	 *
+	 * [--<field>=<value>]
+	 * : Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     $ wp db check
 	 *     Success: Database checked.
 	 */
-	public function check() {
-		self::run( Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ), array(
-			'check' => true,
-		) );
+	public function check( $_, $assoc_args ) {
+		$assoc_args['check'] = true;
+		self::run(
+			Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ),
+			$assoc_args
+		);
 
-		WP_CLI::success( "Database checked." );
+		WP_CLI::success( 'Database checked.' );
 	}
 
 	/**
-	 * Optimize the database.
+	 * Optimizes the database.
 	 *
 	 * Runs `mysqlcheck` utility with `--optimize=true` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
@@ -127,21 +223,34 @@ class DB_Command extends WP_CLI_Command {
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/optimize-table.html)
 	 * for more details on the `OPTIMIZE TABLE` statement.
 	 *
+	 * ## OPTIONS
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysqlcheck. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
+	 *
+	 * [--<field>=<value>]
+	 * : Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     $ wp db optimize
 	 *     Success: Database optimized.
 	 */
-	public function optimize() {
-		self::run( Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ), array(
-			'optimize' => true,
-		) );
+	public function optimize( $_, $assoc_args ) {
+		$assoc_args['optimize'] = true;
+		self::run(
+			Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ),
+			$assoc_args
+		);
 
-		WP_CLI::success( "Database optimized." );
+		WP_CLI::success( 'Database optimized.' );
 	}
 
 	/**
-	 * Repair the database.
+	 * Repairs the database.
 	 *
 	 * Runs `mysqlcheck` utility with `--repair=true` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
@@ -150,21 +259,34 @@ class DB_Command extends WP_CLI_Command {
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/repair-table.html) for
 	 * more details on the `REPAIR TABLE` statement.
 	 *
+	 * ## OPTIONS
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysqlcheck. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysqlcheck. Defaults to DB_PASSWORD.
+	 *
+	 * [--<field>=<value>]
+	 * : Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     $ wp db repair
 	 *     Success: Database repaired.
 	 */
-	public function repair() {
-		self::run( Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ), array(
-			'repair' => true,
-		) );
+	public function repair( $_, $assoc_args ) {
+		$assoc_args['repair'] = true;
+		self::run(
+			Utils\esc_cmd( '/usr/bin/env mysqlcheck --no-defaults %s', DB_NAME ),
+			$assoc_args
+		);
 
-		WP_CLI::success( "Database repaired." );
+		WP_CLI::success( 'Database repaired.' );
 	}
 
 	/**
-	 * Open a MySQL console using credentials from wp-config.php
+	 * Opens a MySQL console using credentials from wp-config.php
 	 *
 	 * ## OPTIONS
 	 *
@@ -174,8 +296,14 @@ class DB_Command extends WP_CLI_Command {
 	 * [--default-character-set=<character-set>]
 	 * : Use a specific character set. Defaults to DB_CHARSET when defined.
 	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysql. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
+	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to the MySQL executable.
+	 * : Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -194,7 +322,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Execute a SQL query against the database.
+	 * Executes a SQL query against the database.
 	 *
 	 * Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 	 *  and `DB_PASSWORD` database credentials specified in wp-config.php.
@@ -204,8 +332,14 @@ class DB_Command extends WP_CLI_Command {
 	 * [<sql>]
 	 * : A SQL query. If not passed, will try to read from STDIN.
 	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysql. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
+	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to mysql.
+	 * : Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -213,7 +347,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     $ wp db query < debug.sql
 	 *
 	 *     # Check all tables in the database
-	 *     $ wp db query "CHECK TABLE $(wp db tables | paste -s -d',');"
+	 *     $ wp db query "CHECK TABLE $(wp db tables | paste -s -d, -);"
 	 *     +---------------------------------------+-------+----------+----------+
 	 *     | Table                                 | Op    | Msg_type | Msg_text |
 	 *     +---------------------------------------+-------+----------+----------+
@@ -240,8 +374,8 @@ class DB_Command extends WP_CLI_Command {
 	public function query( $args, $assoc_args ) {
 		$assoc_args['database'] = DB_NAME;
 
-		// The query might come from STDIN
-		if ( !empty( $args ) ) {
+		// The query might come from STDIN.
+		if ( ! empty( $args ) ) {
 			$assoc_args['execute'] = $args[0];
 		}
 
@@ -260,8 +394,14 @@ class DB_Command extends WP_CLI_Command {
 	 * : The name of the SQL file to export. If '-', then outputs to STDOUT. If
 	 * omitted, it will be '{dbname}-{Y-m-d}-{random-hash}.sql'.
 	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysqldump. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysqldump. Defaults to DB_PASSWORD.
+	 *
 	 * [--<field>=<value>]
-	 * : Extra arguments to pass to mysqldump
+	 * : Extra arguments to pass to mysqldump. [Refer to mysqldump docs](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
 	 *
 	 * [--tables=<tables>]
 	 * : The comma separated list of specific tables to export. Excluding this parameter will export all tables in the database.
@@ -290,6 +430,14 @@ class DB_Command extends WP_CLI_Command {
 	 *     $ wp db export --tables=$(wp db tables --all-tables-with-prefix --format=csv)
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
+	 *     # Export certain posts without create table statements
+	 *     $ wp db export --no-create-info=true --tables=wp_posts --where="ID in (100,101,102)"
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
+	 *
+	 *     # Export relating meta for certain posts without create table statements
+	 *     $ wp db export --no-create-info=true --tables=wp_postmeta --where="post_id in (100,101,102)"
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
+	 *
 	 *     # Skip certain tables from the exported database
 	 *     $ wp db export --exclude_tables=wp_options,wp_users
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
@@ -308,7 +456,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     --
 	 *     -- Host: localhost    Database: wpdev
 	 *     -- ------------------------------------------------------
-	 *     -- Server version	5.7.19
+	 *     -- Server version    5.7.19
 	 *     ...
 	 *
 	 * @alias dump
@@ -317,11 +465,13 @@ class DB_Command extends WP_CLI_Command {
 		if ( ! empty( $args[0] ) ) {
 			$result_file = $args[0];
 		} else {
-			$hash = substr( md5( mt_rand() ), 0, 7 );
-			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash );;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rand_mt_rand -- WordPress is not loaded.
+			$hash        = substr( md5( mt_rand() ), 0, 7 );
+			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash );
+
 		}
-		$stdout = ( '-' === $result_file );
-		$porcelain = \WP_CLI\Utils\get_flag_value( $assoc_args, 'porcelain' );
+		$stdout    = ( '-' === $result_file );
+		$porcelain = Utils\get_flag_value( $assoc_args, 'porcelain' );
 
 		// Bail if both porcelain and STDOUT are set.
 		if ( $stdout && $porcelain ) {
@@ -332,7 +482,14 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$command = '/usr/bin/env mysqldump --no-defaults %s';
+		$support_column_statistics = exec( 'mysqldump --help | grep "column-statistics"' );
+
+		if ( $support_column_statistics ) {
+			$command = '/usr/bin/env mysqldump --no-defaults --skip-column-statistics %s';
+		} else {
+			$command = '/usr/bin/env mysqldump --no-defaults %s';
+		}
+
 		$command_esc_args = array( DB_NAME );
 
 		if ( isset( $assoc_args['tables'] ) ) {
@@ -340,18 +497,18 @@ class DB_Command extends WP_CLI_Command {
 			unset( $assoc_args['tables'] );
 			$command .= ' --tables';
 			foreach ( $tables as $table ) {
-				$command .= ' %s';
+				$command           .= ' %s';
 				$command_esc_args[] = trim( $table );
 			}
 		}
 
-		$exclude_tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'exclude_tables' );
+		$exclude_tables = Utils\get_flag_value( $assoc_args, 'exclude_tables' );
 		if ( isset( $exclude_tables ) ) {
 			$tables = explode( ',', trim( $assoc_args['exclude_tables'], ',' ) );
 			unset( $assoc_args['exclude_tables'] );
 			foreach ( $tables as $table ) {
-				$command .= ' --ignore-table';
-				$command .= ' %s';
+				$command           .= ' --ignore-table';
+				$command           .= ' %s';
 				$command_esc_args[] = trim( DB_NAME . '.' . $table );
 			}
 		}
@@ -365,14 +522,13 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( $porcelain ) {
 			WP_CLI::line( $result_file );
-		}
-		else if ( ! $stdout ) {
+		} elseif ( ! $stdout ) {
 			WP_CLI::success( sprintf( "Exported to '%s'.", $result_file ) );
 		}
 	}
 
 	/**
-	 * Import a database from a file or from STDIN.
+	 * Imports a database from a file or from STDIN.
 	 *
 	 * Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
 	 * `DB_PASSWORD` database credentials specified in wp-config.php. This
@@ -383,6 +539,15 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [<file>]
 	 * : The name of the SQL file to import. If '-', then reads from STDIN. If omitted, it will look for '{dbname}.sql'.
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysql. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
+	 *
+	 * [--<field>=<value>]
+	 * : Extra arguments to pass to mysql. [Refer to mysql binary docs](https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html).
 	 *
 	 * [--skip-optimization]
 	 * : When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
@@ -403,18 +568,21 @@ class DB_Command extends WP_CLI_Command {
 		$mysql_args = array(
 			'database' => DB_NAME,
 		);
+		$mysql_args = array_merge( self::get_dbuser_dbpass_args( $assoc_args ), $mysql_args );
 
 		if ( '-' !== $result_file ) {
 			if ( ! is_readable( $result_file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
 			}
 
-			$query = \WP_CLI\Utils\get_flag_value( $assoc_args, 'skip-optimization' )
+			$query = Utils\get_flag_value( $assoc_args, 'skip-optimization' )
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
 
 			$mysql_args['execute'] = sprintf( $query, $result_file );
 		}
+		// Check if any mysql option pass.
+		$mysql_args = array_merge( $mysql_args, self::get_mysql_args( $assoc_args ) );
 
 		self::run( '/usr/bin/env mysql --no-defaults --no-auto-rehash', $mysql_args );
 
@@ -422,7 +590,7 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * List the database tables.
+	 * Lists the database tables.
 	 *
 	 * Defaults to all tables registered to the $wpdb database handler.
 	 *
@@ -435,7 +603,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
 	 *
 	 * [--network]
-	 * : List all the tables in a multisite install. Overrides --scope=<scope>.
+	 * : List all the tables in a multisite install.
 	 *
 	 * [--all-tables-with-prefix]
 	 * : List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
@@ -469,17 +637,19 @@ class DB_Command extends WP_CLI_Command {
 	 *     # Export only tables for a single site
 	 *     $ wp db export --tables=$(wp db tables --url=sub.example.com --format=csv)
 	 *     Success: Exported to wordpress_dbase.sql
+	 *
+	 * @when after_wp_load
 	 */
 	public function tables( $args, $assoc_args ) {
 
-		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
+		$format = Utils\get_flag_value( $assoc_args, 'format' );
 		unset( $assoc_args['format'] );
 
 		if ( empty( $args ) && empty( $assoc_args ) ) {
 			$assoc_args['scope'] = 'all';
 		}
 
-		$tables = WP_CLI\Utils\wp_get_table_names( $args, $assoc_args );
+		$tables = Utils\wp_get_table_names( $args, $assoc_args );
 
 		if ( 'csv' === $format ) {
 			WP_CLI::line( implode( ',', $tables ) );
@@ -491,41 +661,70 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Display the database name and size.
+	 * Displays the database name and size.
 	 *
 	 * Display the database name and size for `DB_NAME` specified in wp-config.php.
 	 * The size defaults to a human-readable number.
 	 *
+	 * Available size formats include:
+	 * * b (bytes)
+	 * * kb (kilobytes)
+	 * * mb (megabytes)
+	 * * gb (gigabytes)
+	 * * tb (terabytes)
+	 * * B   (ISO Byte setting, with no conversion)
+	 * * KB  (ISO Kilobyte setting, with 1 KB  = 1,000 B)
+	 * * KiB (ISO Kibibyte setting, with 1 KiB = 1,024 B)
+	 * * MB  (ISO Megabyte setting, with 1 MB  = 1,000 KB)
+	 * * MiB (ISO Mebibyte setting, with 1 MiB = 1,024 KiB)
+	 * * GB  (ISO Gigabyte setting, with 1 GB  = 1,000 MB)
+	 * * GiB (ISO Gibibyte setting, with 1 GiB = 1,024 MiB)
+	 * * TB  (ISO Terabyte setting, with 1 TB  = 1,000 GB)
+	 * * TiB (ISO Tebibyte setting, with 1 TiB = 1,024 GiB)
+	 *
 	 * ## OPTIONS
 	 *
-	 * [--size_format]
+	 * [--size_format=<format>]
 	 * : Display the database size only, as a bare number.
 	 * ---
-	 * default: b
 	 * options:
-	 *  - b (bytes)
-	 *  - kb (kilobytes)
-	 *  - mb (megabytes)
-	 *  ---
+	 *   - b
+	 *   - kb
+	 *   - mb
+	 *   - gb
+	 *   - tb
+	 *   - B
+	 *   - KB
+	 *   - KiB
+	 *   - MB
+	 *   - MiB
+	 *   - GB
+	 *   - GiB
+	 *   - TB
+	 *   - TiB
+	 * ---
 	 *
 	 * [--tables]
 	 * : Display each table name and size instead of the database size.
 	 *
-	 * [--format]
-	 * : table, csv, json
+	 * [--human-readable]
+	 * : Display database sizes in human readable formats.
+	 *
+	 * [--format=<format>]
+	 * : Render output in a particular format.
 	 * ---
-	 * default: table
 	 * options:
 	 *   - table
 	 *   - csv
 	 *   - json
+	 *   - yaml
 	 * ---
 	 *
 	 * [--scope=<scope>]
 	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
 	 *
 	 * [--network]
-	 * : List all the tables in a multisite install. Overrides --scope=<scope>.
+	 * : List all the tables in a multisite install.
 	 *
 	 * [--all-tables-with-prefix]
 	 * : List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
@@ -568,21 +767,28 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     $ wp db size --size_format=mb
 	 *     6
+	 *
+	 * @when after_wp_load
 	 */
 	public function size( $args, $assoc_args ) {
 
-		// Avoid a constant redefinition in wp-config.
-		@WP_CLI::get_runner()-> load_wordpress();
-
 		global $wpdb;
 
-		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
-		$size_format = WP_CLI\Utils\get_flag_value( $assoc_args, 'size_format' );
-		$tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'tables' );
-		$tables = ! empty( $tables );
+		$format                 = Utils\get_flag_value( $assoc_args, 'format' );
+		$size_format            = Utils\get_flag_value( $assoc_args, 'size_format' );
+		$human_readable         = Utils\get_flag_value( $assoc_args, 'human-readable', false );
+		$tables                 = Utils\get_flag_value( $assoc_args, 'tables' );
+		$tables                 = ! empty( $tables );
+		$all_tables             = Utils\get_flag_value( $assoc_args, 'all-tables' );
+		$all_tables_with_prefix = Utils\get_flag_value( $assoc_args, 'all-tables-with-prefix' );
+
+		if ( ! is_null( $size_format ) && $human_readable ) {
+			WP_CLI::error( 'Cannot use --size_format and --human-readable arguments at the same time.' );
+		}
 
 		unset( $assoc_args['format'] );
 		unset( $assoc_args['size_format'] );
+		unset( $assoc_args['human-readable'] );
 		unset( $assoc_args['tables'] );
 
 		if ( empty( $args ) && empty( $assoc_args ) ) {
@@ -590,77 +796,137 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		// Build rows for the formatter.
-		$rows = array();
+		$rows   = array();
 		$fields = array( 'Name', 'Size' );
 
-		if ( $tables ) {
+		$default_unit = ( empty( $size_format ) && ! $human_readable ) ? ' B' : '';
+
+		if ( $tables || $all_tables || $all_tables_with_prefix ) {
 
 			// Add all of the table sizes
-			foreach( WP_CLI\Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
+			foreach ( Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
 
 				// Get the table size.
-				$table_bytes = $wpdb->get_var( $wpdb->prepare(
-					"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' and Table_Name = '%s' GROUP BY Table_Name LIMIT 1",
-					DB_NAME,
-					$table_name
+				$table_bytes = $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s and Table_Name = %s GROUP BY Table_Name LIMIT 1',
+						DB_NAME,
+						$table_name
 					)
 				);
 
 				// Add the table size to the list.
 				$rows[] = array(
-					'Name'  => $table_name,
-					'Size'  => strtoupper( size_format( $table_bytes ) ),
+					'Name' => $table_name,
+					'Size' => strtoupper( $table_bytes ) . $default_unit,
 				);
 			}
 		} else {
 
 			// Get the database size.
-			$db_bytes = $wpdb->get_var( $wpdb->prepare(
-				"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' GROUP BY table_schema;",
-				DB_NAME
+			$db_bytes = $wpdb->get_var(
+				$wpdb->prepare(
+					'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
+					DB_NAME
 				)
 			);
 
 			// Add the database size to the list.
 			$rows[] = array(
-				'Name'  => DB_NAME,
-				'Size'  => strtoupper( size_format( $db_bytes ) ),
-				);
+				'Name' => DB_NAME,
+				'Size' => strtoupper( $db_bytes ) . $default_unit,
+			);
 		}
 
-		if ( ! empty( $size_format ) && isset( $db_bytes ) && ! $tables ) {
+		if ( ! empty( $size_format ) || $human_readable ) {
+			foreach ( $rows as $index => $row ) {
+				// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Backfilling WP native constants.
+				if ( ! defined( 'KB_IN_BYTES' ) ) {
+					define( 'KB_IN_BYTES', 1024 );
+				}
+				if ( ! defined( 'MB_IN_BYTES' ) ) {
+					define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
+				}
+				if ( ! defined( 'GB_IN_BYTES' ) ) {
+					define( 'GB_IN_BYTES', 1024 * MB_IN_BYTES );
+				}
+				if ( ! defined( 'TB_IN_BYTES' ) ) {
+					define( 'TB_IN_BYTES', 1024 * GB_IN_BYTES );
+				}
+				// phpcs:enable
 
-			// Display the database size as a number.
-			switch( $size_format ) {
-				case 'mb':
-					$divisor = MB_IN_BYTES;
-					break;
+				if ( $human_readable ) {
+					$size_key = floor( log( $row['Size'] ) / log( 1000 ) );
+					$sizes    = array( 'B', 'KB', 'MB', 'GB', 'TB' );
 
-				case 'kb':
-					$divisor = KB_IN_BYTES;
-					break;
+					$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
+				}
 
-				case 'b':
-				default:
-					$divisor = 1;
-					break;
+				// Display the database size as a number.
+				switch ( $size_format ) {
+					case 'TB':
+						$divisor = pow( 1000, 4 );
+						break;
+
+					case 'GB':
+						$divisor = pow( 1000, 3 );
+						break;
+
+					case 'MB':
+						$divisor = pow( 1000, 2 );
+						break;
+
+					case 'KB':
+						$divisor = 1000;
+						break;
+
+					case 'tb':
+					case 'TiB':
+						$divisor = TB_IN_BYTES;
+						break;
+
+					case 'gb':
+					case 'GiB':
+						$divisor = GB_IN_BYTES;
+						break;
+
+					case 'mb':
+					case 'MiB':
+						$divisor = MB_IN_BYTES;
+						break;
+
+					case 'kb':
+					case 'KiB':
+						$divisor = KB_IN_BYTES;
+						break;
+
+					case 'b':
+					case 'B':
+					default:
+						$divisor = 1;
+						break;
+				}
+					$size_format_display = preg_replace( '/IB$/u', 'iB', strtoupper( $size_format ) );
+
+					$rows[ $index ]['Size'] = ceil( $row['Size'] / $divisor ) . ' ' . $size_format_display;
 			}
+		}
 
-			WP_CLI::Line( ceil( $db_bytes / $divisor ) );
+		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
+			WP_CLI::Line( filter_var( $rows[0]['Size'], FILTER_SANITIZE_NUMBER_INT ) );
 		} else {
-
 			// Display the rows.
 			$args = array(
 				'format' => $format,
 			);
 
-			$formatter = new \WP_CLI\Formatter( $args, $fields );
+			$formatter = new Formatter( $args, $fields );
 			$formatter->display_items( $rows );
 		}
 	}
 
 	/**
-	 * Display the database table prefix.
+	 * Displays the database table prefix.
 	 *
 	 * Display the database table prefix, as defined by the database handler's interpretation of the current site.
 	 *
@@ -668,18 +934,17 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     $ wp db prefix
 	 *     wp_
+	 *
+	 * @when after_wp_load
 	 */
 	public function prefix() {
-		// Avoid a constant redefinition in wp-config.
-		@WP_CLI::get_runner()->load_wordpress();
-
 		global $wpdb;
 
 		WP_CLI::log( $wpdb->prefix );
 	}
 
 	/**
-	 * Find a string in the database.
+	 * Finds a string in the database.
 	 *
 	 * Searches through all or a selection of database tables for a given string, Outputs colorized references to the string.
 	 *
@@ -745,34 +1010,38 @@ class DB_Command extends WP_CLI_Command {
 	 * : Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
 	 *
 	 * The percent color codes available are:
-	 * '%y' Yellow (dark) (mustard)
-	 * '%g' Green (dark)
-	 * '%b' Blue (dark)
-	 * '%r' Red (dark)
-	 * '%m' Magenta (dark)
-	 * '%c' Cyan (dark)
-	 * '%w' White (dark) (light gray)
-	 * '%k' Black
-	 * '%Y' Yellow (bright)
-	 * '%G' Green (bright)
-	 * '%B' Blue (bright)
-	 * '%R' Red (bright)
-	 * '%M' Magenta (bright)
-	 * '%C' Cyan (bright)
-	 * '%W' White
-	 * '%K' Black (bright) (dark gray)
-	 * '%3' Yellow background (dark) (mustard)
-	 * '%2' Green background (dark)
-	 * '%4' Blue background (dark)
-	 * '%1' Red background (dark)
-	 * '%5' Magenta background (dark)
-	 * '%6' Cyan background (dark)
-	 * '%7' White background (dark) (light gray)
-	 * '%0' Black background
-	 * '%8' Reverse
-	 * '%U' Underline
-	 * '%F' Blink (unlikely to work)
-	 * They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background '%3%k' can be made black on a bright yellow background with '%Y%0%8'.
+	 *
+	 * | Code | Color
+	 * | ---- | -----
+	 * |  %y  | Yellow (dark) (mustard)
+	 * |  %g  | Green (dark)
+	 * |  %b  | Blue (dark)
+	 * |  %r  | Red (dark)
+	 * |  %m  | Magenta (dark)
+	 * |  %c  | Cyan (dark)
+	 * |  %w  | White (dark) (light gray)
+	 * |  %k  | Black
+	 * |  %Y  | Yellow (bright)
+	 * |  %G  | Green (bright)
+	 * |  %B  | Blue (bright)
+	 * |  %R  | Red (bright)
+	 * |  %M  | Magenta (bright)
+	 * |  %C  | Cyan (bright)
+	 * |  %W  | White
+	 * |  %K  | Black (bright) (dark gray)
+	 * |  %3  | Yellow background (dark) (mustard)
+	 * |  %2  | Green background (dark)
+	 * |  %4  | Blue background (dark)
+	 * |  %1  | Red background (dark)
+	 * |  %5  | Magenta background (dark)
+	 * |  %6  | Cyan background (dark)
+	 * |  %7  | White background (dark) (light gray)
+	 * |  %0  | Black background
+	 * |  %8  | Reverse
+	 * |  %U  | Underline
+	 * |  %F  | Blink (unlikely to work)
+	 *
+	 * They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background `%3%k` can be made black on a bright yellow background with `%Y%0%8`.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -798,40 +1067,60 @@ class DB_Command extends WP_CLI_Command {
 	 *         ...
 	 *     Success: Found 99146 matches in 10.752s (10.559s searching). Searched 12 tables, 53 columns, 1358907 rows. 1 table skipped: wp_term_relationships.
 	 *
+	 *     # SQL search database table 'wp_options' where 'option_name' match 'foo'
+	 *     wp db query 'SELECT * FROM wp_options WHERE option_name like "%foo%"' --skip-column-names
+	 *     +----+--------------+--------------------------------+-----+
+	 *     | 98 | foo_options  | a:1:{s:12:"_multiwidget";i:1;} | yes |
+	 *     | 99 | foo_settings | a:0:{}                         | yes |
+	 *     +----+--------------+--------------------------------+-----+
+	 *
+	 *     # SQL search and delete records from database table 'wp_options' where 'option_name' match 'foo'
+	 *     wp db query "DELETE from wp_options where option_id in ($(wp db query "SELECT GROUP_CONCAT(option_id SEPARATOR ',') from wp_options where option_name like '%foo%';" --silent --skip-column-names))"
+	 *
+	 * @when after_wp_load
 	 */
 	public function search( $args, $assoc_args ) {
 		global $wpdb;
 
 		$start_run_time = microtime( true );
 
-		// Avoid a constant redefinition in wp-config.
-		@WP_CLI::get_runner()->load_wordpress();
-
 		$search = array_shift( $args );
 
-		$before_context = \WP_CLI\Utils\get_flag_value( $assoc_args, 'before_context', 40 );
+		$before_context = Utils\get_flag_value( $assoc_args, 'before_context', 40 );
 		$before_context = '' === $before_context ? $before_context : (int) $before_context;
 
-		$after_context = \WP_CLI\Utils\get_flag_value( $assoc_args, 'after_context', 40 );
+		$after_context = Utils\get_flag_value( $assoc_args, 'after_context', 40 );
 		$after_context = '' === $after_context ? $after_context : (int) $after_context;
 
-		if ( ( $regex = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex', false ) ) ) {
-			$regex_flags = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-flags', false );
-			$regex_delimiter = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-delimiter', chr( 1 ) );
+		$regex = Utils\get_flag_value( $assoc_args, 'regex', false );
+		if ( false !== $regex ) {
+			$regex_flags             = Utils\get_flag_value( $assoc_args, 'regex-flags', false );
+			$default_regex_delimiter = false;
+			$regex_delimiter         = Utils\get_flag_value( $assoc_args, 'regex-delimiter', '' );
 			if ( '' === $regex_delimiter ) {
-				$regex_delimiter = chr( 1 );
+				$regex_delimiter         = chr( 1 );
+				$default_regex_delimiter = true;
 			}
 		}
 
-		$colors = self::get_colors( $assoc_args, array( 'table_column' => '%G', 'id' => '%Y', 'match' => $before_context || $after_context ? '%3%k' : '' ) );
+		$colors = self::get_colors(
+			$assoc_args,
+			array(
+				'table_column' => '%G',
+				'id'           => '%Y',
+				'match'        => $before_context || $after_context ? '%3%k' : '',
+			)
+		);
 
-		$table_column_once = \WP_CLI\Utils\get_flag_value( $assoc_args, 'table_column_once', false );
-		$one_line = \WP_CLI\Utils\get_flag_value( $assoc_args, 'one_line', false );
-		$matches_only = \WP_CLI\Utils\get_flag_value( $assoc_args, 'matches_only', false );
-		$stats = \WP_CLI\Utils\get_flag_value( $assoc_args, 'stats', false );
+		$table_column_once = Utils\get_flag_value( $assoc_args, 'table_column_once', false );
+		$one_line          = Utils\get_flag_value( $assoc_args, 'one_line', false );
+		$matches_only      = Utils\get_flag_value( $assoc_args, 'matches_only', false );
+		$stats             = Utils\get_flag_value( $assoc_args, 'stats', false );
 
-		$column_count = $row_count = $match_count = 0;
-		$skipped = array();
+		$column_count = 0;
+		$row_count    = 0;
+		$match_count  = 0;
+		$skipped      = array();
 
 		if ( $regex ) {
 			// Note the user must escape the delimiter in the search.
@@ -839,12 +1128,19 @@ class DB_Command extends WP_CLI_Command {
 			if ( $regex_flags ) {
 				$search_regex .= $regex_flags;
 			}
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Unsure why this is needed, leaving in for now.
 			if ( false === @preg_match( $search_regex, '' ) ) {
-				WP_CLI::error( "The regex '$search_regex' fails." );
+				if ( $default_regex_delimiter ) {
+					$flags_msg = $regex_flags ? "flags '$regex_flags'" : 'no flags';
+					$msg       = "The regex pattern '$search' with default delimiter 'chr(1)' and {$flags_msg} fails.";
+				} else {
+					$msg = "The regex '$search_regex' fails.";
+				}
+				WP_CLI::error( $msg );
 			}
 		} else {
-			$search_regex = '#' . preg_quote( $search, '#' ) . '#i';
-			$esc_like_search = '%' . self::esc_like( $search ) . '%';
+			$search_regex    = '#' . preg_quote( $search, '#' ) . '#i';
+			$esc_like_search = '%' . Utils\esc_like( $search ) . '%';
 		}
 
 		$encoding = null;
@@ -852,7 +1148,7 @@ class DB_Command extends WP_CLI_Command {
 			$encoding = 'UTF-8';
 		}
 
-		$tables = WP_CLI\Utils\wp_get_table_names( $args, $assoc_args );
+		$tables = Utils\wp_get_table_names( $args, $assoc_args );
 
 		$start_search_time = microtime( true );
 
@@ -872,26 +1168,29 @@ class DB_Command extends WP_CLI_Command {
 				}
 				continue;
 			}
-			$table_sql = self::esc_sql_ident( $table );
+			$table_sql     = self::esc_sql_ident( $table );
 			$column_count += count( $text_columns );
 			if ( ! $primary_keys ) {
 				WP_CLI::warning( "No primary key for table '$table'. No row ids will be outputted." );
-				$primary_key = $primary_key_sql = '';
+				$primary_key     = '';
+				$primary_key_sql = '';
 			} else {
-				$primary_key = array_shift( $primary_keys );
+				$primary_key     = array_shift( $primary_keys );
 				$primary_key_sql = self::esc_sql_ident( $primary_key ) . ', ';
 			}
 
 			foreach ( $text_columns as $column ) {
 				$column_sql = self::esc_sql_ident( $column );
 				if ( $regex ) {
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
 					$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}" );
 				} else {
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
 					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s;", $esc_like_search ) );
 				}
 				if ( $results ) {
-					$row_count += count( $results );
-					$table_column_val = $colors['table_column'][0] . "{$table}:{$column}" . $colors['table_column'][1];
+					$row_count                  += count( $results );
+					$table_column_val            = $colors['table_column'][0] . "{$table}:{$column}" . $colors['table_column'][1];
 					$outputted_table_column_once = false;
 					foreach ( $results as $result ) {
 						$col_val = $result->$column;
@@ -902,24 +1201,47 @@ class DB_Command extends WP_CLI_Command {
 							}
 							$pk_val = $primary_key ? ( $colors['id'][0] . $result->$primary_key . $colors['id'][1] . ':' ) : '';
 
-							$bits = array();
+							$bits         = array();
 							$col_encoding = $encoding;
-							if ( null === $col_encoding ) {
-								$col_encoding = false;
-								if ( ( $before_context || $after_context ) && function_exists( 'mb_detect_encoding' ) ) {
-									$col_encoding = mb_detect_encoding( $col_val, null, true /*strict*/ );
-								}
+							if ( ! $col_encoding && ( $before_context || $after_context ) && function_exists( 'mb_detect_encoding' ) ) {
+								$col_encoding = mb_detect_encoding( $col_val, null, true /*strict*/ );
 							}
-							foreach ( $matches[0] as $match_arr ) {
-								$match = $match_arr[0];
-								$offset = $match_arr[1];
+							$append_next = false;
+							$last_offset = 0;
+							$match_cnt   = count( $matches[0] );
+							for ( $i = 0; $i < $match_cnt; $i++ ) {
+								$match           = $matches[0][ $i ][0];
+								$offset          = $matches[0][ $i ][1];
+								$log             = $colors['match'][0] . $match . $colors['match'][1];
+								$before          = '';
+								$after           = '';
+								$after_shortened = false;
+
 								// Offsets are in bytes, so need to use `strlen()` and `substr()` before using `safe_substr()`.
-								$before = $before_context && $offset ? \cli\safe_substr( substr( $col_val, 0, $offset ), -$before_context, null /*length*/, false /*is_width*/, $col_encoding ) : '';
-								$after = $after_context ? \cli\safe_substr( substr( $col_val, $offset + strlen( $match ) ), 0, $after_context, false /*is_width*/, $col_encoding ) : '';
-								$bits[] = $before . $colors['match'][0] . $match . $colors['match'][1] . $after;
+								if ( $before_context && $offset && ! $append_next ) {
+									$before = \cli\safe_substr( substr( $col_val, $last_offset, $offset - $last_offset ), -$before_context, null /*length*/, false /*is_width*/, $col_encoding );
+								}
+								if ( $after_context ) {
+									$end_offset = $offset + strlen( $match );
+									$after      = \cli\safe_substr( substr( $col_val, $end_offset ), 0, $after_context, false /*is_width*/, $col_encoding );
+									// To lessen context duplication in output, shorten the after context if it overlaps with the next match.
+									if ( $i + 1 < $match_cnt && $end_offset + strlen( $after ) > $matches[0][ $i + 1 ][1] ) {
+										$after           = substr( $after, 0, $matches[0][ $i + 1 ][1] - $end_offset );
+										$after_shortened = true;
+										// On the next iteration, will append with no before context.
+									}
+								}
+								if ( $append_next ) {
+									$cnt               = count( $bits );
+									$bits[ $cnt - 1 ] .= $log . $after;
+								} else {
+									$bits[] = $before . $log . $after;
+								}
+								$append_next = $after_shortened;
+								$last_offset = $offset;
 							}
-							$match_count += count( $bits );
-							$col_val = implode( ' [...] ', $bits );
+							$match_count += $match_cnt;
+							$col_val      = implode( ' [...] ', $bits );
 
 							WP_CLI::log( $matches_only ? $col_val : ( $one_line ? "{$table_column_val}:{$pk_val}{$col_val}" : "{$pk_val}{$col_val}" ) );
 						}
@@ -929,25 +1251,109 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		if ( $stats ) {
-			$table_count = count( $tables );
+			$table_count   = count( $tables );
 			$skipped_count = count( $skipped );
-			$match_str = 1 === $match_count ? 'match' : 'matches';
-			$table_str = 1 === $table_count ? 'table' : 'tables';
-			$column_str = 1 === $column_count ? 'column' : 'columns';
-			$row_str = 1 === $row_count ? 'row' : 'rows';
-			$skipped_str = 1 === $skipped_count ? 'table skipped' : 'tables skipped';
+			$match_str     = 1 === $match_count ? 'match' : 'matches';
+			$table_str     = 1 === $table_count ? 'table' : 'tables';
+			$column_str    = 1 === $column_count ? 'column' : 'columns';
+			$row_str       = 1 === $row_count ? 'row' : 'rows';
+			$skipped_str   = 1 === $skipped_count ? 'table skipped' : 'tables skipped';
 			if ( 0 !== $skipped_count ) {
 				$skipped_str .= ': ' . implode( ', ', $skipped );
 			}
-			$end_time = microtime( true );
-			$run_time = $end_time - $start_run_time;
+			$end_time    = microtime( true );
+			$run_time    = $end_time - $start_run_time;
 			$search_time = $end_time - $start_search_time;
-			$stats_msg = sprintf(
-				"Found %d %s in %.3fs (%.3fs searching). Searched %d %s, %d %s, %d %s. %d %s.",
-				$match_count, $match_str, $run_time, $search_time, $table_count, $table_str, $column_count, $column_str, $row_count, $row_str, $skipped_count, $skipped_str
+			$stats_msg   = sprintf(
+				'Found %d %s in %.3fs (%.3fs searching). Searched %d %s, %d %s, %d %s. %d %s.',
+				$match_count,
+				$match_str,
+				$run_time,
+				$search_time,
+				$table_count,
+				$table_str,
+				$column_count,
+				$column_str,
+				$row_count,
+				$row_str,
+				$skipped_count,
+				$skipped_str
 			);
 			WP_CLI::success( $stats_msg );
 		}
+	}
+
+	/**
+	 * Displays information about a given table.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<table>]
+	 * : Name of the database table.
+	 *
+	 * [--format]
+	 * : Render output in a particular format.
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - json
+	 *   - yaml
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp db columns wp_posts
+	 *     +-----------------------+---------------------+------+-----+---------------------+----------------+
+	 *     |         Field         |        Type         | Null | Key |       Default       |     Extra      |
+	 *     +-----------------------+---------------------+------+-----+---------------------+----------------+
+	 *     | ID                    | bigint(20) unsigned | NO   | PRI |                     | auto_increment |
+	 *     | post_author           | bigint(20) unsigned | NO   | MUL | 0                   |                |
+	 *     | post_date             | datetime            | NO   |     | 0000-00-00 00:00:00 |                |
+	 *     | post_date_gmt         | datetime            | NO   |     | 0000-00-00 00:00:00 |                |
+	 *     | post_content          | longtext            | NO   |     |                     |                |
+	 *     | post_title            | text                | NO   |     |                     |                |
+	 *     | post_excerpt          | text                | NO   |     |                     |                |
+	 *     | post_status           | varchar(20)         | NO   |     | publish             |                |
+	 *     | comment_status        | varchar(20)         | NO   |     | open                |                |
+	 *     | ping_status           | varchar(20)         | NO   |     | open                |                |
+	 *     | post_password         | varchar(255)        | NO   |     |                     |                |
+	 *     | post_name             | varchar(200)        | NO   | MUL |                     |                |
+	 *     | to_ping               | text                | NO   |     |                     |                |
+	 *     | pinged                | text                | NO   |     |                     |                |
+	 *     | post_modified         | datetime            | NO   |     | 0000-00-00 00:00:00 |                |
+	 *     | post_modified_gmt     | datetime            | NO   |     | 0000-00-00 00:00:00 |                |
+	 *     | post_content_filtered | longtext            | NO   |     |                     |                |
+	 *     | post_parent           | bigint(20) unsigned | NO   | MUL | 0                   |                |
+	 *     | guid                  | varchar(255)        | NO   |     |                     |                |
+	 *     | menu_order            | int(11)             | NO   |     | 0                   |                |
+	 *     | post_type             | varchar(20)         | NO   | MUL | post                |                |
+	 *     | post_mime_type        | varchar(100)        | NO   |     |                     |                |
+	 *     | comment_count         | bigint(20)          | NO   |     | 0                   |                |
+	 *     +-----------------------+---------------------+------+-----+---------------------+----------------+
+	 *
+	 * @when after_wp_load
+	 */
+	public function columns( $args, $assoc_args ) {
+		global $wpdb;
+
+		$format = Utils\get_flag_value( $assoc_args, 'format' );
+
+		Utils\wp_get_table_names( array( $args[0] ), array() );
+
+		$columns = $wpdb->get_results(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Asserted to be a valid table name through wp_get_table_names.
+			'SHOW COLUMNS FROM ' . $args[0]
+		);
+
+		$formatter_fields = array( 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' );
+		$formatter_args   = array(
+			'format' => $format,
+		);
+
+		$formatter = new Formatter( $formatter_args, $formatter_fields );
+		$formatter->display_items( $columns );
 	}
 
 	private static function get_create_query() {
@@ -962,8 +1368,8 @@ class DB_Command extends WP_CLI_Command {
 		return $create_query;
 	}
 
-	private static function run_query( $query ) {
-		self::run( '/usr/bin/env mysql --no-defaults --no-auto-rehash', array( 'execute' => $query ) );
+	private static function run_query( $query, $assoc_args = array() ) {
+		self::run( '/usr/bin/env mysql --no-defaults --no-auto-rehash', array_merge( $assoc_args, array( 'execute' => $query ) ) );
 	}
 
 	private static function run( $cmd, $assoc_args = array(), $descriptors = null ) {
@@ -978,12 +1384,41 @@ class DB_Command extends WP_CLI_Command {
 			$required['default-character-set'] = constant( 'DB_CHARSET' );
 		}
 
+		// Using 'dbuser' as option name to workaround clash with WP-CLI's global WP 'user' parameter, with 'dbpass' also available for tidyness.
+		if ( isset( $assoc_args['dbuser'] ) ) {
+			$required['user'] = $assoc_args['dbuser'];
+			unset( $assoc_args['dbuser'] );
+		}
+		if ( isset( $assoc_args['dbpass'] ) ) {
+			$required['pass'] = $assoc_args['dbpass'];
+			unset( $assoc_args['dbpass'], $assoc_args['password'] );
+		}
+
 		$final_args = array_merge( $assoc_args, $required );
 		Utils\run_mysql_command( $cmd, $final_args, $descriptors );
 	}
 
 	/**
-	 * Get the column names of a db table differentiated into key columns and text columns and all columns.
+	 * Helper to pluck 'dbuser' and 'dbpass' from associative args array.
+	 *
+	 * @param array $assoc_args Associative args array.
+	 * @return array Array with `dbuser' and 'dbpass' set if in passed-in associative args array.
+	 */
+	private static function get_dbuser_dbpass_args( $assoc_args ) {
+		$mysql_args = array();
+		$dbuser     = Utils\get_flag_value( $assoc_args, 'dbuser' );
+		if ( null !== $dbuser ) {
+			$mysql_args['dbuser'] = $dbuser;
+		}
+		$dbpass = Utils\get_flag_value( $assoc_args, 'dbpass' );
+		if ( null !== $dbpass ) {
+			$mysql_args['dbpass'] = $dbpass;
+		}
+		return $mysql_args;
+	}
+
+	/**
+	 * Gets the column names of a db table differentiated into key columns and text columns and all columns.
 	 *
 	 * @param string $table The table name.
 	 * @return array A 3 element array consisting of an array of primary key column names, an array of text column names, and an array containing all column names.
@@ -991,11 +1426,17 @@ class DB_Command extends WP_CLI_Command {
 	private static function get_columns( $table ) {
 		global $wpdb;
 
-		$table_sql = self::esc_sql_ident( $table );
-		$primary_keys = $text_columns = $all_columns = array();
+		$table_sql       = self::esc_sql_ident( $table );
+		$primary_keys    = array();
+		$text_columns    = array();
+		$all_columns     = array();
 		$suppress_errors = $wpdb->suppress_errors();
-		if ( ( $results = $wpdb->get_results( "DESCRIBE $table_sql" ) ) ) {
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
+		$results = $wpdb->get_results( "DESCRIBE $table_sql" );
+		if ( $results ) {
 			foreach ( $results as $col ) {
+				// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Property names come from database.
 				if ( 'PRI' === $col->Key ) {
 					$primary_keys[] = $col->Field;
 				}
@@ -1003,6 +1444,7 @@ class DB_Command extends WP_CLI_Command {
 					$text_columns[] = $col->Field;
 				}
 				$all_columns[] = $col->Field;
+				// phpcs:enable
 			}
 		}
 		$wpdb->suppress_errors( $suppress_errors );
@@ -1010,39 +1452,19 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Whether a column is considered text or not.
+	 * Determines whether a column is considered text or not.
 	 *
 	 * @param string Column type.
 	 * @bool True if text column, false otherwise.
 	 */
 	private static function is_text_col( $type ) {
 		foreach ( array( 'text', 'varchar' ) as $token ) {
-			if ( false !== strpos( $type, $token ) )
+			if ( false !== strpos( $type, $token ) ) {
 				return true;
+			}
 		}
 
 		return false;
-	}
-
-	/**
-	 * Escapes a MySQL string for inclusion in a `LIKE` clause. BC wrapper around different WP versions of this.
-	 *
-	 * @param string $old String to escape.
-	 * @param string Escaped string.
-	 */
-	private static function esc_like( $old ) {
-		global $wpdb;
-
-		// Remove notices in 4.0 and support backwards compatibility
-		if ( method_exists( $wpdb, 'esc_like' ) ) {
-			// 4.0
-			$old = $wpdb->esc_like( $old );
-		} else {
-			// 3.9 or less
-			$old = like_escape( esc_sql( $old ) );
-		}
-
-		return $old;
 	}
 
 	/**
@@ -1073,14 +1495,21 @@ class DB_Command extends WP_CLI_Command {
 	private function get_colors( $assoc_args, $colors ) {
 		$color_reset = WP_CLI::colorize( '%n' );
 
-		$color_codes = implode( '', array_map( function ( $v ) {
-			return substr( $v, 1 );
-		}, array_keys( \cli\Colors::getColors() ) ) );
+		$color_codes = implode(
+			'',
+			array_map(
+				function ( $v ) {
+					return substr( $v, 1 );
+				},
+				array_keys( \cli\Colors::getColors() )
+			)
+		);
 
 		$color_codes_regex = '/^(?:%[' . $color_codes . '])*$/';
 
 		foreach ( array_keys( $colors ) as $color_col ) {
-			if ( false !== ( $col_color_flag = \WP_CLI\Utils\get_flag_value( $assoc_args, $color_col . '_color', false ) ) ) {
+			$col_color_flag = Utils\get_flag_value( $assoc_args, $color_col . '_color', false );
+			if ( false !== $col_color_flag ) {
 				if ( ! preg_match( $color_codes_regex, $col_color_flag, $matches ) ) {
 					WP_CLI::warning( "Unrecognized percent color code '$col_color_flag' for '{$color_col}_color'." );
 				} else {
@@ -1091,5 +1520,114 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		return $colors;
+	}
+
+	/**
+	 * Helper to pluck `mysql` options from associative args array.
+	 *
+	 * @param array $assoc_args Associative args array.
+	 * @return array Array with `mysql` options set if in passed-in associative args array.
+	 */
+	private static function get_mysql_args( $assoc_args ) {
+
+		$allowed_mysql_options = [
+			'auto-rehash',
+			'auto-vertical-output',
+			'batch',
+			'binary-as-hex',
+			'binary-mode',
+			'bind-address',
+			'character-sets-dir',
+			'column-names',
+			'column-type-info',
+			'comments',
+			'compress',
+			'connect-expired-password',
+			'connect_timeout',
+			'database',
+			'debug',
+			'debug-check',
+			'debug-info',
+			'default-auth',
+			'default-character-set',
+			'defaults-extra-file',
+			'defaults-file',
+			'defaults-group-suffix',
+			'delimiter',
+			'enable-cleartext-plugin',
+			'execute',
+			'force',
+			'get-server-public-key',
+			'help',
+			'histignore',
+			'host',
+			'html',
+			'ignore-spaces',
+			'init-command',
+			'line-numbers',
+			'local-infile',
+			'login-path',
+			'max_allowed_packet',
+			'max_join_size',
+			'named-commands',
+			'net_buffer_length',
+			'no-beep',
+			'one-database',
+			'pager',
+			'pipe',
+			'plugin-dir',
+			'port',
+			'print-defaults',
+			'protocol',
+			'quick',
+			'raw',
+			'reconnect',
+			'i-am-a-dummy',
+			'safe-updates',
+			'secure-auth',
+			'select_limit',
+			'server-public-key-path',
+			'shared-memory-base-name',
+			'show-warnings',
+			'sigint-ignore',
+			'silent',
+			'skip-auto-rehash',
+			'skip-column-names',
+			'skip-line-numbers',
+			'skip-named-commands',
+			'skip-pager',
+			'skip-reconnect',
+			'socket',
+			'ssl-ca',
+			'ssl-capath',
+			'ssl-cert',
+			'ssl-cipher',
+			'ssl-crl',
+			'ssl-crlpath',
+			'ssl-fips-mode',
+			'ssl-key',
+			'ssl-mode',
+			'syslog',
+			'table',
+			'tee',
+			'tls-version',
+			'unbuffered',
+			'verbose',
+			'version',
+			'vertical',
+			'wait',
+			'xml',
+		];
+
+		$mysql_args = array();
+
+		foreach ( $assoc_args as $mysql_option_key => $mysql_option_value ) {
+			// Check flags to make sure they only contain valid options.
+			if ( in_array( $mysql_option_key, $allowed_mysql_options, true ) && ! empty( $mysql_option_value ) ) {
+				$mysql_args[ $mysql_option_key ] = $mysql_option_value;
+			}
+		}
+
+		return $mysql_args;
 	}
 }
