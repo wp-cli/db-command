@@ -1279,7 +1279,7 @@ class DB_Command extends WP_CLI_Command {
 				$skipped_count,
 				$skipped_str
 			);
-			WP_ClI::success( $stats_msg );
+			WP_CLI::success( $stats_msg );
 		}
 	}
 
