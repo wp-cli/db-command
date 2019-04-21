@@ -865,7 +865,7 @@ class DB_Command extends WP_CLI_Command {
 					// Display the database size as a number.
 				switch ( $size_format ) {
 					case 'TB':
-							$divisor = pow( 1000, 4 );
+						$divisor = pow( 1000, 4 );
 						break;
 
 					case 'GB':
