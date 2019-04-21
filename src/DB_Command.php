@@ -839,7 +839,6 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( ! empty( $size_format ) || $human_readable ) {
 			foreach ( $rows as $index => $row ) {
-					// These added WP 4.4.0.
 				// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
 				if ( ! defined( 'KB_IN_BYTES' ) ) {
 					define( 'KB_IN_BYTES', 1024 );
