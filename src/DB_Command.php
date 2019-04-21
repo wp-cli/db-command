@@ -1,7 +1,7 @@
 <?php
 
 use WP_CLI\Formatter;
-use \WP_CLI\Utils;
+use WP_CLI\Utils;
 
 /**
  * Performs basic database operations using credentials stored in wp-config.php.
@@ -158,7 +158,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$mysql_args = self::get_dbuser_dbpass_args( $assoc_args );
 
-		$tables = WP_CLI\Utils\wp_get_table_names(
+		$tables = Utils\wp_get_table_names(
 			array(),
 			array( 'all-tables-with-prefix' )
 		);
@@ -374,7 +374,7 @@ class DB_Command extends WP_CLI_Command {
 	public function query( $args, $assoc_args ) {
 		$assoc_args['database'] = DB_NAME;
 
-		// The query might come from STDIN
+		// The query might come from STDIN.
 		if ( ! empty( $args ) ) {
 			$assoc_args['execute'] = $args[0];
 		}
@@ -471,7 +471,7 @@ class DB_Command extends WP_CLI_Command {
 
 		}
 		$stdout    = ( '-' === $result_file );
-		$porcelain = \WP_CLI\Utils\get_flag_value( $assoc_args, 'porcelain' );
+		$porcelain = Utils\get_flag_value( $assoc_args, 'porcelain' );
 
 		// Bail if both porcelain and STDOUT are set.
 		if ( $stdout && $porcelain ) {
@@ -502,7 +502,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
-		$exclude_tables = WP_CLI\Utils\get_flag_value( $assoc_args, 'exclude_tables' );
+		$exclude_tables = Utils\get_flag_value( $assoc_args, 'exclude_tables' );
 		if ( isset( $exclude_tables ) ) {
 			$tables = explode( ',', trim( $assoc_args['exclude_tables'], ',' ) );
 			unset( $assoc_args['exclude_tables'] );
@@ -575,7 +575,7 @@ class DB_Command extends WP_CLI_Command {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
 			}
 
-			$query = \WP_CLI\Utils\get_flag_value( $assoc_args, 'skip-optimization' )
+			$query = Utils\get_flag_value( $assoc_args, 'skip-optimization' )
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
 
@@ -642,14 +642,14 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function tables( $args, $assoc_args ) {
 
-		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
+		$format = Utils\get_flag_value( $assoc_args, 'format' );
 		unset( $assoc_args['format'] );
 
 		if ( empty( $args ) && empty( $assoc_args ) ) {
 			$assoc_args['scope'] = 'all';
 		}
 
-		$tables = WP_CLI\Utils\wp_get_table_names( $args, $assoc_args );
+		$tables = Utils\wp_get_table_names( $args, $assoc_args );
 
 		if ( 'csv' === $format ) {
 			WP_CLI::line( implode( ',', $tables ) );
@@ -774,13 +774,13 @@ class DB_Command extends WP_CLI_Command {
 
 		global $wpdb;
 
-		$format                 = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
-		$size_format            = WP_CLI\Utils\get_flag_value( $assoc_args, 'size_format' );
-		$human_readable         = WP_CLI\Utils\get_flag_value( $assoc_args, 'human-readable', false );
-		$tables                 = WP_CLI\Utils\get_flag_value( $assoc_args, 'tables' );
+		$format                 = Utils\get_flag_value( $assoc_args, 'format' );
+		$size_format            = Utils\get_flag_value( $assoc_args, 'size_format' );
+		$human_readable         = Utils\get_flag_value( $assoc_args, 'human-readable', false );
+		$tables                 = Utils\get_flag_value( $assoc_args, 'tables' );
 		$tables                 = ! empty( $tables );
-		$all_tables             = WP_CLI\Utils\get_flag_value( $assoc_args, 'all-tables' );
-		$all_tables_with_prefix = WP_CLI\Utils\get_flag_value( $assoc_args, 'all-tables-with-prefix' );
+		$all_tables             = Utils\get_flag_value( $assoc_args, 'all-tables' );
+		$all_tables_with_prefix = Utils\get_flag_value( $assoc_args, 'all-tables-with-prefix' );
 
 		if ( ! is_null( $size_format ) && $human_readable ) {
 			WP_CLI::error( 'Cannot use --size_format and --human-readable arguments at the same time.' );
@@ -804,7 +804,7 @@ class DB_Command extends WP_CLI_Command {
 		if ( $tables || $all_tables || $all_tables_with_prefix ) {
 
 			// Add all of the table sizes
-			foreach ( WP_CLI\Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
+			foreach ( Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
 
 				// Get the table size.
 				$table_bytes = $wpdb->get_var(
@@ -840,7 +840,7 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( ! empty( $size_format ) || $human_readable ) {
 			foreach ( $rows as $index => $row ) {
-				// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
+				// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Backfilling WP native constants.
 				if ( ! defined( 'KB_IN_BYTES' ) ) {
 					define( 'KB_IN_BYTES', 1024 );
 				}
@@ -862,7 +862,7 @@ class DB_Command extends WP_CLI_Command {
 					$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
 				}
 
-					// Display the database size as a number.
+				// Display the database size as a number.
 				switch ( $size_format ) {
 					case 'TB':
 						$divisor = pow( 1000, 4 );
@@ -1086,17 +1086,17 @@ class DB_Command extends WP_CLI_Command {
 
 		$search = array_shift( $args );
 
-		$before_context = \WP_CLI\Utils\get_flag_value( $assoc_args, 'before_context', 40 );
+		$before_context = Utils\get_flag_value( $assoc_args, 'before_context', 40 );
 		$before_context = '' === $before_context ? $before_context : (int) $before_context;
 
-		$after_context = \WP_CLI\Utils\get_flag_value( $assoc_args, 'after_context', 40 );
+		$after_context = Utils\get_flag_value( $assoc_args, 'after_context', 40 );
 		$after_context = '' === $after_context ? $after_context : (int) $after_context;
 
-		$regex = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex', false );
+		$regex = Utils\get_flag_value( $assoc_args, 'regex', false );
 		if ( false !== $regex ) {
-			$regex_flags             = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-flags', false );
+			$regex_flags             = Utils\get_flag_value( $assoc_args, 'regex-flags', false );
 			$default_regex_delimiter = false;
-			$regex_delimiter         = \WP_CLI\Utils\get_flag_value( $assoc_args, 'regex-delimiter', '' );
+			$regex_delimiter         = Utils\get_flag_value( $assoc_args, 'regex-delimiter', '' );
 			if ( '' === $regex_delimiter ) {
 				$regex_delimiter         = chr( 1 );
 				$default_regex_delimiter = true;
@@ -1112,10 +1112,10 @@ class DB_Command extends WP_CLI_Command {
 			)
 		);
 
-		$table_column_once = \WP_CLI\Utils\get_flag_value( $assoc_args, 'table_column_once', false );
-		$one_line          = \WP_CLI\Utils\get_flag_value( $assoc_args, 'one_line', false );
-		$matches_only      = \WP_CLI\Utils\get_flag_value( $assoc_args, 'matches_only', false );
-		$stats             = \WP_CLI\Utils\get_flag_value( $assoc_args, 'stats', false );
+		$table_column_once = Utils\get_flag_value( $assoc_args, 'table_column_once', false );
+		$one_line          = Utils\get_flag_value( $assoc_args, 'one_line', false );
+		$matches_only      = Utils\get_flag_value( $assoc_args, 'matches_only', false );
+		$stats             = Utils\get_flag_value( $assoc_args, 'stats', false );
 
 		$column_count = 0;
 		$row_count    = 0;
@@ -1148,7 +1148,7 @@ class DB_Command extends WP_CLI_Command {
 			$encoding = 'UTF-8';
 		}
 
-		$tables = WP_CLI\Utils\wp_get_table_names( $args, $assoc_args );
+		$tables = Utils\wp_get_table_names( $args, $assoc_args );
 
 		$start_search_time = microtime( true );
 
@@ -1338,12 +1338,12 @@ class DB_Command extends WP_CLI_Command {
 	public function columns( $args, $assoc_args ) {
 		global $wpdb;
 
-		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format' );
+		$format = Utils\get_flag_value( $assoc_args, 'format' );
 
-		WP_CLI\Utils\wp_get_table_names( array( $args[0] ), array() );
+		Utils\wp_get_table_names( array( $args[0] ), array() );
 
 		$columns = $wpdb->get_results(
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Asserted to be a valid table name through wp_get_table_names.
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Asserted to be a valid table name through wp_get_table_names.
 			'SHOW COLUMNS FROM ' . $args[0]
 		);
 
@@ -1406,11 +1406,11 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	private static function get_dbuser_dbpass_args( $assoc_args ) {
 		$mysql_args = array();
-		$dbuser     = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dbuser' );
+		$dbuser     = Utils\get_flag_value( $assoc_args, 'dbuser' );
 		if ( null !== $dbuser ) {
 			$mysql_args['dbuser'] = $dbuser;
 		}
-		$dbpass = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dbpass' );
+		$dbpass = Utils\get_flag_value( $assoc_args, 'dbpass' );
 		if ( null !== $dbpass ) {
 			$mysql_args['dbpass'] = $dbpass;
 		}
@@ -1508,7 +1508,7 @@ class DB_Command extends WP_CLI_Command {
 		$color_codes_regex = '/^(?:%[' . $color_codes . '])*$/';
 
 		foreach ( array_keys( $colors ) as $color_col ) {
-			$col_color_flag = \WP_CLI\Utils\get_flag_value( $assoc_args, $color_col . '_color', false );
+			$col_color_flag = Utils\get_flag_value( $assoc_args, $color_col . '_color', false );
 			if ( false !== $col_color_flag ) {
 				if ( ! preg_match( $color_codes_regex, $col_color_flag, $matches ) ) {
 					WP_CLI::warning( "Unrecognized percent color code '$col_color_flag' for '{$color_col}_color'." );
