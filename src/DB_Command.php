@@ -872,7 +872,7 @@ class DB_Command extends WP_CLI_Command {
 						break;
 
 					case 'MB':
-							$divisor = pow( 1000, 2 );
+						$divisor = pow( 1000, 2 );
 						break;
 
 					case 'KB':
