@@ -1342,7 +1342,7 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI\Utils\wp_get_table_names( array( $args[0] ), array() );
 
 		$columns = $wpdb->get_results(
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Asserted to be a valid table name through wp_get_table_names.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Asserted to be a valid table name through wp_get_table_names.
 			'SHOW COLUMNS FROM ' . $args[0]
 		);
 
