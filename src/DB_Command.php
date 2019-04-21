@@ -465,7 +465,7 @@ class DB_Command extends WP_CLI_Command {
 		if ( ! empty( $args[0] ) ) {
 			$result_file = $args[0];
 		} else {
-			$hash        = substr( md5( mt_rand() ), 0, 7 );
+			$hash        = substr( md5( wp_rand() ), 0, 7 );
 			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash );
 
 		}
@@ -808,7 +808,7 @@ class DB_Command extends WP_CLI_Command {
 				// Get the table size.
 				$table_bytes = $wpdb->get_var(
 					$wpdb->prepare(
-						"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' and Table_Name = '%s' GROUP BY Table_Name LIMIT 1",
+						'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s and Table_Name = %s GROUP BY Table_Name LIMIT 1',
 						DB_NAME,
 						$table_name
 					)
@@ -825,7 +825,7 @@ class DB_Command extends WP_CLI_Command {
 			// Get the database size.
 			$db_bytes = $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = '%s' GROUP BY table_schema;",
+					'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
 					DB_NAME
 				)
 			);
@@ -840,6 +840,7 @@ class DB_Command extends WP_CLI_Command {
 		if ( ! empty( $size_format ) || $human_readable ) {
 			foreach ( $rows as $index => $row ) {
 					// These added WP 4.4.0.
+				// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
 				if ( ! defined( 'KB_IN_BYTES' ) ) {
 					define( 'KB_IN_BYTES', 1024 );
 				}
@@ -852,6 +853,7 @@ class DB_Command extends WP_CLI_Command {
 				if ( ! defined( 'TB_IN_BYTES' ) ) {
 					define( 'TB_IN_BYTES', 1024 * GB_IN_BYTES );
 				}
+				// phpcs:enable
 
 				if ( $human_readable ) {
 					$size_key = floor( log( $row['Size'] ) / log( 1000 ) );
@@ -1126,6 +1128,7 @@ class DB_Command extends WP_CLI_Command {
 			if ( $regex_flags ) {
 				$search_regex .= $regex_flags;
 			}
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Unsure why this is needed, leaving in for now.
 			if ( false === @preg_match( $search_regex, '' ) ) {
 				if ( $default_regex_delimiter ) {
 					$flags_msg = $regex_flags ? "flags '$regex_flags'" : 'no flags';
@@ -1179,8 +1182,10 @@ class DB_Command extends WP_CLI_Command {
 			foreach ( $text_columns as $column ) {
 				$column_sql = self::esc_sql_ident( $column );
 				if ( $regex ) {
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
 					$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}" );
 				} else {
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
 					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s;", $esc_like_search ) );
 				}
 				if ( $results ) {
@@ -1338,6 +1343,7 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI\Utils\wp_get_table_names( array( $args[0] ), array() );
 
 		$columns = $wpdb->get_results(
+		
 			'SHOW COLUMNS FROM ' . $args[0]
 		);
 
@@ -1426,9 +1432,11 @@ class DB_Command extends WP_CLI_Command {
 		$all_columns     = array();
 		$suppress_errors = $wpdb->suppress_errors();
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Asserted to be a valid table name through wp_get_table_names.
 		$results = $wpdb->get_results( "DESCRIBE $table_sql" );
 		if ( $results ) {
 			foreach ( $results as $col ) {
+				// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Property names come from database.
 				if ( 'PRI' === $col->Key ) {
 					$primary_keys[] = $col->Field;
 				}
@@ -1436,6 +1444,7 @@ class DB_Command extends WP_CLI_Command {
 					$text_columns[] = $col->Field;
 				}
 				$all_columns[] = $col->Field;
+				// phpcs:enable
 			}
 		}
 		$wpdb->suppress_errors( $suppress_errors );
