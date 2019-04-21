@@ -1432,7 +1432,7 @@ class DB_Command extends WP_CLI_Command {
 		$all_columns     = array();
 		$suppress_errors = $wpdb->suppress_errors();
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Asserted to be a valid table name through wp_get_table_names.
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
 		$results = $wpdb->get_results( "DESCRIBE $table_sql" );
 		if ( $results ) {
 			foreach ( $results as $col ) {
