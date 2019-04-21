@@ -881,7 +881,7 @@ class DB_Command extends WP_CLI_Command {
 
 					case 'tb':
 					case 'TiB':
-							$divisor = TB_IN_BYTES;
+						$divisor = TB_IN_BYTES;
 						break;
 
 					case 'gb':
