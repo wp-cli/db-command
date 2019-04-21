@@ -1,4 +1,5 @@
 .DS_Store
+.phpcs.xml
 wp-cli.local.yml
 node_modules/
 vendor/
@@ -6,4 +7,6 @@ vendor/
 *.tar.gz
 .*.swp
 composer.lock
+phpunit.xml
+phpcs.xml
 *.log
