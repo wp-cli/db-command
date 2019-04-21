@@ -62,6 +62,25 @@ Feature: Search through the database
       wp_options:option_value
       1:example.com
       """
+    And STDOUT should not contain:
+      """
+      wp_not
+      """
+    And STDOUT should not contain:
+      """
+      pw_options
+      """
+    And STDOUT should not contain:
+      """
+      e_ample.c%m
+      """
+
+    When I run `wp db search example.com wp_options wp_not --before_context=0 --after_context=0 --all-tables`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value
+      1:example.com
+      """
     And STDOUT should contain:
       """
       wp_not:awesome_stuff
@@ -236,7 +255,7 @@ Feature: Search through the database
     When I try `wp db search example.com no_such_table`
     Then STDERR should be:
       """
-      Error: No such table 'no_such_table'.
+      Error: Couldn't find any tables matching: no_such_table
       """
     And STDOUT should be empty
     And the return code should be 1
@@ -244,19 +263,21 @@ Feature: Search through the database
     When I run `wp db query "CREATE TABLE no_key ( awesome_stuff TEXT );"`
     And I run `wp db query "CREATE TABLE no_text ( id int(11) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id) );"`
 
-    When I run `wp db search example.com no_key`
+    When I try `wp db search example.com no_key --all-tables`
     Then STDOUT should be empty
     And STDERR should be:
       """
       Warning: No primary key for table 'no_key'. No row ids will be outputted.
       """
+    And the return code should be 0
 
-    When I run `wp db search example.com no_text`
+    When I try `wp db search example.com no_text --all-tables`
     Then STDOUT should be empty
     And STDERR should be:
       """
       Warning: No text columns for table 'no_text' - skipped.
       """
+    And the return code should be 0
 
   Scenario: Search on a multisite install
     Given a WP multisite install
@@ -719,6 +740,34 @@ Feature: Search through the database
       """
     And the return code should be 1
 
+    When I try `wp db search 'regex error)' --regex`
+    Then STDERR should be:
+      """
+      Error: The regex pattern 'regex error)' with default delimiter 'chr(1)' and no flags fails.
+      """
+    And the return code should be 1
+
+    When I try `wp db search 'regex error)' --regex --regex-flags=u`
+    Then STDERR should be:
+      """
+      Error: The regex pattern 'regex error)' with default delimiter 'chr(1)' and flags 'u' fails.
+      """
+    And the return code should be 1
+
+    When I try `wp db search 'regex error)' --regex --regex-delimiter=/`
+    Then STDERR should be:
+      """
+      Error: The regex '/regex error)/' fails.
+      """
+    And the return code should be 1
+
+    When I try `wp db search 'regex error)' --regex --regex-delimiter=/ --regex-flags=u`
+    Then STDERR should be:
+      """
+      Error: The regex '/regex error)/u' fails.
+      """
+    And the return code should be 1
+
     When I run `wp db search '[0-9é]+?https:' --regex --regex-flags=u --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
@@ -909,11 +958,20 @@ Feature: Search through the database
       [33;1m1[0m:example.com
       """
 
-    When I run `wp db search example.com --match_color=%x`
+    When I try `wp db search example.com --match_color=%x`
     Then STDERR should be:
       """
       Warning: Unrecognized percent color code '%x' for 'match_color'.
       """
+    And STDOUT should contain:
+      """
+      example.com
+      """
+    And STDOUT should not contain:
+      """
+      
+      """
+    And the return code should be 0
 
   Scenario: Search should cater for field/table names that use reserved words or unusual characters
     Given a WP install
@@ -927,7 +985,7 @@ Feature: Search through the database
     When I run `wp db query "SOURCE esc_sql_ident.sql;"`
     Then STDERR should be empty
 
-    When I run `wp db search 'v_v' TABLE`
+    When I run `wp db search 'v_v' TABLE --all-tables`
     Then STDOUT should be:
       """
       TABLE:VALUES
@@ -956,7 +1014,7 @@ Feature: Search through the database
       """
     And STDOUT should contain:
       """
-      :1234_XYXYX_2345678_X [...] X_2345678_XYXYX_234567890 [...] 345678901_XYXYX_2345
+      :1234_XYXYX_2345678_XYXYX_234567890 [...] 345678901_XYXYX_2345
       """
     And STDERR should be empty
 
@@ -967,6 +1025,42 @@ Feature: Search through the database
       """
     And STDOUT should contain:
       """
-      :1234_XYXYX_2345678_X [...] X_2345678_XYXYX_234567890 [...] 345678901_XYXYX_2345
+      :1234_XYXYX_2345678_XYXYX_234567890 [...] 345678901_XYXYX_2345
+      """
+    And STDERR should be empty
+
+  Scenario: Search with large data
+    Given a WP install
+    # Note "_utf8 X'CC88'" is combining umlaut. Doing it this way as non-ASCII stuff gets stripped due to (eventually) been put thru `escapeshellarg()` with a default C locale.
+    # Also restricted by default MySQL values for the version-dependent size of the innodb redo log file (max 10% one transaction) and `max_allowed_packet` size (16MB).
+    And I run `wp db query "INSERT INTO wp_options (option_name, option_value) VALUES ('opt_large', CONCAT(REPEAT('a', 1024 * 1024 * 8 - 9), 'o', _utf8 X'CC88', 'XYXYX'));"`
+
+    When I run `wp db search XYXYX --before_context=1 --stats`
+    Then STDOUT should contain:
+      """
+      Success: Found 1 match
+      """
+    And STDOUT should contain:
+      """
+      :öXYXYX
+      """
+    And STDOUT should not contain:
+      """
+      :aöXYXYX
+      """
+    And STDERR should be empty
+
+    When I run `wp db search XYXYX --regex --before_context=1 --stats`
+    Then STDOUT should contain:
+      """
+      Success: Found 1 match
+      """
+    And STDOUT should contain:
+      """
+      :öXYXYX
+      """
+    And STDOUT should not contain:
+      """
+      :aöXYXYX
       """
     And STDERR should be empty
