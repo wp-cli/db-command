@@ -440,7 +440,7 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
     --
     -- Host: localhost    Database: wpdev
     -- ------------------------------------------------------
-    -- Server version	5.7.19
+    -- Server version    5.7.19
     ...
 
 
