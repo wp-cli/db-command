@@ -96,7 +96,7 @@ Feature: Import a WordPress database
       wp db import
       """
 
-  Scenario: Import from database name path by default with passed-in dbuser/dbpass
+  Scenario: Import db that has emoji in post
     Given a WP install
 
     When I run `wp post create --post_title="🎥"`
