@@ -95,3 +95,31 @@ Feature: Import a WordPress database
       """
       wp db import
       """
+
+  Scenario: Import from database name path by default with passed-in dbuser/dbpass
+    Given a WP install
+
+    When I run `wp post create --post_title="🎥"`
+    And I run `wp db export wp_cli_test.sql`
+    Then the wp_cli_test.sql file should exist
+
+    When I run `wp post list`
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      🎥
+      """
+
+    When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'wp_cli_test.sql'.
+      """
+
+    When I run `wp post list`
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      🎥
+      """
+
