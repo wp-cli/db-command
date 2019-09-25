@@ -40,10 +40,9 @@ Feature: List database tables
     Given a WP multisite install
 
     When I run `wp db tables`
-    Then STDOUT should contain:
-      """
-      wp_blog_versions
-      """
+    # Leave out wp_blog_versions, it was never used and removed in WP 5.3+.
+    # See https://core.trac.wordpress.org/ticket/19755
+
     # Leave out wp_blogmeta for old WP compat.
     And STDOUT should contain:
       """
