@@ -41,6 +41,8 @@ Feature: List database tables
 
     When I run `wp db tables`
     # Leave out wp_blog_versions, it was never used and removed in WP 5.3+.
+    # See https://core.trac.wordpress.org/ticket/19755
+
     # Leave out wp_blogmeta for old WP compat.
     And STDOUT should contain:
       """
