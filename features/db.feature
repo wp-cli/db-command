@@ -49,9 +49,10 @@ Feature: Perform database operations
     Then the return code should be 1
 
     When I run `wp db drop < session_no`
-    Then STDOUT should be:
+    # Check for contains only, as the string contains a trailing space.
+    Then STDOUT should contain:
       """
-      Are you sure you want to drop the 'wp_cli_test' database? [y/n] 
+      Are you sure you want to drop the 'wp_cli_test' database? [y/n]
       """
 
     When I run `wp db reset < session_yes`
@@ -178,13 +179,8 @@ Feature: Perform database operations
       """
     And STDOUT should be empty
 
-    # Verbose option prints to STDERR.
     When I try `wp db optimize --verbose`
     Then the return code should be 0
-    And STDERR should contain:
-      """
-      Connecting
-      """
     And STDOUT should not be empty
 
     When I run `wp db repair --dbpass=password1`
