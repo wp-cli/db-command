@@ -50,13 +50,8 @@ Feature: Check the database
       """
     And STDOUT should be empty
 
-    # Verbose option prints to STDERR.
     When I try `wp db check --dbuser=wp_cli_test --verbose`
     Then the return code should be 0
-    And STDERR should contain:
-      """
-      Connecting
-      """
     And STDOUT should contain:
       """
       Success: Database checked.

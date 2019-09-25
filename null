@@ -1,0 +1,14 @@
+Processing databases
+wp_cli_test
+wp_cli_test.wp_commentmeta                         OK
+wp_cli_test.wp_comments                            OK
+wp_cli_test.wp_links                               OK
+wp_cli_test.wp_options                             OK
+wp_cli_test.wp_postmeta                            OK
+wp_cli_test.wp_posts                               OK
+wp_cli_test.wp_term_relationships                  OK
+wp_cli_test.wp_term_taxonomy                       OK
+wp_cli_test.wp_termmeta                            OK
+wp_cli_test.wp_terms                               OK
+wp_cli_test.wp_usermeta                            OK
+wp_cli_test.wp_users                               OK
