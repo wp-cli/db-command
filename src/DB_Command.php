@@ -580,6 +580,8 @@ class DB_Command extends WP_CLI_Command {
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
 
 			$mysql_args['execute'] = sprintf( $query, $result_file );
+		} else {
+			$result_file = 'STDIN';
 		}
 		// Check if any mysql option pass.
 		$mysql_args = array_merge( $mysql_args, self::get_mysql_args( $assoc_args ) );
