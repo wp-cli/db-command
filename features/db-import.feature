@@ -12,6 +12,15 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  Scenario: Import from STDIN
+    Given a WP install
+
+    When I run `wp db import -`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'STDIN'.
+      """
+
   Scenario: Import from database name path by default and skip speed optimization
     Given a WP install
 
