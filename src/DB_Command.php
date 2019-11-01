@@ -407,24 +407,24 @@ class DB_Command extends WP_CLI_Command {
 	public function get_rows( $args, $assoc_args ) {
 		global $wpdb;
 
-		$col = $wpdb->get_col( $args[0] );
+		$assoc_args = wp_parse_args(
+			$assoc_args,
+			[
+				'format' => 'list',
+			]
+		);
 
-		if ( is_array( $col ) && ! empty( $col ) ) {
-			foreach ( $col as $value ) {
-				\WP_CLI::print_value( $value );
-			}
-		}
-
-
-		$formatter = $this->get_formatter( $assoc_args );
-		if ( 'column' === $formatter->format ) {
-
+		if ( 'column' === $assoc_args['format'] ) {
+			$col = $wpdb->get_col( $args[0] );
+			echo implode( ' ', $col );
+			return;
 		} else {
+			// TODO see if we can pass this to a formatter.
+			return;	
+
 			$rows = $wpdb->get_results( $args[0] );
 			$formatter->display_items( $rows );
 		}
-
-
 	}
 
 	/**
