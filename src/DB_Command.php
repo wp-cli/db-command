@@ -383,6 +383,51 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
+	 * Executes a select SQL query against the database and returns a formatted list or a single column.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <sql>
+	 * : A select SQL query. If not passed, will try to read from STDIN.
+	 *
+	 * [--format=<format>]
+	 * : Render output in a particular format.
+	 * ---
+	 * default: list
+	 * options:
+	 *   - list
+	 *   - csv
+	 *   - column
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 * @when after_wp_load
+	 */
+	public function get_rows( $args, $assoc_args ) {
+		global $wpdb;
+
+		$col = $wpdb->get_col( $args[0] );
+
+		if ( is_array( $col ) && ! empty( $col ) ) {
+			foreach ( $col as $value ) {
+				\WP_CLI::print_value( $value );
+			}
+		}
+
+
+		$formatter = $this->get_formatter( $assoc_args );
+		if ( 'column' === $formatter->format ) {
+
+		} else {
+			$rows = $wpdb->get_results( $args[0] );
+			$formatter->display_items( $rows );
+		}
+
+
+	}
+
+	/**
 	 * Exports the database to a file or to STDOUT.
 	 *
 	 * Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
