@@ -393,37 +393,52 @@ class DB_Command extends WP_CLI_Command {
 	 * [--format=<format>]
 	 * : Render output in a particular format.
 	 * ---
-	 * default: list
+	 * default: table
 	 * options:
-	 *   - list
+	 *   - table
 	 *   - csv
+	 *   - json
 	 *   - column
 	 * ---
 	 *
 	 * ## EXAMPLES
 	 *
+	 * @subcommand get-rows
 	 * @when after_wp_load
 	 */
 	public function get_rows( $args, $assoc_args ) {
 		global $wpdb;
 
+		error_reporting( E_ALL );
+		ini_set( 'display_errors', '1' );
+
+
 		$assoc_args = wp_parse_args(
 			$assoc_args,
 			[
-				'format' => 'list',
+				'format' => 'table',
 			]
 		);
 
+		if ( 0 !== stripos( $args[0], 'select ' ) ) {
+			WP_CLI::error( 'Only SELECT queries are supported by get-rows' );
+		}
+
 		if ( 'column' === $assoc_args['format'] ) {
+			// phpcs:disable
 			$col = $wpdb->get_col( $args[0] );
 			echo implode( ' ', $col );
-			return;
+			// phpcs:enable
 		} else {
-			// TODO see if we can pass this to a formatter.
-			return;	
+			// phpcs:ignore
+			$rows = $wpdb->get_results( $args[0], ARRAY_A );
 
-			$rows = $wpdb->get_results( $args[0] );
-			$formatter->display_items( $rows );
+			if ( is_array( $rows ) && ! empty( $rows ) ) {
+				$fields = array_keys( $rows[0] );
+
+				$formatter = new Formatter( $assoc_args, $fields );
+				$formatter->display_items( $rows );
+			}
 		}
 	}
 
