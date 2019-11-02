@@ -421,7 +421,7 @@ class DB_Command extends WP_CLI_Command {
 		);
 
 		if ( 0 !== stripos( $args[0], 'select ' ) ) {
-			WP_CLI::error( 'Only SELECT queries are supported by get-rows' );
+			WP_CLI::error( 'Only SELECT queries are supported by get-rows.' );
 		}
 
 		if ( 'column' === $assoc_args['format'] ) {

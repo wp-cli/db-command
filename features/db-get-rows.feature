@@ -39,3 +39,25 @@ Feature: Select rows from the database with WordPress' MySQL config
       """
       1 2 3
       """
+
+  Scenario: Only allow SELECT queries with get-rows
+    Given a WP install
+
+    When I run `wp db get-rows "DELETE FROM wp_posts;"`
+	Then the return code should not be 0
+    And STDERR should be:
+      """
+      Error: Only SELECT queries are supported by get-rows.
+      """
+
+    When I run `wp db get-rows "update wp_posts set post_name = '123';"`
+    Then STDERR should be:
+      """
+      Error: Only SELECT queries are supported by get-rows.
+      """
+
+    When I run `wp db get-rows "insert into wp_posts(post_name) values('12345');"`
+    Then STDERR should be:
+      """
+      Error: Only SELECT queries are supported by get-rows.
+      """
