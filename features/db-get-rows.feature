@@ -30,3 +30,12 @@ Feature: Select rows from the database with WordPress' MySQL config
       """
       [{"post_id":"1","slug":"hello-world"},{"post_id":"2","slug":"sample-page"},{"post_id":"3","slug":"privacy-policy"}]
       """
+
+  Scenario: Get a list of post IDs in column format using a custom query
+    Given a WP install
+
+    When I run `wp db get-rows "SELECT ID FROM wp_posts where post_content like '%wp:paragraph%';" --format=column`
+    Then STDOUT should contain:
+      """
+      1 2 3
+      """
