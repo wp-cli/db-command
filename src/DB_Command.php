@@ -160,7 +160,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$tables = Utils\wp_get_table_names(
 			array(),
-			array( 'all-tables-with-prefix' )
+			array( 'all-tables-with-prefix' => true )
 		);
 
 		foreach ( $tables as $table ) {
