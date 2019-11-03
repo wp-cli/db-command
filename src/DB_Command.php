@@ -163,7 +163,6 @@ class DB_Command extends WP_CLI_Command {
 			array( 'all-tables-with-prefix' => true )
 		);
 
-
 		foreach ( $tables as $table ) {
 			self::run_query(
 				sprintf(
