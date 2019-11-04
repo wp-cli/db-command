@@ -388,7 +388,7 @@ class DB_Command extends WP_CLI_Command {
 	 * ## OPTIONS
 	 *
 	 * <sql>
-	 * : A select SQL query. If not passed, will try to read from STDIN.
+	 * : A select SQL query.
 	 *
 	 * [--format=<format>]
 	 * : Render output in a particular format.
@@ -408,10 +408,6 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function get_rows( $args, $assoc_args ) {
 		global $wpdb;
-
-		error_reporting( E_ALL );
-		ini_set( 'display_errors', '1' );
-
 
 		$assoc_args = wp_parse_args(
 			$assoc_args,
