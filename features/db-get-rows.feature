@@ -3,7 +3,7 @@ Feature: Select rows from the database with WordPress' MySQL config
   Scenario: Get a list of post IDs in table format using a custom query
     Given a WP install
 
-    When I run `wp db get-rows "SELECT ID as post_id FROM wp_posts;"`
+    When I run `wp db get-rows "SELECT ID as post_id FROM wp_posts where ID in (1,2);"`
     Then STDOUT should be a table containing rows:
       | post_id |
       | 1       |
@@ -12,7 +12,7 @@ Feature: Select rows from the database with WordPress' MySQL config
   Scenario: Get a list of posts in CSV format using a custom query
     Given a WP install
 
-    When I run `wp db get-rows "SELECT ID as post_id, post_name as slug FROM wp_posts;" --format=csv`
+    When I run `wp db get-rows "SELECT ID as post_id, post_name as slug FROM wp_posts where ID in (1,2);" --format=csv`
     Then STDOUT should contain:
       """
       post_id,slug
@@ -23,7 +23,7 @@ Feature: Select rows from the database with WordPress' MySQL config
   Scenario: Get a list of posts in JSON format using a custom query
     Given a WP install
 
-    When I run `wp db get-rows "SELECT ID as post_id, post_name as slug FROM wp_posts;" --format=json`
+    When I run `wp db get-rows "SELECT ID as post_id, post_name as slug FROM wp_posts where ID in (1,2);" --format=json`
     Then STDOUT should contain:
       """
       [{"post_id":"1","slug":"hello-world"},{"post_id":"2","slug":"sample-page"}]
@@ -32,7 +32,7 @@ Feature: Select rows from the database with WordPress' MySQL config
   Scenario: Get a list of post IDs in column format using a custom query
     Given a WP install
 
-    When I run `wp db get-rows "SELECT ID FROM wp_posts where post_content like '%post%';" --format=column`
+    When I run `wp db get-rows "SELECT ID FROM wp_posts where post_content like '%post%' where ID in (1,2);" --format=column`
     Then STDOUT should contain:
       """
       1 2
