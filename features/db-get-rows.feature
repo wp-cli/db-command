@@ -32,7 +32,7 @@ Feature: Select rows from the database with WordPress' MySQL config
   Scenario: Get a list of post IDs in column format using a custom query
     Given a WP install
 
-    When I run `wp db get-rows "SELECT ID FROM wp_posts where post_content like '%post%' where ID in (1,2);" --format=column`
+    When I run `wp db get-rows "SELECT ID FROM wp_posts where post_content like '%post%' and ID in (1,2);" --format=column`
     Then STDOUT should contain:
       """
       1 2
