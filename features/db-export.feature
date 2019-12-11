@@ -59,3 +59,18 @@ Feature: Export a WordPress database
       Access denied
       """
     And STDOUT should be empty
+
+  Scenario: Ensure MySQL defaults are available when as appropriate with --defaults flag
+    Given a WP install
+
+    When I try `wp db export --defaults --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): /usr/bin/env mysqldump
+      """
+
+    When I try `wp db export --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): /usr/bin/env mysqldump --no-defaults
+      """

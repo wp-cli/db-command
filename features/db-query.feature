@@ -37,3 +37,18 @@ Feature: Query the database with WordPress' MySQL config
       Access denied
       """
     And STDOUT should be empty
+
+  Scenario: Ensure MySQL defaults are available when as appropriate with --defaults flag
+    Given a WP install
+
+  When I try `wp db query --defaults --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): /usr/bin/env mysql --no-auto-rehash
+      """
+
+    When I try `wp db query --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): /usr/bin/env mysql --no-defaults --no-auto-rehash
+      """

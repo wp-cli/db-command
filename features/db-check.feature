@@ -97,3 +97,18 @@ Feature: Check the database
       Access denied
       """
     And STDOUT should be empty
+
+  Scenario: Ensure MySQL defaults are available when as appropriate with --defaults flag
+    Given a WP install
+
+    When I try `wp db check --defaults --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): /usr/bin/env mysqlcheck %s
+      """
+
+    When I try `wp db check --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): /usr/bin/env mysqlcheck --no-defaults %s
+      """
