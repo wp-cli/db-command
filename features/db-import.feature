@@ -104,3 +104,20 @@ Feature: Import a WordPress database
       """
       wp db import
       """
+  Scenario: Ensure MySQL defaults are available when as appropriate with --defaults flag
+    Given a WP install
+
+    When I run `wp db export wp_cli_test.sql`
+    Then the wp_cli_test.sql file should exist
+
+    When I try `wp db import --defaults --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): /usr/bin/env mysql --no-auto-rehash
+      """
+
+    When I try `wp db import --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): /usr/bin/env mysql --no-defaults --no-auto-rehash
+      """
