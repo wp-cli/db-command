@@ -182,7 +182,7 @@ for more details on the `CHECK TABLE` statement.
 		Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 
 	[--defaults]
-		Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
@@ -218,7 +218,7 @@ for more details on the `OPTIMIZE TABLE` statement.
 		Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 
 	[--defaults]
-		Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
@@ -271,7 +271,7 @@ more details on the `REPAIR TABLE` statement.
 		Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 
 	[--defaults]
-		Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
@@ -306,7 +306,7 @@ wp db cli [--database=<database>] [--default-character-set=<character-set>] [--d
 		Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 
 	[--defaults]
-		Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
@@ -342,7 +342,7 @@ Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 		Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 
 	[--defaults]
-		Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
@@ -412,7 +412,7 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 		Output filename for the exported database.
 
 	[--defaults]
-		Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
@@ -494,7 +494,7 @@ defined in the SQL.
 		When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
 
 	[--defaults]
-		Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
