@@ -209,7 +209,7 @@ class DB_Command extends WP_CLI_Command {
 	public function check( $_, $assoc_args ) {
 
 		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', self::get_no_defaults( $assoc_args ), '%s' );
-		WP_CLI::debug( $command, 'db' );
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['check'] = true;
 		self::run(
