@@ -49,7 +49,7 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function create( $_, $assoc_args ) {
 
-		self::run_query( self::get_create_query(), self::get_dbuser_dbpass_args( $assoc_args ) );
+		$this->run_query( self::get_create_query(), self::get_dbuser_dbpass_args( $assoc_args ) );
 
 		WP_CLI::success( 'Database created.' );
 	}
@@ -80,7 +80,7 @@ class DB_Command extends WP_CLI_Command {
 	public function drop( $_, $assoc_args ) {
 		WP_CLI::confirm( "Are you sure you want to drop the '" . DB_NAME . "' database?", $assoc_args );
 
-		self::run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ), self::get_dbuser_dbpass_args( $assoc_args ) );
+		$this->run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ), self::get_dbuser_dbpass_args( $assoc_args ) );
 
 		WP_CLI::success( 'Database dropped.' );
 	}
@@ -113,8 +113,8 @@ class DB_Command extends WP_CLI_Command {
 
 		$mysql_args = self::get_dbuser_dbpass_args( $assoc_args );
 
-		self::run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ), $mysql_args );
-		self::run_query( self::get_create_query(), $mysql_args );
+		$this->run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ), $mysql_args );
+		$this->run_query( self::get_create_query(), $mysql_args );
 
 		WP_CLI::success( 'Database reset.' );
 	}
@@ -164,7 +164,7 @@ class DB_Command extends WP_CLI_Command {
 		);
 
 		foreach ( $tables as $table ) {
-			self::run_query(
+			$this->run_query(
 				sprintf(
 					'DROP TABLE IF EXISTS `%s`.`%s`',
 					DB_NAME,
@@ -199,7 +199,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 	 *
 	 * [--defaults]
-	 * : Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -208,7 +208,7 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function check( $_, $assoc_args ) {
 
-		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', self::get_no_defaults( $assoc_args ), '%s' );
+		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['check'] = true;
@@ -242,7 +242,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 	 *
 	 * [--defaults]
-	 * : Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -251,8 +251,8 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function optimize( $_, $assoc_args ) {
 
-		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', self::get_no_defaults( $assoc_args ), '%s' );
-		WP_CLI::debug( $command, 'db' );
+		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['optimize'] = true;
 		self::run(
@@ -285,7 +285,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 	 *
 	 * [--defaults]
-	 * : Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -294,8 +294,8 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function repair( $_, $assoc_args ) {
 
-		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', self::get_no_defaults( $assoc_args ), '%s' );
-		WP_CLI::debug( $command, 'db' );
+		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['repair'] = true;
 		self::run(
@@ -327,7 +327,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 	 *
 	 * [--defaults]
-	 * : Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -339,8 +339,8 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function cli( $args, $assoc_args ) {
 
-		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', self::get_no_defaults( $assoc_args ) );
-		WP_CLI::debug( $command, 'db' );
+		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		if ( ! isset( $assoc_args['database'] ) ) {
 			$assoc_args['database'] = DB_NAME;
@@ -370,7 +370,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 	 *
 	 * [--defaults]
-	 * : Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -404,8 +404,8 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function query( $args, $assoc_args ) {
 
-		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', self::get_no_defaults( $assoc_args ) );
-		WP_CLI::debug( $command, 'db' );
+		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['database'] = DB_NAME;
 
@@ -448,7 +448,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Output filename for the exported database.
 	 *
 	 * [--defaults]
-	 * : Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -522,8 +522,8 @@ class DB_Command extends WP_CLI_Command {
 
 		$support_column_statistics = exec( 'mysqldump --help | grep "column-statistics"' );
 
-		$initial_command = sprintf( '/usr/bin/env mysqldump%s ', self::get_no_defaults( $assoc_args ) );
-		WP_CLI::debug( $initial_command, 'db' );
+		$initial_command = sprintf( '/usr/bin/env mysqldump%s ', $this->get_defaults_flag_string( $assoc_args ) );
+		WP_CLI::debug( "Running initial shell command: {$initial_command}", 'db' );
 
 		if ( $support_column_statistics ) {
 			$command = $initial_command . '--skip-column-statistics %s';
@@ -594,7 +594,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
 	 *
 	 * [--defaults]
-	 * : Removes the "--no-defaults" flag normally passed to MySQL allowing it to use the default my.cnf or one specified with the MYSQL_HOME environment variable.
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -630,8 +630,8 @@ class DB_Command extends WP_CLI_Command {
 		// Check if any mysql option pass.
 		$mysql_args = array_merge( $mysql_args, self::get_mysql_args( $assoc_args ) );
 
-		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', self::get_no_defaults( $assoc_args ) );
-		WP_CLI::debug( $command, 'db' );
+		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		self::run( $command, $mysql_args );
 
@@ -1417,8 +1417,8 @@ class DB_Command extends WP_CLI_Command {
 		return $create_query;
 	}
 
-	private static function run_query( $query, $assoc_args = array() ) {
-		self::run( sprintf( '/usr/bin/env mysql%s --no-auto-rehash', self::get_no_defaults( $assoc_args ) ), array_merge( $assoc_args, array( 'execute' => $query ) ) );
+	protected function run_query( $query, $assoc_args = array() ) {
+		self::run( sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) ), array_merge( $assoc_args, array( 'execute' => $query ) ) );
 	}
 
 	private static function run( $cmd, $assoc_args = array(), $descriptors = null ) {
@@ -1686,7 +1686,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array $assoc_args Associative args array.
 	 * @return string Either the '--no-defaults' flag for use in the command or an empty string.
 	 */
-	private static function get_defaults_flag_string( &$assoc_args ) {
+	protected function get_defaults_flag_string( &$assoc_args ) {
 
 		if ( true === Utils\get_flag_value( $assoc_args, 'defaults' ) ) {
 			unset( $assoc_args['defaults'] );
