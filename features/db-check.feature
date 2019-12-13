@@ -98,7 +98,7 @@ Feature: Check the database
       """
     And STDOUT should be empty
 
-  Scenario: Ensure MySQL defaults are available when as appropriate with --defaults flag
+  Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 
     When I try `wp db check --defaults --debug`
