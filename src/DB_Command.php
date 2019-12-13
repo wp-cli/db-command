@@ -1686,7 +1686,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array $assoc_args Associative args array.
 	 * @return string Either the '--no-defaults' flag for use in the command or an empty string.
 	 */
-	private static function get_no_defaults( &$assoc_args ) {
+	private static function get_defaults_flag_string( &$assoc_args ) {
 
 		if ( true === Utils\get_flag_value( $assoc_args, 'defaults' ) ) {
 			unset( $assoc_args['defaults'] );
