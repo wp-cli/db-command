@@ -1688,12 +1688,19 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	protected function get_defaults_flag_string( &$assoc_args ) {
 
-		if ( true === Utils\get_flag_value( $assoc_args, 'defaults' ) ) {
+		$flag_string = ' --no-defaults';
+
+		if ( array_key_exists( 'defaults', $assoc_args ) ) {
+
+			if ( true === Utils\get_flag_value( $assoc_args, 'defaults' ) ) {
+				$flag_string = '';
+			}
+
 			unset( $assoc_args['defaults'] );
-			return '';
+
 		}
 
-		return ' --no-defaults';
+		return $flag_string;
 
 	}
 }
