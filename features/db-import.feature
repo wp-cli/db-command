@@ -24,6 +24,18 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  Scenario: Import from database name path by default with --no-defaults
+    Given a WP install
+
+    When I run `wp db export wp_cli_test.sql`
+    Then the wp_cli_test.sql file should exist
+
+    When I run `wp db import --no-defaults`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'wp_cli_test.sql'.
+      """
+
   Scenario: Import from STDIN
     Given a WP install
 
@@ -129,6 +141,12 @@ Feature: Import a WordPress database
       """
 
     When I try `wp db import --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): Running shell command: /usr/bin/env mysql --no-defaults --no-auto-rehash
+      """
+
+    When I try `wp db import --no-defaults --debug`
     Then STDERR should contain:
       """
       Debug (db): Running shell command: /usr/bin/env mysql --no-defaults --no-auto-rehash
