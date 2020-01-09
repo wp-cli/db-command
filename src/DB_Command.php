@@ -48,7 +48,14 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database created.
 	 */
 	public function create( $_, $assoc_args ) {
-		$this->run_mysql_query( $this->get_create_query(), $assoc_args, [ 'no-auto-rehash' => true, 'database' => false ] );
+		$this->run_mysql_query(
+			$this->get_create_query(),
+			$assoc_args,
+			[
+				'no-auto-rehash' => true,
+				'database'       => false,
+			]
+		);
 
 		WP_CLI::success( 'Database created.' );
 	}
@@ -113,7 +120,14 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::confirm( "Are you sure you want to reset the '{$db_settings['database']}' database?", $assoc_args );
 
 		$this->run_mysql_query( "DROP DATABASE IF EXISTS `{$db_settings['database']}`", $assoc_args );
-		$this->run_mysql_query( $this->get_create_query(), $assoc_args, [ 'no-auto-rehash' => true, 'database' => false ] );
+		$this->run_mysql_query(
+			$this->get_create_query(),
+			$assoc_args,
+			[
+				'no-auto-rehash' => true,
+				'database'       => false,
+			]
+		);
 
 		WP_CLI::success( 'Database reset.' );
 	}
@@ -1412,7 +1426,8 @@ class DB_Command extends WP_CLI_Command {
 			$command .= ' --ignore-table ';
 			$command .= implode(
 				' ',
-				array_map( 'escapeshellarg',
+				array_map(
+					'escapeshellarg',
 					array_map(
 						static function ( $table ) use ( $db_settings ) {
 							return "{$db_settings['database']}.{$table}";
@@ -1421,7 +1436,7 @@ class DB_Command extends WP_CLI_Command {
 					)
 				)
 			);
-	}
+		}
 
 		// Remove parameters not needed for SQL run.
 		unset( $assoc_args['porcelain'] );
@@ -1454,7 +1469,7 @@ class DB_Command extends WP_CLI_Command {
 			unset( $assoc_args['execute'] );
 		}
 
-		$masked_args = array_merge( $assoc_args, [ /*'pass' => '<*****>'*/ ] );
+		$masked_args = array_merge( $assoc_args, [ 'pass' => '<*****>' ] );
 
 		$argument_string = Utils\assoc_args_to_str( $masked_args );
 
@@ -1667,27 +1682,10 @@ class DB_Command extends WP_CLI_Command {
 			'xml',
 		];
 
-		$mysql_args = [];
-
-		foreach ( $assoc_args as $mysql_option_key => $mysql_option_value ) {
-			// Check flags to make sure they only contain valid options.
-			if ( ! empty( $mysql_option_value ) && in_array( $mysql_option_key, $allowed_mysql_options, true ) ) {
-				$mysql_args[ $mysql_option_key ] = $mysql_option_value;
-			}
-		}
-
-		// Special handling for --no-defaults because of BC reasons.
-		if ( ! array_key_exists( 'defaults', $assoc_args ) || false === $assoc_args['defaults'] ) {
-			$mysql_args['no-defaults'] = true;
-			unset( $assoc_args['defaults'] );
-		}
-
-		// Make sure the password is forwarded.
-		if ( array_key_exists( 'pass', $assoc_args ) ) {
-			$mysql_args['pass'] = $assoc_args['pass'];
-	     }
-
-		return $mysql_args;
+		return $this->filter_against_allowed_options(
+			$assoc_args,
+			$allowed_mysql_options
+		);
 	}
 
 	/**
@@ -1803,27 +1801,10 @@ class DB_Command extends WP_CLI_Command {
 			'write-binlog',
 		];
 
-		$mysqlcheck_args = [];
-
-		foreach ( $assoc_args as $mysqlcheck_option_key => $mysqlcheck_option_value ) {
-			// Check flags to make sure they only contain valid options.
-			if ( ! empty( $mysqlcheck_option_value ) && in_array( $mysqlcheck_option_key, $allowed_mysqlcheck_options, true ) ) {
-				$mysqlcheck_args[ $mysqlcheck_option_key ] = $mysqlcheck_option_value;
-			}
-		}
-
-		// Special handling for --no-defaults because of BC reasons.
-		if ( ! array_key_exists( 'defaults', $assoc_args ) || false === $assoc_args['defaults'] ) {
-			$mysqlcheck_args['no-defaults'] = true;
-			unset( $assoc_args['defaults'] );
-		}
-
-		// Make sure the password is forwarded.
-		if ( array_key_exists( 'pass', $assoc_args ) ) {
-			$mysqlcheck_args['pass'] = $assoc_args['pass'];
-	     }
-
-		return $mysqlcheck_args;
+		return $this->filter_against_allowed_options(
+			$assoc_args,
+			$allowed_mysqlcheck_options
+		);
 	}
 
 	/**
@@ -2031,27 +2012,43 @@ class DB_Command extends WP_CLI_Command {
 			'where',
 		];
 
-		$mysqldump_args = [];
+		return $this->filter_against_allowed_options(
+			$assoc_args,
+			$allowed_mysqldump_options
+		);
+	}
 
-		foreach ( $assoc_args as $mysqldump_option_key => $mysqldump_option_value ) {
+	/**
+	 * Filter a set of associative arguments against a list of allowed options.
+	 *
+	 * @param array    $assoc_args      Associative array of arguments to
+	 *                                  filter.
+	 * @param string[] $allowed_options List of allowed options to filter
+	 *                                  against.
+	 * @return array Filters associative array of arguments.
+	 */
+	protected function filter_against_allowed_options( $assoc_args, $allowed_options ) {
+		$args = [];
+
+		foreach ( $assoc_args as $option_key => $option_value ) {
 			// Check flags to make sure they only contain valid options.
-			if ( ! empty( $mysqldump_option_value ) && in_array( $mysqldump_option_key, $allowed_mysqldump_options, true ) ) {
-				$mysqldump_args[ $mysqldump_option_key ] = $mysqldump_option_value;
+			if ( ! empty( $option_value ) && in_array( $option_key, $allowed_options, true ) ) {
+				$args[ $option_key ] = $option_value;
 			}
 		}
 
 		// Special handling for --no-defaults because of BC reasons.
 		if ( ! array_key_exists( 'defaults', $assoc_args ) || false === $assoc_args['defaults'] ) {
-			$mysqldump_args['no-defaults'] = true;
+			$args['no-defaults'] = true;
 			unset( $assoc_args['defaults'] );
 		}
 
 		// Make sure the password is forwarded.
 		if ( array_key_exists( 'pass', $assoc_args ) ) {
-			$mysqldump_args['pass'] = $assoc_args['pass'];
-	     }
+			$args['pass'] = $assoc_args['pass'];
+		}
 
-		return $mysqldump_args;
+		return $args;
 	}
 
 	/**
@@ -2098,12 +2095,12 @@ class DB_Command extends WP_CLI_Command {
 
 		foreach ( $mapping as $key => $mappings ) {
 			if ( defined( $mappings['constant_name'] ) ) {
-				$assoc_args[ $key ] = constant( $mappings['constant_name'] );
+				$assoc_args[ $key ]                  = constant( $mappings['constant_name'] );
 				$assoc_args['_db_settings_'][ $key ] = $assoc_args[ $key ];
 			}
 
 			if ( array_key_exists( $mappings['flag_name'], $assoc_args ) ) {
-				$assoc_args[ $key ] = $assoc_args[ $mappings['flag_name'] ];
+				$assoc_args[ $key ]                  = $assoc_args[ $mappings['flag_name'] ];
 				$assoc_args['_db_settings_'][ $key ] = $assoc_args[ $key ];
 			}
 
