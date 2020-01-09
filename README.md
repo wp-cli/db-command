@@ -160,7 +160,7 @@ specified in wp-config.php.
 Checks the current status of the database.
 
 ~~~
-wp db check [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>]
+wp db check [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults]
 ~~~
 
 Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
@@ -181,6 +181,9 @@ for more details on the `CHECK TABLE` statement.
 	[--<field>=<value>]
 		Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
 **EXAMPLES**
 
     $ wp db check
@@ -193,7 +196,7 @@ for more details on the `CHECK TABLE` statement.
 Optimizes the database.
 
 ~~~
-wp db optimize [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>]
+wp db optimize [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults]
 ~~~
 
 Runs `mysqlcheck` utility with `--optimize=true` using `DB_HOST`,
@@ -214,6 +217,9 @@ for more details on the `OPTIMIZE TABLE` statement.
 	[--<field>=<value>]
 		Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
 **EXAMPLES**
 
     $ wp db optimize
@@ -226,7 +232,7 @@ for more details on the `OPTIMIZE TABLE` statement.
 Displays the database table prefix.
 
 ~~~
-wp db prefix 
+wp db prefix
 ~~~
 
 Display the database table prefix, as defined by the database handler's interpretation of the current site.
@@ -243,7 +249,7 @@ Display the database table prefix, as defined by the database handler's interpre
 Repairs the database.
 
 ~~~
-wp db repair [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>]
+wp db repair [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults]
 ~~~
 
 Runs `mysqlcheck` utility with `--repair=true` using `DB_HOST`,
@@ -264,6 +270,9 @@ more details on the `REPAIR TABLE` statement.
 	[--<field>=<value>]
 		Extra arguments to pass to mysqlcheck. [Refer to mysqlcheck docs](https://dev.mysql.com/doc/en/mysqlcheck.html).
 
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
 **EXAMPLES**
 
     $ wp db repair
@@ -276,7 +285,7 @@ more details on the `REPAIR TABLE` statement.
 Opens a MySQL console using credentials from wp-config.php
 
 ~~~
-wp db cli [--database=<database>] [--default-character-set=<character-set>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>]
+wp db cli [--database=<database>] [--default-character-set=<character-set>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults]
 ~~~
 
 **OPTIONS**
@@ -296,6 +305,9 @@ wp db cli [--database=<database>] [--default-character-set=<character-set>] [--d
 	[--<field>=<value>]
 		Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
 
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
 **EXAMPLES**
 
     # Open MySQL console
@@ -309,7 +321,7 @@ wp db cli [--database=<database>] [--default-character-set=<character-set>] [--d
 Executes a SQL query against the database.
 
 ~~~
-wp db query [<sql>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>]
+wp db query [<sql>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults]
 ~~~
 
 Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
@@ -328,6 +340,9 @@ Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 
 	[--<field>=<value>]
 		Extra arguments to pass to mysql. [Refer to mysql docs](https://dev.mysql.com/doc/en/mysql-command-options.html).
+
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
@@ -366,7 +381,7 @@ Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--porcelain]
+wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--porcelain] [--defaults]
 ~~~
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
@@ -395,6 +410,9 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
 	[--porcelain]
 		Output filename for the exported database.
+
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
@@ -450,7 +468,7 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 Imports a database from a file or from STDIN.
 
 ~~~
-wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--skip-optimization]
+wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--skip-optimization] [--defaults]
 ~~~
 
 Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
@@ -474,6 +492,9 @@ defined in the SQL.
 
 	[--skip-optimization]
 		When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
+
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
