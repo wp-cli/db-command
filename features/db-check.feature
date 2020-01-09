@@ -13,32 +13,6 @@ Feature: Check the database
       Success: Database checked.
       """
 
-  Scenario: Run db check with MySQL defaults to check the database
-    Given a WP install
-
-    When I run `wp db check --defaults`
-    Then STDOUT should contain:
-      """
-      wp_cli_test.wp_users
-      """
-    And STDOUT should contain:
-      """
-      Success: Database checked.
-      """
-
-  Scenario: Run db check with --no-defaults to check the database
-    Given a WP install
-
-    When I run `wp db check --no-defaults`
-    Then STDOUT should contain:
-      """
-      wp_cli_test.wp_users
-      """
-    And STDOUT should contain:
-      """
-      Success: Database checked.
-      """
-
   Scenario: Run db check with passed-in options
     Given a WP install
 
