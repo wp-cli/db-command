@@ -43,6 +43,24 @@ Feature: Export a WordPress database
       -- MySQL dump
       """
 
+  Scenario: Export database with mysql defaults to STDOUT
+    Given a WP install
+
+    When I run `wp db export --defaults -`
+    Then STDOUT should contain:
+      """
+      -- MySQL dump
+      """
+
+  Scenario: Export database with mysql --no-defaults to STDOUT
+    Given a WP install
+
+    When I run `wp db export --no-defaults -`
+    Then STDOUT should contain:
+      """
+      -- MySQL dump
+      """
+
   Scenario: Export database with passed-in options
     Given a WP install
 
@@ -59,3 +77,24 @@ Feature: Export a WordPress database
       Access denied
       """
     And STDOUT should be empty
+
+  Scenario: MySQL defaults are available as appropriate with --defaults flag
+    Given a WP install
+
+    When I try `wp db export --defaults --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): Running initial shell command: /usr/bin/env mysqldump
+      """
+
+    When I try `wp db export --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): Running initial shell command: /usr/bin/env mysqldump --no-defaults
+      """
+
+    When I try `wp db export --no-defaults --debug`
+    Then STDERR should contain:
+      """
+      Debug (db): Running initial shell command: /usr/bin/env mysqldump --no-defaults
+      """
