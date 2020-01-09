@@ -2,7 +2,6 @@
 
 use WP_CLI\Formatter;
 use WP_CLI\Utils;
-use cli;
 
 /**
  * Performs basic database operations using credentials stored in wp-config.php.
@@ -49,8 +48,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database created.
 	 */
 	public function create( $_, $assoc_args ) {
-
-		$this->run_query( $this->get_create_query(), $this->get_dbuser_dbpass_args( $assoc_args ) );
+		$this->run_mysql_query( $this->get_create_query(), $assoc_args, [ 'no-auto-rehash' => true, 'database' => false ] );
 
 		WP_CLI::success( 'Database created.' );
 	}
@@ -79,9 +77,10 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database dropped.
 	 */
 	public function drop( $_, $assoc_args ) {
-		WP_CLI::confirm( "Are you sure you want to drop the '" . DB_NAME . "' database?", $assoc_args );
+		$db_settings = $this->get_db_settings( $assoc_args );
+		WP_CLI::confirm( "Are you sure you want to drop the '{$db_settings['database']}' database?", $assoc_args );
 
-		$this->run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ), $this->get_dbuser_dbpass_args( $assoc_args ) );
+		$this->run_mysql_query( "DROP DATABASE `{$db_settings['database']}`", $assoc_args );
 
 		WP_CLI::success( 'Database dropped.' );
 	}
@@ -110,12 +109,11 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database reset.
 	 */
 	public function reset( $_, $assoc_args ) {
-		WP_CLI::confirm( "Are you sure you want to reset the '" . DB_NAME . "' database?", $assoc_args );
+		$db_settings = $this->get_db_settings( $assoc_args );
+		WP_CLI::confirm( "Are you sure you want to reset the '{$db_settings['database']}' database?", $assoc_args );
 
-		$mysql_args = $this->get_dbuser_dbpass_args( $assoc_args );
-
-		$this->run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ), $mysql_args );
-		$this->run_query( $this->get_create_query(), $mysql_args );
+		$this->run_mysql_query( "DROP DATABASE IF EXISTS `{$db_settings['database']}`", $assoc_args );
+		$this->run_mysql_query( $this->get_create_query(), $assoc_args, [ 'no-auto-rehash' => true, 'database' => false ] );
 
 		WP_CLI::success( 'Database reset.' );
 	}
@@ -148,16 +146,11 @@ class DB_Command extends WP_CLI_Command {
 	public function clean( $_, $assoc_args ) {
 		global $wpdb;
 
+		$db_settings = $this->get_db_settings( $assoc_args );
 		WP_CLI::confirm(
-			sprintf(
-				"Are you sure you want to drop all the tables on '%s' that use the current site's database prefix ('%s')?",
-				DB_NAME,
-				$wpdb->get_blog_prefix()
-			),
+			"Are you sure you want to drop all the tables on '{$db_settings['database']}' that use the current site's database prefix ('{$wpdb->get_blog_prefix()}')?",
 			$assoc_args
 		);
-
-		$mysql_args = $this->get_dbuser_dbpass_args( $assoc_args );
 
 		$tables = Utils\wp_get_table_names(
 			[],
@@ -165,13 +158,9 @@ class DB_Command extends WP_CLI_Command {
 		);
 
 		foreach ( $tables as $table ) {
-			$this->run_query(
-				sprintf(
-					'DROP TABLE IF EXISTS `%s`.`%s`',
-					DB_NAME,
-					$table
-				),
-				$mysql_args
+			$this->run_mysql_query(
+				"DROP TABLE IF EXISTS `{$db_settings['database']}`.`{$table}`",
+				$assoc_args
 			);
 		}
 
@@ -208,15 +197,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database checked.
 	 */
 	public function check( $_, $assoc_args ) {
-
-		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
-		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-
-		$assoc_args['check'] = true;
-		$this->run(
-			Utils\esc_cmd( $command, DB_NAME ),
-			$assoc_args
-		);
+		$this->run_mysqlcheck_command( $assoc_args, [ 'check' => true ] );
 
 		WP_CLI::success( 'Database checked.' );
 	}
@@ -251,15 +232,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database optimized.
 	 */
 	public function optimize( $_, $assoc_args ) {
-
-		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
-		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-
-		$assoc_args['optimize'] = true;
-		$this->run(
-			Utils\esc_cmd( $command, DB_NAME ),
-			$assoc_args
-		);
+		$this->run_mysqlcheck_command( $assoc_args, [ 'optimize' => true ] );
 
 		WP_CLI::success( 'Database optimized.' );
 	}
@@ -294,15 +267,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database repaired.
 	 */
 	public function repair( $_, $assoc_args ) {
-
-		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
-		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-
-		$assoc_args['repair'] = true;
-		$this->run(
-			Utils\esc_cmd( $command, DB_NAME ),
-			$assoc_args
-		);
+		$this->run_mysqlcheck_command( $assoc_args, [ 'repair' => true ] );
 
 		WP_CLI::success( 'Database repaired.' );
 	}
@@ -339,15 +304,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @alias connect
 	 */
 	public function cli( $_, $assoc_args ) {
-
-		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
-		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-
-		if ( ! isset( $assoc_args['database'] ) ) {
-			$assoc_args['database'] = DB_NAME;
-		}
-
-		$this->run( $command, $assoc_args );
+		$this->run_mysql_command( $assoc_args, [ 'no-auto-rehash' => true ] );
 	}
 
 	/**
@@ -404,18 +361,13 @@ class DB_Command extends WP_CLI_Command {
 	 *     +---+------+------------------------------+-----+
 	 */
 	public function query( $args, $assoc_args ) {
-
-		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
-		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-
-		$assoc_args['database'] = DB_NAME;
-
 		// The query might come from STDIN.
+		$query = '-';
 		if ( ! empty( $args ) ) {
-			$assoc_args['execute'] = $args[0];
+			$query = $args[0];
 		}
 
-		$this->run( $command, $assoc_args );
+		$this->run_mysql_query( $query, $assoc_args, [ 'no-auto-rehash' => true ] );
 	}
 
 	/**
@@ -521,46 +473,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$support_column_statistics = exec( 'mysqldump --help | grep "column-statistics"' );
-
-		$initial_command = sprintf( '/usr/bin/env mysqldump%s ', $this->get_defaults_flag_string( $assoc_args ) );
-		WP_CLI::debug( "Running initial shell command: {$initial_command}", 'db' );
-
-		if ( $support_column_statistics ) {
-			$command = $initial_command . '--skip-column-statistics %s';
-		} else {
-			$command = $initial_command . '%s';
-		}
-
-		$command_esc_args = [ DB_NAME ];
-
-		if ( isset( $assoc_args['tables'] ) ) {
-			$tables = explode( ',', trim( $assoc_args['tables'], ',' ) );
-			unset( $assoc_args['tables'] );
-			$command .= ' --tables';
-			foreach ( $tables as $table ) {
-				$command           .= ' %s';
-				$command_esc_args[] = trim( $table );
-			}
-		}
-
-		$exclude_tables = Utils\get_flag_value( $assoc_args, 'exclude_tables' );
-		if ( isset( $exclude_tables ) ) {
-			$tables = explode( ',', trim( $assoc_args['exclude_tables'], ',' ) );
-			unset( $assoc_args['exclude_tables'] );
-			foreach ( $tables as $table ) {
-				$command           .= ' --ignore-table';
-				$command           .= ' %s';
-				$command_esc_args[] = trim( DB_NAME . '.' . $table );
-			}
-		}
-
-		$escaped_command = call_user_func_array( '\WP_CLI\Utils\esc_cmd', array_merge( [ $command ], $command_esc_args ) );
-
-		// Remove parameters not needed for SQL run.
-		unset( $assoc_args['porcelain'] );
-
-		$this->run( $escaped_command, $assoc_args );
+		$this->run_mysqldump_command( $assoc_args );
 
 		if ( $porcelain ) {
 			WP_CLI::line( $result_file );
@@ -610,11 +523,6 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
 
-		$mysql_args = [
-			'database' => DB_NAME,
-		];
-		$mysql_args = array_merge( $this->get_dbuser_dbpass_args( $assoc_args ), $mysql_args );
-
 		if ( '-' !== $result_file ) {
 			if ( ! is_readable( $result_file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
@@ -624,17 +532,12 @@ class DB_Command extends WP_CLI_Command {
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
 
-			$mysql_args['execute'] = sprintf( $query, $result_file );
+			$assoc_args['execute'] = sprintf( $query, $result_file );
 		} else {
 			$result_file = 'STDIN';
 		}
-		// Check if any mysql option pass.
-		$mysql_args = array_merge( $mysql_args, $this->get_mysql_args( $assoc_args ) );
 
-		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
-		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-
-		$this->run( $command, $mysql_args );
+		$this->run_mysql_command( $assoc_args, [ 'no-auto-rehash' => true ] );
 
 		WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
 	}
@@ -1411,53 +1314,153 @@ class DB_Command extends WP_CLI_Command {
 		return $create_query;
 	}
 
-	protected function run_query( $query, $assoc_args = [] ) {
-		$this->run( sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) ), array_merge( $assoc_args, [ 'execute' => $query ] ) );
-	}
+	/**
+	 * Run a 'mysql' command.
+	 *
+	 * @param array $assoc_args        Associative array of arguments passed to
+	 *                                 WP-CLI.
+	 * @param array $command_arguments Associative array of arguments that need
+	 *                                 to be enforced for the command.
+	 */
+	protected function run_mysql_command( $assoc_args = [], $command_arguments = [] ) {
+		$db_settings     = $this->get_db_settings( $assoc_args );
+		$mysql_arguments = $this->get_mysql_args( $assoc_args );
 
-	private function run( $cmd, $assoc_args = [], $descriptors = null ) {
-		$required = [
-			'host' => DB_HOST,
-			'user' => DB_USER,
-			'pass' => DB_PASSWORD,
-		];
-
-		if ( ! isset( $assoc_args['default-character-set'] )
-			&& defined( 'DB_CHARSET' ) && constant( 'DB_CHARSET' ) ) {
-			$required['default-character-set'] = constant( 'DB_CHARSET' );
-		}
-
-		// Using 'dbuser' as option name to workaround clash with WP-CLI's global WP 'user' parameter, with 'dbpass' also available for tidyness.
-		if ( isset( $assoc_args['dbuser'] ) ) {
-			$required['user'] = $assoc_args['dbuser'];
-			unset( $assoc_args['dbuser'] );
-		}
-		if ( isset( $assoc_args['dbpass'] ) ) {
-			$required['pass'] = $assoc_args['dbpass'];
-			unset( $assoc_args['dbpass'], $assoc_args['password'] );
-		}
-
-		$final_args = array_merge( $assoc_args, $required );
-		Utils\run_mysql_command( $cmd, $final_args, $descriptors );
+		$this->run(
+			'/usr/bin/env mysql',
+			array_merge( $mysql_arguments, $command_arguments )
+		);
 	}
 
 	/**
-	 * Helper to pluck 'dbuser' and 'dbpass' from associative args array.
+	 * Run a 'mysql' command.
 	 *
-	 * @param array $assoc_args Associative args array.
-	 * @return array Array with `dbuser' and 'dbpass' set if in passed-in associative args array.
+	 * @param string $query             Query to execute.
+	 * @param array  $assoc_args        Associative array of arguments passed to
+	 *                                  WP-CLI.
+	 * @param array  $command_arguments Associative array of arguments that need
+	 *                                  to be enforced for the command.
 	 */
-	private function get_dbuser_dbpass_args( $assoc_args ) {
-		$mysql_args = [];
-		$dbuser     = Utils\get_flag_value( $assoc_args, 'dbuser' );
-		if ( null !== $dbuser ) {
-			$mysql_args['dbuser'] = $dbuser;
+	protected function run_mysql_query( $query, $assoc_args = [], $command_arguments = [] ) {
+		$this->run_mysql_command(
+			$assoc_args,
+			array_merge( $command_arguments, [ 'execute' => $query ] )
+		);
+	}
+
+	/**
+	 * Run a 'mysqlcheck' command.
+	 *
+	 * @param array $assoc_args        Associative array of arguments passed to
+	 *                                 WP-CLI.
+	 * @param array $command_arguments Associative array of arguments that need
+	 *                                 to be enforced for the command.
+	 */
+	protected function run_mysqlcheck_command( $assoc_args = [], $command_arguments = [] ) {
+		$db_settings          = $this->get_db_settings( $assoc_args );
+		$mysqlcheck_arguments = $this->get_mysqlcheck_args( $assoc_args );
+
+		$command = "/usr/bin/env mysqlcheck '{$db_settings['database']}'";
+
+		// The --no-defaults flag always needs to come first if it is used.
+		if ( array_key_exists( 'no-defaults', $mysqlcheck_arguments ) ) {
+			$command = "/usr/bin/env mysqlcheck --no-defaults '{$db_settings['database']}'";
+			unset( $mysqlcheck_arguments['no-defaults'] );
 		}
-		$dbpass = Utils\get_flag_value( $assoc_args, 'dbpass' );
-		if ( null !== $dbpass ) {
-			$mysql_args['dbpass'] = $dbpass;
+
+		$this->run(
+			$command,
+			array_merge( $mysqlcheck_arguments, [ 'database' => false ], $command_arguments )
+		);
+	}
+
+	/**
+	 * Run a 'mysqldump' command.
+	 *
+	 * @param array $assoc_args        Associative array of arguments passed to
+	 *                                 WP-CLI.
+	 * @param array $command_arguments Associative array of arguments that need
+	 *                                 to be enforced for the command.
+	 */
+	protected function run_mysqldump_command( $assoc_args = [], $command_arguments = [] ) {
+		$db_settings         = $this->get_db_settings( $assoc_args );
+		$mysqldump_arguments = $this->get_mysqldump_args( $assoc_args );
+
+		$command = "/usr/bin/env mysqldump '{$db_settings['database']}'";
+
+		// The --no-defaults flag always needs to come first if it is used.
+		if ( array_key_exists( 'no-defaults', $mysqldump_arguments ) ) {
+			$command = "/usr/bin/env mysqldump --no-defaults '{$db_settings['database']}'";
+			unset( $mysqldump_arguments['no-defaults'] );
 		}
-		return $mysql_args;
+
+		if ( exec( 'mysqldump --help | grep "column-statistics"' ) ) {
+			$mysqldump_arguments['skip-column-statistics'] = true;
+		}
+
+		if ( isset( $assoc_args['tables'] ) ) {
+			$tables = array_map( 'trim', explode( ',', trim( $assoc_args['tables'], ',' ) ) );
+			unset( $assoc_args['tables'] );
+			$command .= ' --tables ';
+			$command .= implode( ' ', array_map( 'escapeshellarg', $tables ) );
+		}
+
+		$exclude_tables = Utils\get_flag_value( $assoc_args, 'exclude_tables' );
+		if ( isset( $exclude_tables ) ) {
+			$tables = array_map( 'trim', explode( ',', trim( $assoc_args['exclude_tables'], ',' ) ) );
+			unset( $assoc_args['exclude_tables'] );
+			$command .= ' --ignore-table ';
+			$command .= implode(
+				' ',
+				array_map( 'escapeshellarg',
+					array_map(
+						static function ( $table ) use ( $db_settings ) {
+							return "{$db_settings['database']}.{$table}";
+						},
+						$tables
+					)
+				)
+			);
+	}
+
+		// Remove parameters not needed for SQL run.
+		unset( $assoc_args['porcelain'] );
+
+		$this->run(
+			$command,
+			array_merge( $mysqldump_arguments, [ 'database' => false ], $command_arguments )
+		);
+	}
+
+	private function run( $cmd, $assoc_args = [], $descriptors = null ) {
+		if ( ! isset( $assoc_args['default-character-set'] )
+			&& defined( 'DB_CHARSET' ) && constant( 'DB_CHARSET' ) ) {
+			$assoc_args['default-character-set'] = constant( 'DB_CHARSET' );
+		}
+
+		// The --no-defaults flag always needs to come first if it is used.
+		if ( array_key_exists( 'no-defaults', $assoc_args ) ) {
+			unset( $assoc_args['no-defaults'] );
+			$assoc_args = array_merge( [ 'no-defaults' => true ], $assoc_args );
+		}
+
+		// Provide a way to override the database setting.
+		if ( array_key_exists( 'database', $assoc_args ) && false === $assoc_args['database'] ) {
+			unset( $assoc_args['database'] );
+		}
+
+		// A query of '-' means we want to use STDIN, so just unset the query.
+		if ( array_key_exists( 'execute', $assoc_args ) && '-' === $assoc_args['execute'] ) {
+			unset( $assoc_args['execute'] );
+		}
+
+		$masked_args = array_merge( $assoc_args, [ /*'pass' => '<*****>'*/ ] );
+
+		$argument_string = Utils\assoc_args_to_str( $masked_args );
+
+		WP_CLI::debug( "Running shell command: {$cmd}{$argument_string}", 'db' );
+
+		Utils\run_mysql_command( $cmd, $assoc_args, $descriptors );
 	}
 
 	/**
@@ -1569,7 +1572,8 @@ class DB_Command extends WP_CLI_Command {
 	 * Helper to pluck `mysql` options from associative args array.
 	 *
 	 * @param array $assoc_args Associative args array.
-	 * @return array Array with `mysql` options set if in passed-in associative args array.
+	 * @return array Array with `mysql` options set if in passed-in associative
+	 *               args array.
 	 */
 	private function get_mysql_args( $assoc_args ) {
 
@@ -1605,6 +1609,7 @@ class DB_Command extends WP_CLI_Command {
 			'histignore',
 			'host',
 			'html',
+			'i-am-a-dummy',
 			'ignore-spaces',
 			'init-command',
 			'line-numbers',
@@ -1625,7 +1630,6 @@ class DB_Command extends WP_CLI_Command {
 			'quick',
 			'raw',
 			'reconnect',
-			'i-am-a-dummy',
 			'safe-updates',
 			'secure-auth',
 			'select_limit',
@@ -1655,6 +1659,7 @@ class DB_Command extends WP_CLI_Command {
 			'tee',
 			'tls-version',
 			'unbuffered',
+			'user',
 			'verbose',
 			'version',
 			'vertical',
@@ -1671,30 +1676,447 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
+		// Special handling for --no-defaults because of BC reasons.
+		if ( ! array_key_exists( 'defaults', $assoc_args ) || false === $assoc_args['defaults'] ) {
+			$mysql_args['no-defaults'] = true;
+			unset( $assoc_args['defaults'] );
+		}
+
+		// Make sure the password is forwarded.
+		if ( array_key_exists( 'pass', $assoc_args ) ) {
+			$mysql_args['pass'] = $assoc_args['pass'];
+	     }
+
 		return $mysql_args;
 	}
 
 	/**
-	 * Writes out the `--no-defaults` flag for MySQL commands unless the --defaults flag is specified for the WP_CLI command.
+	 * Helper to pluck `mysqlcheck` options from associative args array.
 	 *
 	 * @param array $assoc_args Associative args array.
-	 * @return string Either the '--no-defaults' flag for use in the command or an empty string.
+	 * @return array Array with `mysqlcheck` options set if in passed-in
+	 *               associative args array.
 	 */
-	protected function get_defaults_flag_string( &$assoc_args ) {
+	private function get_mysqlcheck_args( $assoc_args ) {
+		$allowed_mysqlcheck_options = [
+			// Options:
+			'all-databases',
+			'all-in-1',
+			'analyze',
+			'auto-repair',
+			'character-sets-dir',
+			'check',
+			'check-only-changed',
+			'check-upgrade',
+			'compress',
+			'databases',
+			'debug',
+			'debug-check',
+			'debug-info',
+			'default-auth',
+			'default-character-set',
+			'defaults-extra-file',
+			'defaults-file',
+			'defaults-group-suffix',
+			'extended',
+			'fast',
+			'fix-db-names',
+			'fix-table-names',
+			'flush',
+			'force',
+			'help',
+			'host',
+			'medium-check',
+			'no-defaults',
+			'optimize',
+			'password',
+			'persistent',
+			'plugin-dir',
+			'port',
+			'print-defaults',
+			'process-tables',
+			'process-views',
+			'protocol',
+			'quick',
+			'repair',
+			'silent',
+			'skip-database',
+			'skip-process-tables',
+			'skip-write-binlog',
+			'socket',
+			'ssl',
+			'ssl-ca',
+			'ssl-capath',
+			'ssl-cert',
+			'ssl-cipher',
+			'ssl-crl',
+			'ssl-crlpath',
+			'ssl-key',
+			'ssl-verify-server-cert',
+			'tables',
+			'tls-version',
+			'use-frm',
+			'user',
+			'verbose',
+			'version',
+			'write-binlog',
 
-		$flag_string = ' --no-defaults';
+			// Variables:
+			'all-databases',
+			'all-in-1',
+			'auto-repair',
+			'character-sets-dir',
+			'compress',
+			'databases',
+			'debug-check',
+			'debug-info',
+			'default-auth',
+			'default-character-set',
+			'extended',
+			'fast',
+			'fix-db-names',
+			'fix-table-names',
+			'flush',
+			'force',
+			'host',
+			'persistent',
+			'plugin-dir',
+			'port',
+			'process-tables',
+			'process-views',
+			'quick',
+			'silent',
+			'skip-database',
+			'socket',
+			'ssl',
+			'ssl-ca',
+			'ssl-capath',
+			'ssl-cert',
+			'ssl-cipher',
+			'ssl-crl',
+			'ssl-crlpath',
+			'ssl-key',
+			'ssl-verify-server-cert',
+			'tls-version',
+			'use-frm',
+			'user',
+			'write-binlog',
+		];
 
-		if ( array_key_exists( 'defaults', $assoc_args ) ) {
+		$mysqlcheck_args = [];
 
-			if ( true === Utils\get_flag_value( $assoc_args, 'defaults' ) ) {
-				$flag_string = '';
+		foreach ( $assoc_args as $mysqlcheck_option_key => $mysqlcheck_option_value ) {
+			// Check flags to make sure they only contain valid options.
+			if ( ! empty( $mysqlcheck_option_value ) && in_array( $mysqlcheck_option_key, $allowed_mysqlcheck_options, true ) ) {
+				$mysqlcheck_args[ $mysqlcheck_option_key ] = $mysqlcheck_option_value;
 			}
-
-			unset( $assoc_args['defaults'] );
-
 		}
 
-		return $flag_string;
+		// Special handling for --no-defaults because of BC reasons.
+		if ( ! array_key_exists( 'defaults', $assoc_args ) || false === $assoc_args['defaults'] ) {
+			$mysqlcheck_args['no-defaults'] = true;
+			unset( $assoc_args['defaults'] );
+		}
 
+		// Make sure the password is forwarded.
+		if ( array_key_exists( 'pass', $assoc_args ) ) {
+			$mysqlcheck_args['pass'] = $assoc_args['pass'];
+	     }
+
+		return $mysqlcheck_args;
+	}
+
+	/**
+	 * Helper to pluck `mysqldump` options from associative args array.
+	 *
+	 * @param array $assoc_args Associative args array.
+	 * @return array Array with `mysqldump` options set if in passed-in
+	 *               associative args array.
+	 */
+	private function get_mysqldump_args( $assoc_args ) {
+		$allowed_mysqldump_options = [
+			// Options:
+			'add-drop-database',
+			'add-drop-table',
+			'add-drop-trigger',
+			'add-locks',
+			'all-databases',
+			'all-tablespaces',
+			'allow-keywords',
+			'apply-slave-statements',
+			'character-sets-dir',
+			'comments',
+			'compact',
+			'compatible',
+			'complete-insert',
+			'compress',
+			'create-options',
+			'databases',
+			'debug',
+			'debug-check',
+			'debug-info',
+			'default-auth',
+			'default-character-set',
+			'defaults-extra-file',
+			'defaults-file',
+			'defaults-group-suffix',
+			'delayed-insert',
+			'delete-master-logs',
+			'disable-keys',
+			'dump-date',
+			'dump-slave',
+			'events',
+			'extended-insert',
+			'fields-enclosed-by',
+			'fields-escaped-by',
+			'fields-optionally-enclosed-by',
+			'fields-terminated-by',
+			'flush-logs',
+			'flush-privileges',
+			'force',
+			'gtid',
+			'help',
+			'hex-blob',
+			'host',
+			'ignore-database',
+			'ignore-table',
+			'include-master-host-port',
+			'insert-ignore',
+			'lines-terminated-by',
+			'lock-all-tables',
+			'lock-tables',
+			'log-error',
+			'log-queries',
+			'master-data',
+			'max-allowed-packet',
+			'net-buffer-length',
+			'no-autocommit',
+			'no-create-db',
+			'no-create-info',
+			'no-data',
+			'no-data-med',
+			'no-defaults',
+			'no-set-names',
+			'no-tablespaces',
+			'opt',
+			'order-by-primary',
+			'password',
+			'plugin-dir',
+			'port',
+			'print-defaults',
+			'protocol',
+			'quick',
+			'quote-names',
+			'replace',
+			'result-file',
+			'routines',
+			'set-charset',
+			'single-transaction',
+			'skip-add-drop-table',
+			'skip-add-locks',
+			'skip-comments',
+			'skip-create-options',
+			'skip-disable-keys',
+			'skip-dump-date',
+			'skip-extended-insert',
+			'skip-lock-tables',
+			'skip-log-queries',
+			'skip-no-data-med',
+			'skip-opt',
+			'skip-quick',
+			'skip-quote-names',
+			'skip-set-charset',
+			'skip-triggers',
+			'skip-tz-utc',
+			'socket',
+			'ssl',
+			'ssl-ca',
+			'ssl-capath',
+			'ssl-cert',
+			'ssl-cipher',
+			'ssl-crl',
+			'ssl-crlpath',
+			'ssl-key',
+			'ssl-verify-server-cert',
+			'tab',
+			'tables',
+			'tls-version',
+			'triggers',
+			'tz-utc',
+			'user',
+			'verbose',
+			'version',
+			'where',
+			'xml',
+
+			// Variables:
+			'add-drop-database',
+			'add-drop-table',
+			'add-drop-trigger',
+			'add-locks',
+			'all-databases',
+			'all-tablespaces',
+			'allow-keywords',
+			'apply-slave-statements',
+			'character-sets-dir',
+			'comments',
+			'compact',
+			'compatible',
+			'complete-insert',
+			'compress',
+			'create-options',
+			'databases',
+			'debug-check',
+			'debug-info',
+			'default-auth',
+			'default-character-set',
+			'delayed-insert',
+			'delete-master-logs',
+			'disable-keys',
+			'dump-date',
+			'dump-slave',
+			'events',
+			'extended-insert',
+			'fields-enclosed-by',
+			'fields-escaped-by',
+			'fields-optionally-enclosed-by',
+			'fields-terminated-by',
+			'flush-logs',
+			'flush-privileges',
+			'force',
+			'gtid',
+			'hex-blob',
+			'host',
+			'include-master-host-port',
+			'insert-ignore',
+			'lines-terminated-by',
+			'lock-all-tables',
+			'lock-tables',
+			'log-error',
+			'log-queries',
+			'master-data',
+			'max-allowed-packet',
+			'net-buffer-length',
+			'no-autocommit',
+			'no-create-db',
+			'no-create-info',
+			'no-data',
+			'no-data-med',
+			'no-tablespaces',
+			'order-by-primary',
+			'plugin-dir',
+			'port',
+			'quick',
+			'quote-names',
+			'replace',
+			'routines',
+			'set-charset',
+			'single-transaction',
+			'socket',
+			'ssl',
+			'ssl-ca',
+			'ssl-capath',
+			'ssl-cert',
+			'ssl-cipher',
+			'ssl-crl',
+			'ssl-crlpath',
+			'ssl-key',
+			'ssl-verify-server-cert',
+			'tab',
+			'tls-version',
+			'triggers',
+			'tz-utc',
+			'user',
+			'verbose',
+			'where',
+		];
+
+		$mysqldump_args = [];
+
+		foreach ( $assoc_args as $mysqldump_option_key => $mysqldump_option_value ) {
+			// Check flags to make sure they only contain valid options.
+			if ( ! empty( $mysqldump_option_value ) && in_array( $mysqldump_option_key, $allowed_mysqldump_options, true ) ) {
+				$mysqldump_args[ $mysqldump_option_key ] = $mysqldump_option_value;
+			}
+		}
+
+		// Special handling for --no-defaults because of BC reasons.
+		if ( ! array_key_exists( 'defaults', $assoc_args ) || false === $assoc_args['defaults'] ) {
+			$mysqldump_args['no-defaults'] = true;
+			unset( $assoc_args['defaults'] );
+		}
+
+		// Make sure the password is forwarded.
+		if ( array_key_exists( 'pass', $assoc_args ) ) {
+			$mysqldump_args['pass'] = $assoc_args['pass'];
+	     }
+
+		return $mysqldump_args;
+	}
+
+	/**
+	 * Get the database settings and make sure all required settings are found.
+	 *
+	 * @param array $assoc_args Associative array of named arguments.
+	 * @return array Associative array of database settings.
+	 * @throws \WP_CLI\ExitException If one of the required settings is not
+	 *                               found.
+	 */
+	protected function get_db_settings( &$assoc_args ) {
+		if ( array_key_exists( '_db_settings_', $assoc_args ) ) {
+			return $assoc_args['_db_settings_'];
+		}
+
+		$assoc_args['_db_settings_'] = [];
+		if ( isset( $assoc_args['password'] ) && ! isset( $assoc_args['dbpass'] ) ) {
+			$assoc_args['dbpass'] = $assoc_args['password'];
+		}
+		unset( $assoc_args['user'], $assoc_args['pass'], $assoc_args['password'] );
+
+		$mapping = [
+			'host'     => [
+				'label'         => 'host server',
+				'constant_name' => 'DB_HOST',
+				'flag_name'     => 'host',
+			],
+			'database' => [
+				'label'         => 'database name',
+				'constant_name' => 'DB_NAME',
+				'flag_name'     => 'database',
+			],
+			'user'     => [
+				'label'         => 'user name',
+				'constant_name' => 'DB_USER',
+				'flag_name'     => 'dbuser',
+			],
+			'pass'     => [
+				'label'         => 'password',
+				'constant_name' => 'DB_PASSWORD',
+				'flag_name'     => 'dbpass',
+			],
+		];
+
+		foreach ( $mapping as $key => $mappings ) {
+			if ( defined( $mappings['constant_name'] ) ) {
+				$assoc_args[ $key ] = constant( $mappings['constant_name'] );
+				$assoc_args['_db_settings_'][ $key ] = $assoc_args[ $key ];
+			}
+
+			if ( array_key_exists( $mappings['flag_name'], $assoc_args ) ) {
+				$assoc_args[ $key ] = $assoc_args[ $mappings['flag_name'] ];
+				$assoc_args['_db_settings_'][ $key ] = $assoc_args[ $key ];
+			}
+
+			if ( ! array_key_exists( $key, $assoc_args['_db_settings_'] ) ) {
+				WP_CLI::error(
+					"Missing the {$key} information from the database settings.\n" .
+					"It can be set either via the '{$mappings[ 'constant_name' ]}' constant in wp-config.php or via the --{$mappings[ 'flag_name' ]} option."
+				);
+			}
+		}
+
+		unset( $assoc_args['dbuser'], $assoc_args['dbpass'] );
+
+		return $assoc_args['_db_settings_'];
 	}
 }

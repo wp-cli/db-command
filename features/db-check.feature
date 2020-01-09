@@ -104,17 +104,17 @@ Feature: Check the database
     When I try `wp db check --defaults --debug`
     Then STDERR should contain:
       """
-      Debug (db): Running shell command: /usr/bin/env mysqlcheck %s
+      Debug (db): Running shell command: /usr/bin/env mysqlcheck 'wp_cli_test'
       """
 
     When I try `wp db check --debug`
     Then STDERR should contain:
       """
-      Debug (db): Running shell command: /usr/bin/env mysqlcheck --no-defaults %s
+      Debug (db): Running shell command: /usr/bin/env mysqlcheck --no-defaults 'wp_cli_test'
       """
 
     When I try `wp db check --no-defaults --debug`
     Then STDERR should contain:
       """
-      Debug (db): Running shell command: /usr/bin/env mysqlcheck --no-defaults %s
+      Debug (db): Running shell command: /usr/bin/env mysqlcheck --no-defaults 'wp_cli_test'
       """

@@ -40,7 +40,7 @@ Feature: Export a WordPress database
     When I run `wp db export -`
     Then STDOUT should contain:
       """
-      -- MySQL dump
+      -- Table structure for table
       """
 
   Scenario: Export database with passed-in options
