@@ -118,16 +118,13 @@ class DB_Command extends WP_CLI_Command {
 	public function reset( $_, $assoc_args ) {
 		$db_settings = $this->get_db_settings( $assoc_args );
 		WP_CLI::confirm( "Are you sure you want to reset the '{$db_settings['database']}' database?", $assoc_args );
+		$extra_options = [
+			'no-auto-rehash' => true,
+			'database'       => false,
+		];
 
-		$this->run_mysql_query( "DROP DATABASE IF EXISTS `{$db_settings['database']}`", $assoc_args );
-		$this->run_mysql_query(
-			$this->get_create_query(),
-			$assoc_args,
-			[
-				'no-auto-rehash' => true,
-				'database'       => false,
-			]
-		);
+		$this->run_mysql_query( "DROP DATABASE IF EXISTS `{$db_settings['database']}`", $assoc_args, $extra_options );
+		$this->run_mysql_query( $this->get_create_query(), $assoc_args, $extra_options );
 
 		WP_CLI::success( 'Database reset.' );
 	}
