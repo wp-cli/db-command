@@ -505,7 +505,7 @@ class DB_Command extends WP_CLI_Command {
 		} else {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.rand_mt_rand -- WordPress is not loaded.
 			$hash        = substr( md5( mt_rand() ), 0, 7 );
-			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
+			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date.
 
 		}
 		$stdout    = ( '-' === $result_file );
@@ -852,7 +852,7 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( $tables || $all_tables || $all_tables_with_prefix ) {
 
-			// Add all of the table sizes
+			// Add all of the table sizes.
 			foreach ( Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
 
 				// Get the table size.
@@ -902,7 +902,7 @@ class DB_Command extends WP_CLI_Command {
 				if ( ! defined( 'TB_IN_BYTES' ) ) {
 					define( 'TB_IN_BYTES', 1024 * GB_IN_BYTES );
 				}
-				// phpcs:enable
+				// phpcs:enable.
 
 				if ( $human_readable ) {
 					$size_key = floor( log( $row['Size'] ) / log( 1000 ) );
