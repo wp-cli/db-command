@@ -852,7 +852,7 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( $tables || $all_tables || $all_tables_with_prefix ) {
 
-			// Add all of the table sizes
+			// Add all of the table sizes.
 			foreach ( Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
 
 				// Get the table size.
