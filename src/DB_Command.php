@@ -902,7 +902,7 @@ class DB_Command extends WP_CLI_Command {
 				if ( ! defined( 'TB_IN_BYTES' ) ) {
 					define( 'TB_IN_BYTES', 1024 * GB_IN_BYTES );
 				}
-				// phpcs:enable.
+				// phpcs:enable
 
 				if ( $human_readable ) {
 					$size_key = floor( log( $row['Size'] ) / log( 1000 ) );
