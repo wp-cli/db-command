@@ -999,7 +999,7 @@ class DB_Command extends WP_CLI_Command {
 				}
 					$size_format_display = preg_replace( '/IB$/u', 'iB', strtoupper( $size_format ) );
 
-					$rows[ $index ]['Size'] = ceil( $row['Size'] / $divisor ) . ' ' . $size_format_display;
+					$rows[ $index ]['Size'] = round( $row['Size'] / $divisor ) . ' ' . $size_format_display;
 			}
 		}
 
