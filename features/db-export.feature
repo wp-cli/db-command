@@ -40,25 +40,7 @@ Feature: Export a WordPress database
     When I run `wp db export -`
     Then STDOUT should contain:
       """
-      -- MySQL dump
-      """
-
-  Scenario: Export database with mysql defaults to STDOUT
-    Given a WP install
-
-    When I run `wp db export --defaults -`
-    Then STDOUT should contain:
-      """
-      -- MySQL dump
-      """
-
-  Scenario: Export database with mysql --no-defaults to STDOUT
-    Given a WP install
-
-    When I run `wp db export --no-defaults -`
-    Then STDOUT should contain:
-      """
-      -- MySQL dump
+      -- Table structure for table
       """
 
   Scenario: Export database with passed-in options
