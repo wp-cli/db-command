@@ -96,7 +96,7 @@ Feature: Query the database with WordPress' MySQL config
   Scenario: SQL modes do not include any of the modes incompatible with WordPress
     Given a WP install
 
-    When I run `wp db query 'SELECT @@SESSION.sql_mode;'`
+    When I try `wp db query 'SELECT @@SESSION.sql_mode;' --debug`
     Then STDOUT should not contain:
       """
       NO_ZERO_DATE

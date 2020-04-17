@@ -1807,6 +1807,14 @@ class DB_Command extends WP_CLI_Command {
 			return '';
 		}
 
+		WP_CLI::debug(
+			sprintf(
+				'SQL mode adaptation is needed: %s => %s',
+				$this->get_current_sql_modes( $assoc_args ),
+				$modes
+			)
+		);
+
 		$modes_str = implode( ',', $modes );
 
 		return "SET SESSION sql_mode='{$modes_str}';";
