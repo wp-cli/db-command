@@ -430,18 +430,6 @@ class DB_Command extends WP_CLI_Command {
 
 		$assoc_args['database'] = DB_NAME;
 
-		if (
-			! isset( $assoc_args['result-format'] )
-			&& ! isset( $assoc_args['table'] )
-			&& ! isset( $assoc_args['tabbed'] )
-			&& ! isset( $assoc_args['vertical'] )
-			&& ! isset( $assoc_args['json'] )
-			&& ! isset( $assoc_args['html'] )
-			&& ! isset( $assoc_args['silent'] )
-		) {
-			$assoc_args['table'] = true;
-		}
-
 		// The query might come from STDIN.
 		if ( ! empty( $args ) ) {
 			$assoc_args['execute'] = $args[0];
