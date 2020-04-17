@@ -1825,8 +1825,8 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug(
 			sprintf(
 				'SQL mode adaptation is needed: %s => %s',
-				$this->get_current_sql_modes( $assoc_args ),
-				$modes
+				json_encode( $this->get_current_sql_modes( $assoc_args ) ),
+				json_encode( $modes )
 			)
 		);
 
