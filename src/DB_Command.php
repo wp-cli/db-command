@@ -1813,6 +1813,12 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		if ( ! $is_mode_adaptation_needed ) {
+			WP_CLI::debug(
+				sprintf(
+					'SQL modes look fine: %s',
+					json_encode( $modes )
+				)
+			);
 			return '';
 		}
 
