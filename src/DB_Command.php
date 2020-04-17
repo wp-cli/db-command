@@ -426,6 +426,18 @@ class DB_Command extends WP_CLI_Command {
 
 		$assoc_args['database'] = DB_NAME;
 
+		if (
+			! isset( $assoc_args['result-format'] )
+			&& ! isset( $assoc_args['table'] )
+			&& ! isset( $assoc_args['tabbed'] )
+			&& ! isset( $assoc_args['vertical'] )
+			&& ! isset( $assoc_args['json'] )
+			&& ! isset( $assoc_args['html'] )
+			&& ! isset( $assoc_args['silent'] )
+		) {
+			$assoc_args['table'] = true;
+		}
+
 		// The query might come from STDIN.
 		if ( ! empty( $args ) ) {
 			$assoc_args['execute'] = $args[0];
@@ -1811,7 +1823,16 @@ class DB_Command extends WP_CLI_Command {
 
 		// Make sure the provided arguments don't interfere with the expected
 		// output here.
-		unset( $assoc_args['column-names'], $assoc_args['html'] );
+		$args = $assoc_args;
+		unset(
+			$args['column-names'],
+			$args['result-format'],
+			$args['json'],
+			$args['html'],
+			$args['table'],
+			$args['tabbed'],
+			$args['vertical'],
+		);
 
 		if ( null === $modes ) {
 			$modes = [];
@@ -1821,7 +1842,7 @@ class DB_Command extends WP_CLI_Command {
 					'/usr/bin/env mysql%s --no-auto-rehash --batch --skip-column-names',
 					$this->get_defaults_flag_string( $assoc_args )
 				),
-				array_merge( $assoc_args, [ 'execute' => 'SELECT @@SESSION.sql_mode' ] ),
+				array_merge( $args, [ 'execute' => 'SELECT @@SESSION.sql_mode' ] ),
 				false
 			);
 
