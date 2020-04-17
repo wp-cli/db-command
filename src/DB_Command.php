@@ -227,7 +227,6 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		$assoc_args['check'] = true;
 		self::run(
@@ -235,6 +234,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args
 		);
 
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 		WP_CLI::success( 'Database checked.' );
 	}
 
@@ -271,7 +271,6 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		$assoc_args['optimize'] = true;
 		self::run(
@@ -279,6 +278,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args
 		);
 
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 		WP_CLI::success( 'Database optimized.' );
 	}
 
@@ -315,7 +315,6 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		$assoc_args['repair'] = true;
 		self::run(
@@ -323,6 +322,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args
 		);
 
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 		WP_CLI::success( 'Database repaired.' );
 	}
 
@@ -361,12 +361,12 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		if ( ! isset( $assoc_args['database'] ) ) {
 			$assoc_args['database'] = DB_NAME;
 		}
 
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 		self::run( $command, $assoc_args );
 	}
 
@@ -427,7 +427,6 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		$assoc_args['database'] = DB_NAME;
 
@@ -453,6 +452,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
 		}
 
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 		self::run( $command, $assoc_args );
 	}
 
@@ -563,7 +563,6 @@ class DB_Command extends WP_CLI_Command {
 
 		$initial_command = sprintf( '/usr/bin/env mysqldump%s ', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running initial shell command: {$initial_command}", 'db' );
-		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		if ( $support_column_statistics ) {
 			$command = $initial_command . '--skip-column-statistics %s';
@@ -599,6 +598,7 @@ class DB_Command extends WP_CLI_Command {
 		// Remove parameters not needed for SQL run.
 		unset( $assoc_args['porcelain'] );
 
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 		self::run( $escaped_command, $assoc_args );
 
 		if ( $porcelain ) {
@@ -1003,7 +1003,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
-			WP_CLI::Line( filter_var( $rows[0]['Size'], FILTER_SANITIZE_NUMBER_INT ) );
+			WP_CLI::line( filter_var( $rows[0]['Size'], FILTER_SANITIZE_NUMBER_INT ) );
 		} else {
 			// Display the rows.
 			$args = [
@@ -1470,6 +1470,8 @@ class DB_Command extends WP_CLI_Command {
 	protected function run_query( $query, $assoc_args = [] ) {
 		// Ensure that the SQL mode is compatible with WPDB.
 		$query = $this->get_sql_mode_query( $assoc_args ) . $query;
+
+		WP_CLI::debug( "Query: {$query}", 'db' );
 
 		self::run(
 			sprintf(
