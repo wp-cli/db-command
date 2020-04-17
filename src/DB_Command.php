@@ -1839,7 +1839,7 @@ class DB_Command extends WP_CLI_Command {
 			$args['html'],
 			$args['table'],
 			$args['tabbed'],
-			$args['vertical'],
+			$args['vertical']
 		);
 
 		if ( null === $modes ) {
