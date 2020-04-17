@@ -227,6 +227,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		$assoc_args['check'] = true;
 		self::run(
@@ -270,6 +271,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		$assoc_args['optimize'] = true;
 		self::run(
@@ -313,6 +315,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		$assoc_args['repair'] = true;
 		self::run(
@@ -354,10 +357,11 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * @alias connect
 	 */
-	public function cli( $args, $assoc_args ) {
+	public function cli( $_, $assoc_args ) {
 
 		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		if ( ! isset( $assoc_args['database'] ) ) {
 			$assoc_args['database'] = DB_NAME;
@@ -423,6 +427,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		$assoc_args['database'] = DB_NAME;
 
@@ -558,6 +563,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$initial_command = sprintf( '/usr/bin/env mysqldump%s ', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running initial shell command: {$initial_command}", 'db' );
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		if ( $support_column_statistics ) {
 			$command = $initial_command . '--skip-column-statistics %s';
@@ -666,6 +672,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		self::run( $command, $mysql_args );
 
