@@ -1881,7 +1881,7 @@ class DB_Command extends WP_CLI_Command {
 				$modes = array_filter(
 					array_map(
 						'trim',
-						preg_split( "/\r\n|\n|\r/", $stdout )
+						preg_split( "/\r\n|\n|\r/|,", $stdout )
 					)
 				);
 			}
