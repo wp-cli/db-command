@@ -431,8 +431,10 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['execute'] = $args[0];
 		}
 
-		// Ensure that the SQL mode is compatible with WPDB.
-		$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
+		if ( isset( $assoc_args['execute'] ) ) {
+			// Ensure that the SQL mode is compatible with WPDB.
+			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
+		}
 
 		self::run( $command, $assoc_args );
 	}
