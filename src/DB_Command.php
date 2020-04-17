@@ -1442,7 +1442,7 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Run a single query via the 'mysql' binary.
 	 *
-	 * This includes necessary setup to make sure the queries behave similar
+	 * This includes the necessary setup to make sure the queries behave similar
 	 * to what WPDB produces.
 	 *
 	 * @param string $query      Query to execute.
@@ -1783,10 +1783,16 @@ class DB_Command extends WP_CLI_Command {
 
 		$modes = array_change_key_case( $modes, CASE_UPPER );
 
+		$is_mode_adaptation_needed = false;
 		foreach ( $modes as $i => $mode ) {
 			if ( in_array( $mode, $this->sql_incompatible_modes, true ) ) {
 				unset( $modes[ $i ] );
+				$is_mode_adaptation_needed = true;
 			}
+		}
+
+		if ( ! $is_mode_adaptation_needed ) {
+			return '';
 		}
 
 		$modes_str = implode( ',', $modes );
@@ -1803,7 +1809,7 @@ class DB_Command extends WP_CLI_Command {
 	protected function get_current_sql_modes( $assoc_args ) {
 		static $modes = null;
 
-		// Make sure the provided argument don't interfere with the expected
+		// Make sure the provided arguments don't interfere with the expected
 		// output here.
 		unset( $assoc_args['column-names'], $assoc_args['html'] );
 
