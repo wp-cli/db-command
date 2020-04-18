@@ -1836,16 +1836,12 @@ class DB_Command extends WP_CLI_Command {
 
 		// Make sure the provided arguments don't interfere with the expected
 		// output here.
-		$args = $assoc_args;
-		unset(
-			$args['column-names'],
-			$args['result-format'],
-			$args['json'],
-			$args['html'],
-			$args['table'],
-			$args['tabbed'],
-			$args['vertical']
-		);
+		$args = [];
+		foreach ( [] as $arg ) {
+			if ( isset( $assoc_args[ $arg ] ) ) {
+				$args[ $arg ] = $assoc_args[ $arg ];
+			}
+		}
 
 		if ( null === $modes ) {
 			$modes = [];
