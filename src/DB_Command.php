@@ -651,6 +651,8 @@ class DB_Command extends WP_CLI_Command {
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
 
+			$query = $this->get_sql_mode_query( $assoc_args ) . $query;
+
 			$mysql_args['execute'] = sprintf( $query, $result_file );
 		} else {
 			$result_file = 'STDIN';
