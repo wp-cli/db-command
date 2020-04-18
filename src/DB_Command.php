@@ -651,6 +651,8 @@ class DB_Command extends WP_CLI_Command {
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
 
+			$query = $this->get_sql_mode_query( $assoc_args ) . $query;
+
 			$mysql_args['execute'] = sprintf( $query, $result_file );
 		} else {
 			$result_file = 'STDIN';
@@ -1834,16 +1836,12 @@ class DB_Command extends WP_CLI_Command {
 
 		// Make sure the provided arguments don't interfere with the expected
 		// output here.
-		$args = $assoc_args;
-		unset(
-			$args['column-names'],
-			$args['result-format'],
-			$args['json'],
-			$args['html'],
-			$args['table'],
-			$args['tabbed'],
-			$args['vertical']
-		);
+		$args = [];
+		foreach ( [] as $arg ) {
+			if ( isset( $assoc_args[ $arg ] ) ) {
+				$args[ $arg ] = $assoc_args[ $arg ];
+			}
+		}
 
 		if ( null === $modes ) {
 			$modes = [];
