@@ -2,6 +2,10 @@
 
 use WP_CLI\Formatter;
 use WP_CLI\Utils;
+use function WP_CLI\Utils\assoc_args_to_str;
+use function WP_CLI\Utils\force_env_on_nix_systems;
+use function WP_CLI\Utils\mysql_host_to_cli_args;
+use function WP_CLI\Utils\proc_open_compat;
 
 /**
  * Performs basic database operations using credentials stored in wp-config.php.
@@ -641,6 +645,9 @@ class DB_Command extends WP_CLI_Command {
 			'database' => DB_NAME,
 		];
 		$mysql_args = array_merge( self::get_dbuser_dbpass_args( $assoc_args ), $mysql_args );
+		$mysql_args = array_merge( $mysql_args, self::get_mysql_args( $assoc_args ) );
+
+		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 
 		if ( '-' !== $result_file ) {
 			if ( ! is_readable( $result_file ) ) {
@@ -656,17 +663,77 @@ class DB_Command extends WP_CLI_Command {
 			$mysql_args['execute'] = sprintf( $query, $result_file );
 		} else {
 			$result_file = 'STDIN';
+			$this->adapt_stdin( $command, $assoc_args );
 		}
 		// Check if any mysql option pass.
-		$mysql_args = array_merge( $mysql_args, self::get_mysql_args( $assoc_args ) );
-
-		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		self::run( $command, $mysql_args );
 
 		WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
+	}
+
+	protected function adapt_stdin( $command, $assoc_args ) {
+
+		$descriptors = [
+			0 => [ 'pipe', 'rw' ],
+			1 => [ 'pipe', 'w' ],
+			2 => [ 'pipe', 'w' ],
+		];
+
+		$stdout = '';
+		$stderr = '';
+
+		if ( isset( $assoc_args['host'] ) ) {
+			// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysql_host_to_cli_args -- Misidentified as PHP native MySQL function.
+			$assoc_args = array_merge( $assoc_args, mysql_host_to_cli_args( $assoc_args['host'] ) );
+		}
+
+		if ( isset( $assoc_args['pass'] ) ) {
+			$old_password = getenv( 'MYSQL_PWD' );
+			putenv( 'MYSQL_PWD=' . $assoc_args['pass'] );
+			unset( $assoc_args['pass'] );
+		}
+
+		$final_cmd = force_env_on_nix_systems( $command ) . assoc_args_to_str( $assoc_args );
+
+		$process = proc_open_compat( $final_cmd, $descriptors, $pipes );
+
+		if ( isset( $old_password ) ) {
+			putenv( 'MYSQL_PWD=' . $old_password );
+		}
+
+		if ( ! $process ) {
+			exit( 1 );
+		}
+
+		if ( is_resource( $process ) ) {
+			fwrite( $pipes[0], $this->get_sql_mode_query( $assoc_args ) );
+
+			while ( ! feof( STDIN ) ) {
+				$data = fread( STDIN, 8192 );
+				fwrite( $pipes[0], $data );
+			}
+
+			$stdout = stream_get_contents( $pipes[1] );
+			$stderr = stream_get_contents( $pipes[2] );
+
+			fclose( $pipes[0] );
+			fclose( $pipes[1] );
+			fclose( $pipes[2] );
+		}
+
+		fwrite( STDOUT, $stdout );
+		fwrite( STDERR, $stderr );
+
+		$exit_code = proc_close( $process );
+
+		return [
+			$stdout,
+			$stderr,
+			$exit_code,
+		];
 	}
 
 	/**
