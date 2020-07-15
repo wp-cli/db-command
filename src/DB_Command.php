@@ -1026,7 +1026,7 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Finds a string in the database.
 	 *
-	 * Searches through all or a selection of database tables for a given string, Outputs colorized references to the string.
+	 * Searches through all of the text columns in a selection of database tables for a given string, Outputs colorized references to the string.
 	 *
 	 * Defaults to searching through all tables registered to $wpdb. On multisite, this default is limited to the tables for the current site.
 	 *
@@ -1060,7 +1060,7 @@ class DB_Command extends WP_CLI_Command {
 	 * ---
 	 *
 	 * [--regex]
-	 * : Runs the search as a regular expression (without delimiters). The search becomes case-sensitive (i.e. no PCRE flags are added). Delimiters must be escaped if they occur in the expression.
+	 * : Runs the search as a regular expression (without delimiters). The search becomes case-sensitive (i.e. no PCRE flags are added). Delimiters must be escaped if they occur in the expression. Because the search is run on individual columns, you can use the `^` and `$` tokens to mark the start and end of a match, respectively.
 	 *
 	 * [--regex-flags=<regex-flags>]
 	 * : Pass PCRE modifiers to the regex search (e.g. 'i' for case-insensitivity).
