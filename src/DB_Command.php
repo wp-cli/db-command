@@ -367,7 +367,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
-		self::run( $command, $assoc_args );
+		self::run( $command, $assoc_args, null, true );
 	}
 
 	/**
@@ -1480,6 +1480,9 @@ class DB_Command extends WP_CLI_Command {
 	 *                              use.
 	 * @param bool   $send_to_shell Optional. Whether to send STDOUT and STDERR
 	 *                              immediately to the shell. Defaults to true.
+	 * @param bool   $interactive   Optional. Whether MySQL is meant to be
+	 *                              executed as an interactive process. Defaults
+	 *                              to false.
 	 *
 	 * @return array {
 	 *     Associative array containing STDOUT and STDERR output.
@@ -1489,7 +1492,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     @type int    $exit_code Exit code of the process.
 	 * }
 	 */
-	private static function run( $cmd, $assoc_args = [], $send_to_shell = true ) {
+	private static function run( $cmd, $assoc_args = [], $send_to_shell = true, $interactive = false ) {
 		$required = [
 			'host' => DB_HOST,
 			'user' => DB_USER,
@@ -1513,7 +1516,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$final_args = array_merge( $assoc_args, $required );
 
-		return Utils\run_mysql_command( $cmd, $final_args, null, $send_to_shell );
+		return Utils\run_mysql_command( $cmd, $final_args, null, $send_to_shell, $interactive );
 	}
 
 	/**
