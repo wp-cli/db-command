@@ -64,17 +64,17 @@ jobs:
       matrix:
         php: ['5.6', '7.0', '7.1', '7.2', '7.3', '7.4']
         wp: ['latest']
-        test: 'composer behat || composer behat-rerun'
+        test: "composer behat || composer behat-rerun"
         include:
           - php: '5.6'
             wp: 'trunk'
-            test: ['composer behat || composer behat-rerun']
+            test: "composer behat || composer behat-rerun"
           - php: '7.4'
             wp: 'trunk'
-            test: 'composer behat || composer behat-rerun'
+            test: "composer behat || composer behat-rerun"
           - php: '5.6'
             wp: '3.7'
-            test: 'composer behat || composer behat-rerun || true'
+            test: "composer behat || composer behat-rerun || true"
     runs-on: ubuntu-latest
 
     services:
