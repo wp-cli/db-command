@@ -471,6 +471,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--exclude_tables=<tables>]
 	 * : The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
 	 *
+	 * [--include-tablespaces]
+	 * : Skips adding the default --no-tablespaces option to mysqldump.
+	 *
 	 * [--porcelain]
 	 * : Output filename for the exported database.
 	 *
@@ -547,16 +550,24 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$support_column_statistics = exec( 'mysqldump --help | grep "column-statistics"' );
+		$mysqldump_binary = Utils\force_env_on_nix_systems( 'mysqldump' );
 
-		$initial_command = sprintf( '/usr/bin/env mysqldump%s ', $this->get_defaults_flag_string( $assoc_args ) );
+		$support_column_statistics = exec( $mysqldump_binary . ' --help | grep "column-statistics"' );
+
+		$initial_command = sprintf( "{$mysqldump_binary}%s ", $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running initial shell command: {$initial_command}", 'db' );
 
+		$default_arguments = [ '%s' ];
+
 		if ( $support_column_statistics ) {
-			$command = $initial_command . '--skip-column-statistics %s';
-		} else {
-			$command = $initial_command . '%s';
+			$default_arguments[] = '--skip-column-statistics';
 		}
+
+		if ( ! Utils\get_flag_value( $assoc_args, 'include-tablespaces', false ) ) {
+			$default_arguments[] = '--no-tablespaces';
+		}
+
+		$command = $initial_command . implode( ' ', $default_arguments );
 
 		$command_esc_args = [ DB_NAME ];
 
