@@ -562,7 +562,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		if ( ! Utils\get_flag_value( $assoc_args, 'include-tablespaces', false ) ) {
-			$default_arguments[] = 'no-tablespaces';
+			$default_arguments[] = '--no-tablespaces';
 		}
 
 		$command = $initial_command . implode( ' ', $default_arguments );
