@@ -550,7 +550,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$support_column_statistics = exec( 'mysqldump --help | grep "column-statistics"' );
+		$support_column_statistics = exec( '/usr/bin/env mysqldump --help | grep "column-statistics"' );
 
 		$initial_command = sprintf( '/usr/bin/env mysqldump%s ', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running initial shell command: {$initial_command}", 'db' );
