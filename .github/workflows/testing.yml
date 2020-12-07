@@ -50,6 +50,7 @@ jobs:
         run: COMPOSER_ROOT_VERSION=dev-master composer install --prefer-dist --no-progress --no-suggest
 
       - name: Setup problem matcher to provide annotations for PHPUnit
+        if: steps.check_files.outputs.files_exists == 'true'
         run: echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
       - name: Run PHPUnit
@@ -141,5 +142,5 @@ jobs:
         if: steps.check_files.outputs.files_exists == 'true'
         env:
           WP_VERSION: '${{ matrix.wp }}'
-        run: composer behat || composer behat-rerun
+        run: ${{ matrix.test }}
 
