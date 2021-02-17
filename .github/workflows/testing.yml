@@ -133,7 +133,7 @@ jobs:
       - name: Prepare test database
         if: steps.check_files.outputs.files_exists == 'true'
         run: |
-          export MYSQL_HOST=${{ job.services.mysql.host }}
+          export MYSQL_HOST=127.0.0.1
           echo "MYSQL_HOST=$MYSQL_HOST" >> $GITHUB_ENV
           export MYSQL_TCP_PORT=${{ job.services.mysql.ports['3306'] }}
           echo "MYSQL_TCP_PORT=$MYSQL_TCP_PORT" >> $GITHUB_ENV
