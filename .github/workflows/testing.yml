@@ -138,8 +138,9 @@ jobs:
           export MYSQL_TCP_PORT=${{ job.services.mysql.ports['3306'] }}
           echo "MYSQL_TCP_PORT=$MYSQL_TCP_PORT" >> $GITHUB_ENV
           mysql -e "CREATE DATABASE IF NOT EXISTS \`wp_cli_test\`;" -uroot -proot
-          mysql -e "GRANT ALL PRIVILEGES ON \`wp_cli_test\`.* TO 'wp_cli_test'@'$MYSQL_HOST' IDENTIFIED BY 'password1';" -uroot -proot
-          mysql -e "GRANT ALL PRIVILEGES ON \`wp_cli_test_scaffold\`.* TO 'wp_cli_test'@'$MYSQL_HOST' IDENTIFIED BY 'password1';" -uroot -proot
+          mysql -e "GRANT ALL PRIVILEGES ON \`wp_cli_test\`.* TO 'wp_cli_test'@'%' IDENTIFIED BY 'password1';" -uroot -proot
+          mysql -e "GRANT ALL PRIVILEGES ON \`wp_cli_test_scaffold\`.* TO 'wp_cli_test'@'%' IDENTIFIED BY 'password1';" -uroot -proot
+
       - name: Run Behat
         if: steps.check_files.outputs.files_exists == 'true'
         env:
