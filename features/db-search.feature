@@ -1029,6 +1029,7 @@ Feature: Search through the database
       """
     And STDERR should be empty
 
+  @broken
   Scenario: Search with large data
     Given a WP install
     # Note "_utf8 X'CC88'" is combining umlaut. Doing it this way as non-ASCII stuff gets stripped due to (eventually) been put thru `escapeshellarg()` with a default C locale.
