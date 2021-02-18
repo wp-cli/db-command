@@ -128,7 +128,7 @@ jobs:
 
       - name: Start MySQL server
         if: steps.check_files.outputs.files_exists == 'true'
-        run: sudo service mysql start
+        run: sudo systemctl start mysql
 
       - name: Prepare test database
         if: steps.check_files.outputs.files_exists == 'true'
