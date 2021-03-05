@@ -4,6 +4,8 @@ Feature: Display information about a given table.
   Scenario: Display information about the wp_posts table
     Given a WP install
 
+    @broken
+    # This requires conditional tags to target different DB versions, as bigint(20) is only bigint on MySQL 8.
     When I run `wp db columns wp_posts --format=table`
     Then STDOUT should be a table containing rows:
       |         Field         |        Type         | Null | Key |       Default       |     Extra      |
