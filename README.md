@@ -459,6 +459,11 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
     -- Host: localhost    Database: wpdev
     -- ------------------------------------------------------
     -- Server version    5.7.19
+
+    # Export database to current user homedir with filename db.sql.
+    $ wp db export - > ~/db.sql
+    Or (if your username is webuser)
+    $ wp db export - > /home/webuser/db.sql
     ...
 
 
