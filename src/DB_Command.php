@@ -525,6 +525,12 @@ class DB_Command extends WP_CLI_Command {
 	 *     -- Host: localhost    Database: wpdev
 	 *     -- ------------------------------------------------------
 	 *     -- Server version    5.7.19
+	 *
+	 *     # Export database to current user homedir with filename db.sql.
+	 *     $ wp db export - > ~/db.sql
+	 *
+	 *     # Export database to /home/webuser with filename db.sql.
+	 *     $ wp db export - > /home/webuser/db.sql
 	 *     ...
 	 *
 	 * @alias dump
