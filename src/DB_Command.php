@@ -1521,7 +1521,7 @@ class DB_Command extends WP_CLI_Command {
 			unset( $assoc_args['dbuser'] );
 		}
 		if ( isset( $assoc_args['dbpass'] ) ) {
-			$required['pass'] = $assoc_args['dbpass'];
+			$required['password'] = $assoc_args['dbpass'];
 			unset( $assoc_args['dbpass'], $assoc_args['password'] );
 		}
 
