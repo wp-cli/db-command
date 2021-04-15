@@ -1521,12 +1521,13 @@ class DB_Command extends WP_CLI_Command {
 			unset( $assoc_args['dbuser'] );
 		}
 		if ( isset( $assoc_args['dbpass'] ) ) {
-			$required['password'] = $assoc_args['dbpass'];
+			$required['pass'] = $assoc_args['dbpass'];
 			unset( $assoc_args['dbpass'], $assoc_args['password'] );
 		}
 
 		$final_args = array_merge( $assoc_args, $required );
 
+		var_dump( $final_args );
 		return Utils\run_mysql_command( $cmd, $final_args, null, $send_to_shell, $interactive );
 	}
 
