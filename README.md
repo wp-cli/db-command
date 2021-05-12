@@ -3,7 +3,7 @@ wp-cli/db-command
 
 Performs basic database operations using credentials stored in wp-config.php.
 
-[![Build Status](https://travis-ci.org/wp-cli/db-command.svg?branch=master)](https://travis-ci.org/wp-cli/db-command)
+[![Testing](https://github.com/wp-cli/db-command/actions/workflows/testing.yml/badge.svg)](https://github.com/wp-cli/db-command/actions/workflows/testing.yml)
 
 Quick links: [Using](#using) | [Installing](#installing) | [Contributing](#contributing) | [Support](#support)
 
@@ -232,7 +232,7 @@ for more details on the `OPTIMIZE TABLE` statement.
 Displays the database table prefix.
 
 ~~~
-wp db prefix
+wp db prefix 
 ~~~
 
 Display the database table prefix, as defined by the database handler's interpretation of the current site.
@@ -381,11 +381,11 @@ Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--porcelain] [--defaults]
+wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--defaults]
 ~~~
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
-`DB_PASSWORD` database credentials specified in wp-config.php.
+`DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid `mysqldump` flags.
 
 **OPTIONS**
 
@@ -407,6 +407,9 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
 	[--exclude_tables=<tables>]
 		The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
+
+	[--include-tablespaces]
+		Skips adding the default --no-tablespaces option to mysqldump.
 
 	[--porcelain]
 		Output filename for the exported database.
@@ -512,7 +515,7 @@ Finds a string in the database.
 wp db search <search> [<tables>...] [--network] [--all-tables-with-prefix] [--all-tables] [--before_context=<num>] [--after_context=<num>] [--regex] [--regex-flags=<regex-flags>] [--regex-delimiter=<regex-delimiter>] [--table_column_once] [--one_line] [--matches_only] [--stats] [--table_column_color=<color_code>] [--id_color=<color_code>] [--match_color=<color_code>]
 ~~~
 
-Searches through all or a selection of database tables for a given string, Outputs colorized references to the string.
+Searches through all of the text columns in a selection of database tables for a given string, Outputs colorized references to the string.
 
 Defaults to searching through all tables registered to $wpdb. On multisite, this default is limited to the tables for the current site.
 
@@ -546,7 +549,7 @@ Defaults to searching through all tables registered to $wpdb. On multisite, this
 		---
 
 	[--regex]
-		Runs the search as a regular expression (without delimiters). The search becomes case-sensitive (i.e. no PCRE flags are added). Delimiters must be escaped if they occur in the expression.
+		Runs the search as a regular expression (without delimiters). The search becomes case-sensitive (i.e. no PCRE flags are added). Delimiters must be escaped if they occur in the expression. Because the search is run on individual columns, you can use the `^` and `$` tokens to mark the start and end of a match, respectively.
 
 	[--regex-flags=<regex-flags>]
 		Pass PCRE modifiers to the regex search (e.g. 'i' for case-insensitivity).
