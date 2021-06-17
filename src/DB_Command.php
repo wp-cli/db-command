@@ -598,7 +598,14 @@ class DB_Command extends WP_CLI_Command {
 		unset( $assoc_args['porcelain'] );
 
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
-		self::run( $escaped_command, $assoc_args );
+
+		$send_to_shell = true;
+		$interactive = false;
+		if ( true === $stdout ) {
+			$interactive = true;
+		}
+
+		self::run( $escaped_command, $assoc_args, $send_to_shell, $interactive );
 
 		if ( $porcelain ) {
 			WP_CLI::line( $result_file );
