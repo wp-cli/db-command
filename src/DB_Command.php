@@ -602,6 +602,7 @@ class DB_Command extends WP_CLI_Command {
 		$send_to_shell = true;
 		$interactive = false;
 		if ( true === $stdout ) {
+			$send_to_shell = false;
 			$interactive = true;
 		}
 
