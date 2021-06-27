@@ -40,7 +40,7 @@ Feature: Export a WordPress database
     When I run `wp db export -`
     Then STDOUT should contain:
       """
-      -- MySQL dump
+      -- Dump completed on
       """
 
   Scenario: Export database with mysql defaults to STDOUT
@@ -49,7 +49,7 @@ Feature: Export a WordPress database
     When I run `wp db export --defaults -`
     Then STDOUT should contain:
       """
-      -- MySQL dump
+      -- Dump completed on
       """
 
   Scenario: Export database with mysql --no-defaults to STDOUT
@@ -58,7 +58,7 @@ Feature: Export a WordPress database
     When I run `wp db export --no-defaults -`
     Then STDOUT should contain:
       """
-      -- MySQL dump
+      -- Dump completed on
       """
 
   Scenario: Export database with passed-in options
