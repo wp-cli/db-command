@@ -151,3 +151,29 @@ Feature: Import a WordPress database
       """
       Debug (db): Running shell command: /usr/bin/env mysql --no-defaults --no-auto-rehash
       """
+  Scenario: Import db that has emoji in post
+    Given a WP install
+
+    When I run `wp post create --post_title="🍣"`
+    And I run `wp db export wp_cli_test.sql`
+    Then the wp_cli_test.sql file should exist
+
+    When I run `wp post list`
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      🍣
+      """
+
+    When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'wp_cli_test.sql'.
+      """
+
+    When I run `wp post list`
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      🍣
+      """
