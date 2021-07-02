@@ -600,10 +600,10 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
 		$send_to_shell = true;
-		$interactive = false;
+		$interactive   = false;
 		if ( true === $stdout ) {
 			$send_to_shell = false;
-			$interactive = true;
+			$interactive   = true;
 		}
 
 		self::run( $escaped_command, $assoc_args, $send_to_shell, $interactive );
