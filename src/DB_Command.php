@@ -817,7 +817,7 @@ class DB_Command extends WP_CLI_Command {
 	 * [--network]
 	 * : List all the tables in a multisite install.
 	 *
-	 * [--decimals=<decimals>
+	 * [--decimals=<decimals>]
 	 * : Number of digits after decimal point. Defaults to 0.
 	 *
 	 * [--all-tables-with-prefix]
