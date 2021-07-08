@@ -136,7 +136,7 @@ Feature: Display database size
   Scenario: Display only database size in megabytes with specific precision for a WordPress install
     Given a WP install
 
-	When I run `wp db size --size_format=mb --decimals=0`
+    When I run `wp db size --size_format=mb --decimals=0`
     Then STDOUT should not contain:
       """
       .
@@ -147,7 +147,7 @@ Feature: Display database size
       MB
       """
 
-	When I run `wp db size --size_format=mb --decimals=1`
+    When I run `wp db size --size_format=mb --decimals=1`
     Then STDOUT should contain:
       """
       .
