@@ -1008,7 +1008,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
-			WP_CLI::line( filter_var( $rows[0]['Size'], FILTER_SANITIZE_NUMBER_INT ) );
+			WP_CLI::line( str_replace( " {$size_format_display}", '', $rows[0]['Size'] ) );
 		} else {
 			// Display the rows.
 			$args = [
