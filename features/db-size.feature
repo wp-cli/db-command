@@ -133,7 +133,7 @@ Feature: Display database size
     When I run `wp db size --size_format=TB`
     Then STDOUT should be a number
 
-  Scenario: Display only database size in megabytes with sprcic precision for a WordPress install
+  Scenario: Display only database size in megabytes with specific precision for a WordPress install
     Given a WP install
 
     When I run `wp db size --size_format=mb --decimals=1`
