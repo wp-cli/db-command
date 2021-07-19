@@ -817,6 +817,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--network]
 	 * : List all the tables in a multisite install.
 	 *
+	 * [--decimals=<decimals>]
+	 * : Number of digits after decimal point. Defaults to 0.
+	 *
 	 * [--all-tables-with-prefix]
 	 * : List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
 	 *
@@ -999,12 +1002,13 @@ class DB_Command extends WP_CLI_Command {
 				}
 					$size_format_display = preg_replace( '/IB$/u', 'iB', strtoupper( $size_format ) );
 
-					$rows[ $index ]['Size'] = ceil( $row['Size'] / $divisor ) . ' ' . $size_format_display;
+					$decimals               = Utils\get_flag_value( $assoc_args, 'decimals', 0 );
+					$rows[ $index ]['Size'] = round( $row['Size'] / $divisor, $decimals ) . ' ' . $size_format_display;
 			}
 		}
 
 		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
-			WP_CLI::line( filter_var( $rows[0]['Size'], FILTER_SANITIZE_NUMBER_INT ) );
+			WP_CLI::line( str_replace( " {$size_format_display}", '', $rows[0]['Size'] ) );
 		} else {
 			// Display the rows.
 			$args = [
