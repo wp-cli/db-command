@@ -445,6 +445,62 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
+	 * Executes a select SQL query against the database and returns a formatted list or a single column.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <sql>
+	 * : A select SQL query.
+	 *
+	 * [--format=<format>]
+	 * : Render output in a particular format.
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - json
+	 *   - column
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 * @subcommand get-rows
+	 * @when after_wp_load
+	 */
+	public function get_rows( $args, $assoc_args ) {
+		global $wpdb;
+
+		$assoc_args = wp_parse_args(
+			$assoc_args,
+			[
+				'format' => 'table',
+			]
+		);
+
+		if ( 0 !== stripos( $args[0], 'select ' ) ) {
+			WP_CLI::error( 'Only SELECT queries are supported by get-rows.' );
+		}
+
+		if ( 'column' === $assoc_args['format'] ) {
+			// phpcs:disable
+			$col = $wpdb->get_col( $args[0] );
+			echo implode( ' ', $col );
+			// phpcs:enable
+		} else {
+			// phpcs:ignore
+			$rows = $wpdb->get_results( $args[0], ARRAY_A );
+
+			if ( is_array( $rows ) && ! empty( $rows ) ) {
+				$fields = array_keys( $rows[0] );
+
+				$formatter = new Formatter( $assoc_args, $fields );
+				$formatter->display_items( $rows );
+			}
+		}
+	}
+
+	/**
 	 * Exports the database to a file or to STDOUT.
 	 *
 	 * Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
