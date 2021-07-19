@@ -709,7 +709,7 @@ Defaults to all tables registered to the $wpdb database handler.
 Displays the database name and size.
 
 ~~~
-wp db size [--size_format=<format>] [--tables] [--human-readable] [--format=<format>] [--scope=<scope>] [--network] [--all-tables-with-prefix] [--all-tables]
+wp db size [--size_format=<format>] [--tables] [--human-readable] [--format=<format>] [--scope=<scope>] [--network] [--decimals=<decimals>] [--all-tables-with-prefix] [--all-tables]
 ~~~
 
 Display the database name and size for `DB_NAME` specified in wp-config.php.
@@ -774,6 +774,9 @@ Available size formats include:
 
 	[--network]
 		List all the tables in a multisite install.
+
+	[--decimals=<decimals>]
+		Number of digits after decimal point. Defaults to 0.
 
 	[--all-tables-with-prefix]
 		List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
