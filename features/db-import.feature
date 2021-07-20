@@ -151,6 +151,8 @@ Feature: Import a WordPress database
       """
       Debug (db): Running shell command: /usr/bin/env mysql --no-defaults --no-auto-rehash
       """
+
+  @require-wp-4.2
   Scenario: Import db that has emoji in post
     Given a WP install
 
