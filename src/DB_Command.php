@@ -554,6 +554,15 @@ class DB_Command extends WP_CLI_Command {
 
 		$support_column_statistics = exec( $mysqldump_binary . ' --help | grep "column-statistics"' );
 
+		/*
+		 * In case that `--default-character-set` is not given and `DB_CHARSET` is `utf8`,
+		 * use `utf8mb4` as a `default-character-set` to ensure emojis are encoded correctly.
+		 */
+		if ( ! isset( $assoc_args['default-character-set'] ) &&
+			defined( 'DB_CHARSET' ) && 'utf8' === constant( 'DB_CHARSET' ) ) {
+			$assoc_args['default-character-set'] = 'utf8mb4';
+		}
+
 		$initial_command = sprintf( "{$mysqldump_binary}%s ", $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running initial shell command: {$initial_command}", 'db' );
 
