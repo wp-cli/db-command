@@ -559,7 +559,7 @@ class DB_Command extends WP_CLI_Command {
 		 * use `utf8mb4` as a `default-character-set` to ensure emojis are encoded correctly.
 		 */
 		if ( ! isset( $assoc_args['default-character-set'] ) &&
-			defined( 'DB_CHARSET' ) && 'utf8' == constant( 'DB_CHARSET' ) ) {
+			defined( 'DB_CHARSET' ) && 'utf8' === constant( 'DB_CHARSET' ) ) {
 			$assoc_args['default-character-set'] = 'utf8mb4';
 		}
 
