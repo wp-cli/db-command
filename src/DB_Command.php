@@ -1543,7 +1543,10 @@ class DB_Command extends WP_CLI_Command {
 
 		WP_CLI::debug( "Query: {$query}", 'db' );
 
-		$mysql_args = self::get_mysql_args( $assoc_args );
+		$mysql_args = array_merge(
+			self::get_mysql_args( $assoc_args ),
+			self::get_dbuser_dbpass_args( $assoc_args )
+		);
 
 		self::run(
 			sprintf(
@@ -1599,6 +1602,25 @@ class DB_Command extends WP_CLI_Command {
 		$final_args = array_merge( $assoc_args, $required );
 
 		return Utils\run_mysql_command( $cmd, $final_args, null, $send_to_shell, $interactive );
+	}
+
+	/**
+	 * Helper to pluck 'dbuser' and 'dbpass' from associative args array.
+	 *
+	 * @param array $assoc_args Associative args array.
+	 * @return array Array with `dbuser' and 'dbpass' set if in passed-in associative args array.
+	 */
+	private static function get_dbuser_dbpass_args( $assoc_args ) {
+		$mysql_args = [];
+		$dbuser     = Utils\get_flag_value( $assoc_args, 'dbuser' );
+		if ( null !== $dbuser ) {
+			$mysql_args['dbuser'] = $dbuser;
+		}
+		$dbpass = Utils\get_flag_value( $assoc_args, 'dbpass' );
+		if ( null !== $dbpass ) {
+			$mysql_args['dbpass'] = $dbpass;
+		}
+		return $mysql_args;
 	}
 
 	/**
