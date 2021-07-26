@@ -28,6 +28,20 @@ use WP_CLI\Utils;
 class DB_Command extends WP_CLI_Command {
 
 	/**
+	 * Legacy UTF-8 encoding for MySQL.
+	 *
+	 * @var string
+	 */
+	const ENCODING_UTF8 = 'utf8';
+
+	/**
+	 * Standards-compliant UTF-8 encoding for MySQL.
+	 *
+	 * @var string
+	 */
+	const ENCODING_UTF8MB4 = 'utf8mb4';
+
+	/**
 	 * A list of incompatible SQL modes.
 	 *
 	 * Copied over from WordPress Core code.
@@ -554,6 +568,23 @@ class DB_Command extends WP_CLI_Command {
 
 		$support_column_statistics = exec( $mysqldump_binary . ' --help | grep "column-statistics"' );
 
+		/*
+		 * In case that `--default-character-set` is not given and `DB_CHARSET` is `utf8`,
+		 * we try to deduce what the actual character set for the posts table of the
+		 * current database is and use `utf8mb4` as a `default-character-set` if that
+		 * seems like the safer default, to ensure emojis are encoded correctly.
+		 */
+		if (
+			! isset( $assoc_args['default-character-set'] )
+			&&
+			( defined( 'DB_CHARSET' ) && self::ENCODING_UTF8 === constant( 'DB_CHARSET' ) )
+			&&
+			self::ENCODING_UTF8MB4 === $this->get_posts_table_charset( $assoc_args )
+		) {
+			WP_CLI::debug( 'Setting missing default character set to ' . self::ENCODING_UTF8MB4, 'db' );
+			$assoc_args['default-character-set'] = self::ENCODING_UTF8MB4;
+		}
+
 		$initial_command = sprintf( "{$mysqldump_binary}%s ", $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running initial shell command: {$initial_command}", 'db' );
 
@@ -605,6 +636,45 @@ class DB_Command extends WP_CLI_Command {
 		} elseif ( ! $stdout ) {
 			WP_CLI::success( sprintf( "Exported to '%s'.", $result_file ) );
 		}
+	}
+
+	/**
+	 * Get the current character set of the posts table.
+	 *
+	 * @param array Associative array of associative arguments.
+	 * @return string Posts table character set.
+	 */
+	private function get_posts_table_charset( $assoc_args ) {
+		$query = 'SELECT CCSA.character_set_name '
+				. 'FROM information_schema.`TABLES` T, '
+				. 'information_schema.`COLLATION_CHARACTER_SET_APPLICABILITY` CCSA '
+				. 'WHERE CCSA.collation_name = T.table_collation '
+				. 'AND T.table_schema = "' . DB_NAME . '" '
+				. 'AND T.table_name LIKE "%\_posts";';
+
+		list( $stdout, $stderr, $exit_code ) = self::run(
+			sprintf(
+				'/usr/bin/env mysql%s --no-auto-rehash --batch --skip-column-names',
+				$this->get_defaults_flag_string( $assoc_args )
+			),
+			[ 'execute' => $query ],
+			false
+		);
+
+		if ( $exit_code ) {
+			WP_CLI::warning(
+				'Failed to get current character set of the posts table.'
+				. ( ! empty( $stderr ) ? " Reason: {$stderr}" : '' )
+			);
+
+			return self::ENCODING_UTF8MB4;
+		}
+
+		$stdout = trim( $stdout );
+
+		WP_CLI::debug( "Detected character set of the posts table: {$stdout}.", 'db' );
+
+		return $stdout;
 	}
 
 	/**
@@ -1239,7 +1309,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$encoding = null;
-		if ( 0 === strpos( $wpdb->charset, 'utf8' ) ) {
+		if ( 0 === strpos( $wpdb->charset, self::ENCODING_UTF8 ) ) {
 			$encoding = 'UTF-8';
 		}
 
@@ -1611,7 +1681,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @return string|array An escaped string if given a string, or an array of escaped strings if given an array of strings.
 	 */
 	private static function esc_sql_ident( $idents ) {
-		$backtick = function ( $v ) {
+		$backtick = static function ( $v ) {
 			// Escape any backticks in the identifier by doubling.
 			return '`' . str_replace( '`', '``', $v ) . '`';
 		};
