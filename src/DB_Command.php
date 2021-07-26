@@ -1604,7 +1604,8 @@ class DB_Command extends WP_CLI_Command {
 
 		// Adapt ordering of arguments.
 		uksort(
-			$final_args, static function ( $a, $b ) {
+			$final_args,
+			static function ( $a, $b ) {
 				switch ( $b ) {
 					case 'force':
 						return -1;
