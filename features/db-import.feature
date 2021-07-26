@@ -157,14 +157,23 @@ Feature: Import a WordPress database
     Given a WP install
 
     When I run `wp post create --post_title="🍣"`
-    And I run `wp db export wp_cli_test.sql`
-    Then the wp_cli_test.sql file should exist
-
-    When I run `wp post list`
+    And I run `wp post list`
     Then the return code should be 0
     And STDOUT should contain:
       """
       🍣
+      """
+
+    When I try `wp db export wp_cli_test.sql --debug`
+    Then the return code should be 0
+    And the wp_cli_test.sql file should exist
+    And STDERR should contain:
+      """
+      Detected character set of the posts table: utf8mb4
+      """
+    And STDERR should contain:
+      """
+      Setting missing default character set to utf8mb4
       """
 
     When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
