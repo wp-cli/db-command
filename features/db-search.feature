@@ -917,42 +917,42 @@ Feature: Search through the database
     Given a WP install
 
     When I run `SHELL_PIPE=0 wp db search example.com`
-    Then STDOUT should contain:
+    Then STDOUT should strictly contain:
       """
       [32;1mwp_options:option_value[0m
       [33;1m1[0m:http://[43m[30mexample.com[0m
       """
 
     When I run `SHELL_PIPE=0 wp db search example.com --table_column_color=%r --id_color=%g --match_color=%b`
-    Then STDOUT should contain:
+    Then STDOUT should strictly contain:
       """
       [31mwp_options:option_value[0m
       [32m1[0m:http://[34mexample.com[0m
       """
 
     When I run `SHELL_PIPE=0 wp db search example.com --table_column_color=%r`
-    Then STDOUT should contain:
+    Then STDOUT should strictly contain:
       """
       [31mwp_options:option_value[0m
       [33;1m1[0m:http://[43m[30mexample.com[0m
       """
 
     When I run `SHELL_PIPE=0 wp db search example.com --id_color=%g`
-    Then STDOUT should contain:
+    Then STDOUT should strictly contain:
       """
       [32;1mwp_options:option_value[0m
       [32m1[0m:http://[43m[30mexample.com[0m
       """
 
     When I run `SHELL_PIPE=0 wp db search example.com --match_color=%b`
-    Then STDOUT should contain:
+    Then STDOUT should strictly contain:
       """
       [32;1mwp_options:option_value[0m
       [33;1m1[0m:http://[34mexample.com[0m
       """
 
     When I run `SHELL_PIPE=0 wp db search example.com --before_context=0 --after_context=0`
-    Then STDOUT should contain:
+    Then STDOUT should strictly contain:
       """
       [32;1mwp_options:option_value[0m
       [33;1m1[0m:example.com
@@ -967,7 +967,7 @@ Feature: Search through the database
       """
       example.com
       """
-    And STDOUT should not contain:
+    And STDOUT should strictly not contain:
       """
       
       """
