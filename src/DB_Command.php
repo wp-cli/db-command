@@ -717,8 +717,8 @@ class DB_Command extends WP_CLI_Command {
 		// Process options to MySQL.
 		$mysql_args = array_merge(
 			[ 'database' => DB_NAME ],
-			self::get_mysql_args( $assoc_args ),
-			self::get_dbuser_dbpass_args( $assoc_args )
+			self::get_dbuser_dbpass_args( $assoc_args ),
+			self::get_mysql_args( $assoc_args )
 		);
 
 		if ( '-' !== $result_file ) {
@@ -1545,8 +1545,9 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Query: {$query}", 'db' );
 
 		$mysql_args = array_merge(
-			self::get_mysql_args( $assoc_args ),
-			self::get_dbuser_dbpass_args( $assoc_args )
+			[ 'database' => DB_NAME ],
+			self::get_dbuser_dbpass_args( $assoc_args ),
+			self::get_mysql_args( $assoc_args )
 		);
 
 		self::run(
@@ -1554,7 +1555,7 @@ class DB_Command extends WP_CLI_Command {
 				'/usr/bin/env mysql%s --no-auto-rehash',
 				$this->get_defaults_flag_string( $assoc_args )
 			),
-			array_merge( $mysql_args, [ 'execute' => $query ] )
+			array_merge( [ 'execute' => $query ], $mysql_args )
 		);
 	}
 
@@ -1600,7 +1601,19 @@ class DB_Command extends WP_CLI_Command {
 			unset( $assoc_args['dbpass'], $assoc_args['password'] );
 		}
 
-		$final_args = array_merge( $assoc_args, $required );
+		$final_args = array_merge( $required, $assoc_args );
+
+		// Adapt ordering of arguments.
+		uksort(
+			$final_args, static function ( $a, $b ) {
+				switch ( $b ) {
+					case 'force':
+						return -1;
+					default:
+						return 1;
+				}
+			}
+		);
 
 		return Utils\run_mysql_command( $cmd, $final_args, null, $send_to_shell, $interactive );
 	}
