@@ -714,9 +714,12 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
 
-		$mysql_args = [
-			'database' => DB_NAME,
-		];
+		// Process options to MySQL.
+		$mysql_args = array_merge(
+			[ 'database' => DB_NAME ],
+			self::get_mysql_args( $assoc_args ),
+			self::get_dbuser_dbpass_args( $assoc_args )
+		);
 
 		if ( '-' !== $result_file ) {
 			if ( ! is_readable( $result_file ) ) {
@@ -733,8 +736,6 @@ class DB_Command extends WP_CLI_Command {
 		} else {
 			$result_file = 'STDIN';
 		}
-		// Check if any mysql option pass.
-		$mysql_args = array_merge( $mysql_args, self::get_mysql_args( $assoc_args ) );
 
 		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
