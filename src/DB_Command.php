@@ -1545,7 +1545,6 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Query: {$query}", 'db' );
 
 		$mysql_args = array_merge(
-			[ 'database' => DB_NAME ],
 			self::get_dbuser_dbpass_args( $assoc_args ),
 			self::get_mysql_args( $assoc_args )
 		);
