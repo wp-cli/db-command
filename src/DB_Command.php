@@ -80,7 +80,7 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function create( $_, $assoc_args ) {
 
-		$this->run_query( self::get_create_query(), self::get_dbuser_dbpass_args( $assoc_args ) );
+		$this->run_query( self::get_create_query(), $assoc_args );
 
 		WP_CLI::success( 'Database created.' );
 	}
@@ -111,7 +111,7 @@ class DB_Command extends WP_CLI_Command {
 	public function drop( $_, $assoc_args ) {
 		WP_CLI::confirm( "Are you sure you want to drop the '" . DB_NAME . "' database?", $assoc_args );
 
-		$this->run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ), self::get_dbuser_dbpass_args( $assoc_args ) );
+		$this->run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ), $assoc_args );
 
 		WP_CLI::success( 'Database dropped.' );
 	}
@@ -142,10 +142,8 @@ class DB_Command extends WP_CLI_Command {
 	public function reset( $_, $assoc_args ) {
 		WP_CLI::confirm( "Are you sure you want to reset the '" . DB_NAME . "' database?", $assoc_args );
 
-		$mysql_args = self::get_dbuser_dbpass_args( $assoc_args );
-
-		$this->run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ), $mysql_args );
-		$this->run_query( self::get_create_query(), $mysql_args );
+		$this->run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ), $assoc_args );
+		$this->run_query( self::get_create_query(), $assoc_args );
 
 		WP_CLI::success( 'Database reset.' );
 	}
@@ -187,8 +185,6 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args
 		);
 
-		$mysql_args = self::get_dbuser_dbpass_args( $assoc_args );
-
 		$tables = Utils\wp_get_table_names(
 			[],
 			[ 'all-tables-with-prefix' => true ]
@@ -201,7 +197,7 @@ class DB_Command extends WP_CLI_Command {
 					DB_NAME,
 					$table
 				),
-				$mysql_args
+				$assoc_args
 			);
 		}
 
@@ -718,10 +714,12 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
 
-		$mysql_args = [
-			'database' => DB_NAME,
-		];
-		$mysql_args = array_merge( self::get_dbuser_dbpass_args( $assoc_args ), $mysql_args );
+		// Process options to MySQL.
+		$mysql_args = array_merge(
+			[ 'database' => DB_NAME ],
+			self::get_dbuser_dbpass_args( $assoc_args ),
+			self::get_mysql_args( $assoc_args )
+		);
 
 		if ( '-' !== $result_file ) {
 			if ( ! is_readable( $result_file ) ) {
@@ -738,8 +736,6 @@ class DB_Command extends WP_CLI_Command {
 		} else {
 			$result_file = 'STDIN';
 		}
-		// Check if any mysql option pass.
-		$mysql_args = array_merge( $mysql_args, self::get_mysql_args( $assoc_args ) );
 
 		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -1548,12 +1544,17 @@ class DB_Command extends WP_CLI_Command {
 
 		WP_CLI::debug( "Query: {$query}", 'db' );
 
+		$mysql_args = array_merge(
+			self::get_dbuser_dbpass_args( $assoc_args ),
+			self::get_mysql_args( $assoc_args )
+		);
+
 		self::run(
 			sprintf(
 				'/usr/bin/env mysql%s --no-auto-rehash',
 				$this->get_defaults_flag_string( $assoc_args )
 			),
-			array_merge( $assoc_args, [ 'execute' => $query ] )
+			array_merge( [ 'execute' => $query ], $mysql_args )
 		);
 	}
 
@@ -1599,7 +1600,20 @@ class DB_Command extends WP_CLI_Command {
 			unset( $assoc_args['dbpass'], $assoc_args['password'] );
 		}
 
-		$final_args = array_merge( $assoc_args, $required );
+		$final_args = array_merge( $required, $assoc_args );
+
+		// Adapt ordering of arguments.
+		uksort(
+			$final_args,
+			static function ( $a, $b ) {
+				switch ( $b ) {
+					case 'force':
+						return -1;
+					default:
+						return 1;
+				}
+			}
+		);
 
 		return Utils\run_mysql_command( $cmd, $final_args, null, $send_to_shell, $interactive );
 	}
