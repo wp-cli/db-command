@@ -73,6 +73,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--dbpass=<value>]
 	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
 	 *
+	 * [--defaults]
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     $ wp db create
@@ -102,6 +105,9 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--yes]
 	 * : Answer yes to the confirmation message.
+	 *
+	 * [--defaults]
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -134,6 +140,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--yes]
 	 * : Answer yes to the confirmation message.
 	 *
+	 * [--defaults]
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     $ wp db reset --yes
@@ -164,6 +173,9 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--yes]
 	 * : Answer yes to the confirmation message.
+	 *
+	 * [--defaults]
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
