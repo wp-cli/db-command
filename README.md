@@ -43,7 +43,7 @@ wp db
 Removes all tables with `$table_prefix` from the database.
 
 ~~~
-wp db clean [--dbuser=<value>] [--dbpass=<value>] [--yes]
+wp db clean [--dbuser=<value>] [--dbpass=<value>] [--yes] [--defaults]
 ~~~
 
 Runs `DROP_TABLE` for each table that has a `$table_prefix` as specified
@@ -60,6 +60,9 @@ in wp-config.php.
 	[--yes]
 		Answer yes to the confirmation message.
 
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
 **EXAMPLES**
 
     # Delete all tables that match the current site prefix.
@@ -73,7 +76,7 @@ in wp-config.php.
 Creates a new database.
 
 ~~~
-wp db create [--dbuser=<value>] [--dbpass=<value>]
+wp db create [--dbuser=<value>] [--dbpass=<value>] [--defaults]
 ~~~
 
 Runs `CREATE_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
@@ -88,6 +91,9 @@ wp-config.php.
 	[--dbpass=<value>]
 		Password to pass to mysql. Defaults to DB_PASSWORD.
 
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
 **EXAMPLES**
 
     $ wp db create
@@ -100,7 +106,7 @@ wp-config.php.
 Deletes the existing database.
 
 ~~~
-wp db drop [--dbuser=<value>] [--dbpass=<value>] [--yes]
+wp db drop [--dbuser=<value>] [--dbpass=<value>] [--yes] [--defaults]
 ~~~
 
 Runs `DROP_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
@@ -118,6 +124,9 @@ wp-config.php.
 	[--yes]
 		Answer yes to the confirmation message.
 
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
 **EXAMPLES**
 
     $ wp db drop --yes
@@ -130,7 +139,7 @@ wp-config.php.
 Removes all tables from the database.
 
 ~~~
-wp db reset [--dbuser=<value>] [--dbpass=<value>] [--yes]
+wp db reset [--dbuser=<value>] [--dbpass=<value>] [--yes] [--defaults]
 ~~~
 
 Runs `DROP_DATABASE` and `CREATE_DATABASE` SQL statements using
@@ -147,6 +156,9 @@ specified in wp-config.php.
 
 	[--yes]
 		Answer yes to the confirmation message.
+
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
