@@ -41,7 +41,7 @@ Feature: Display information about a given table.
       Couldn't find any tables matching: wp_foobar
       """
 
-  Scenario: Display information about non-existing table
+  Scenario: Display information about a non default WordPress table
     Given a WP install
     And I run `wp db query "CREATE TABLE not_wp ( id int(11) unsigned NOT NULL AUTO_INCREMENT, awesome_stuff TEXT, PRIMARY KEY (id) );"`
 
