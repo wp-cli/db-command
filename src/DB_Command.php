@@ -1461,7 +1461,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * ## OPTIONS
 	 *
-	 * [<table>]
+	 * <table>
 	 * : Name of the database table.
 	 *
 	 * [--format]
