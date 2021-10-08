@@ -43,9 +43,9 @@ Feature: Display information about a given table.
 
   Scenario: Display information about non-existing table
     Given a WP install
-    And I run `wp db query "CREATE TABLE wp_not ( id int(11) unsigned NOT NULL AUTO_INCREMENT, awesome_stuff TEXT, PRIMARY KEY (id) );"`
+    And I run `wp db query "CREATE TABLE not_wp ( id int(11) unsigned NOT NULL AUTO_INCREMENT, awesome_stuff TEXT, PRIMARY KEY (id) );"`
 
-    When I try `wp db columns wp_not`
+    When I try `wp db columns not_wp`
     Then STDOUT should be a table containing rows:
       | Field         | Type             | Null | Key | Default | Extra          |
       | id            | int(11) unsigned | NO   | PRI |         | auto_increment |
