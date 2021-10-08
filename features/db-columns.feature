@@ -40,3 +40,13 @@ Feature: Display information about a given table.
       """
       Couldn't find any tables matching: wp_foobar
       """
+
+  Scenario: Display information about non-existing table
+    Given a WP install
+    And I run `wp db query "CREATE TABLE wp_not ( id int(11) unsigned NOT NULL AUTO_INCREMENT, awesome_stuff TEXT, PRIMARY KEY (id) );"`
+
+    When I try `wp db columns wp_not`
+    Then STDOUT should be a table containing rows:
+      | Field         | Type             | Null | Key | Default | Extra          |
+      | id            | int(11) unsigned | NO   | PRI |         | auto_increment |
+      | awesome_stuff | text             | YES  |     |         |                |
