@@ -43,10 +43,10 @@ Feature: Display information about a given table.
 
   Scenario: Display information about a non default WordPress table
     Given a WP install
-    And I run `wp db query "CREATE TABLE not_wp ( id int(11) unsigned NOT NULL AUTO_INCREMENT, awesome_stuff TEXT, PRIMARY KEY (id) );"`
+    And I run `wp db query "CREATE TABLE not_wp ( id int(5) unsigned NOT NULL AUTO_INCREMENT, awesome_stuff TEXT, PRIMARY KEY (id) );"`
 
     When I try `wp db columns not_wp`
     Then STDOUT should be a table containing rows:
-      | Field         | Type             | Null | Key | Default | Extra          |
-      | id            | int(11) unsigned | NO   | PRI |         | auto_increment |
-      | awesome_stuff | text             | YES  |     |         |                |
+      | Field         | Type         | Null | Key | Default | Extra          |
+      | id            | int unsigned | NO   | PRI |         | auto_increment |
+      | awesome_stuff | text         | YES  |     |         |                |
