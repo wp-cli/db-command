@@ -244,7 +244,7 @@ for more details on the `OPTIMIZE TABLE` statement.
 Displays the database table prefix.
 
 ~~~
-wp db prefix
+wp db prefix 
 ~~~
 
 Display the database table prefix, as defined by the database handler's interpretation of the current site.
