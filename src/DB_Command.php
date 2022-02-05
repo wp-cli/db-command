@@ -1620,7 +1620,7 @@ class DB_Command extends WP_CLI_Command {
 			static function ( $a, $b ) {
 				if ( 'force' === $a ) {
 					return 1;
-				} else if ( 'force' === $b ) {
+				} elseif ( 'force' === $b ) {
 					return -1;
 				} else {
 					return 0;
