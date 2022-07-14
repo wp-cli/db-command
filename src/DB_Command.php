@@ -1618,11 +1618,12 @@ class DB_Command extends WP_CLI_Command {
 		uksort(
 			$final_args,
 			static function ( $a, $b ) {
-				switch ( $b ) {
-					case 'force':
-						return -1;
-					default:
-						return 1;
+				if ( 'force' === $a ) {
+					return 1;
+				} elseif ( 'force' === $b ) {
+					return -1;
+				} else {
+					return 0;
 				}
 			}
 		);
