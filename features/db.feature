@@ -18,7 +18,7 @@ Feature: Perform database operations
     Then STDOUT should be empty
     And STDERR should contain:
       """
-      We were able to connect to the database server (which means your username and password is okay) but not able to select the `wp_cli_test` database.
+      (which means your username and password is okay)
       """
 
     When I run `wp db create`
@@ -62,7 +62,7 @@ Feature: Perform database operations
     Then STDOUT should be empty
     And STDERR should contain:
       """
-      We were able to connect to the database server (which means your username and password is okay) but not able to select the `wp_cli_test` database.
+      (which means your username and password is okay)
       """
 
     When I run `wp db create --dbuser=wp_cli_test`
