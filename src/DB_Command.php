@@ -904,6 +904,24 @@ class DB_Command extends WP_CLI_Command {
 	 * [--all-tables]
 	 * : List all tables in the database, regardless of the prefix, and even if not registered on $wpdb. Overrides --all-tables-with-prefix.
 	 *
+	 * [--order=<order>]
+	 * : Ascending or Descending order.
+	 * ---
+	 * default: ASC
+	 * options:
+	 *   - ASC
+	 *   - DESC
+	 * ---
+	 *
+	 * [--orderby=<orderby>]
+	 * : Order by fields.
+	 * ---
+	 * default: name
+	 * options:
+	 *   - name
+	 *   - size
+	 * ---
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     $ wp db size
@@ -943,7 +961,6 @@ class DB_Command extends WP_CLI_Command {
 	 * @when after_wp_load
 	 */
 	public function size( $args, $assoc_args ) {
-
 		global $wpdb;
 
 		$format                 = Utils\get_flag_value( $assoc_args, 'format' );
@@ -953,6 +970,11 @@ class DB_Command extends WP_CLI_Command {
 		$tables                 = ! empty( $tables );
 		$all_tables             = Utils\get_flag_value( $assoc_args, 'all-tables' );
 		$all_tables_with_prefix = Utils\get_flag_value( $assoc_args, 'all-tables-with-prefix' );
+		$order                  = Utils\get_flag_value( $assoc_args, 'order', 'ASC' );
+		$orderby                = Utils\get_flag_value( $assoc_args, 'orderby', null );
+
+		// Normalize the `orderby` value to match the array key format.
+		$orderby = ucfirst( $orderby );
 
 		if ( ! is_null( $size_format ) && $human_readable ) {
 			WP_CLI::error( 'Cannot use --size_format and --human-readable arguments at the same time.' );
@@ -991,6 +1013,7 @@ class DB_Command extends WP_CLI_Command {
 				$rows[] = [
 					'Name' => $table_name,
 					'Size' => strtoupper( $table_bytes ) . $default_unit,
+					'_Bytes' => strtoupper( $table_bytes ),
 				];
 			}
 		} else {
@@ -1007,6 +1030,7 @@ class DB_Command extends WP_CLI_Command {
 			$rows[] = [
 				'Name' => DB_NAME,
 				'Size' => strtoupper( $db_bytes ) . $default_unit,
+				'_Bytes' => strtoupper( $db_bytes ),
 			];
 		}
 
@@ -1088,6 +1112,25 @@ class DB_Command extends WP_CLI_Command {
 		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
 			WP_CLI::line( str_replace( " {$size_format_display}", '', $rows[0]['Size'] ) );
 		} else {
+
+			// Sort the rows by user input
+			if ( $orderby ) {
+				usort(
+					$rows,
+					function( $a, $b ) use ( $order, $orderby ) {
+
+						$orderby_array          = 'ASC' === $order ? array( $a, $b ) : array( $b, $a );
+						list( $first, $second ) = $orderby_array;
+
+						if( 'Size' === $orderby ) {
+							return $first['_Bytes'] > $second['_Bytes'];
+						}
+
+						return strcmp( $first[$orderby], $second[$orderby] );
+					}
+				);
+			}
+
 			// Display the rows.
 			$args = [
 				'format' => $format,
