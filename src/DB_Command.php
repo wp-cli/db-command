@@ -907,10 +907,10 @@ class DB_Command extends WP_CLI_Command {
 	 * [--order=<order>]
 	 * : Ascending or Descending order.
 	 * ---
-	 * default: ASC
+	 * default: asc
 	 * options:
-	 *   - ASC
-	 *   - DESC
+	 *   - asc
+	 *   - desc
 	 * ---
 	 *
 	 * [--orderby=<orderby>]
@@ -1119,10 +1119,10 @@ class DB_Command extends WP_CLI_Command {
 					$rows,
 					function( $a, $b ) use ( $order, $orderby ) {
 
-						$orderby_array          = 'ASC' === $order ? array( $a, $b ) : array( $b, $a );
+						$orderby_array          = 'asc' === $order ? array( $a, $b ) : array( $b, $a );
 						list( $first, $second ) = $orderby_array;
 
-						if( 'Size' === $orderby ) {
+						if( 'size' === $orderby ) {
 							return $first['_Bytes'] > $second['_Bytes'];
 						}
 
