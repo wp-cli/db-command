@@ -1013,7 +1013,7 @@ class DB_Command extends WP_CLI_Command {
 				$rows[] = [
 					'Name' => $table_name,
 					'Size' => strtoupper( $table_bytes ) . $default_unit,
-					'_Bytes' => strtoupper( $table_bytes ),
+					'Bytes' => strtoupper( $table_bytes ),
 				];
 			}
 		} else {
@@ -1030,7 +1030,7 @@ class DB_Command extends WP_CLI_Command {
 			$rows[] = [
 				'Name' => DB_NAME,
 				'Size' => strtoupper( $db_bytes ) . $default_unit,
-				'_Bytes' => strtoupper( $db_bytes ),
+				'Bytes' => strtoupper( $db_bytes ),
 			];
 		}
 
@@ -1123,7 +1123,7 @@ class DB_Command extends WP_CLI_Command {
 						list( $first, $second ) = $orderby_array;
 
 						if( 'size' === $orderby ) {
-							return $first['_Bytes'] > $second['_Bytes'];
+							return $first['Bytes'] > $second['Bytes'];
 						}
 
 						return strcmp( $first[$orderby], $second[$orderby] );
