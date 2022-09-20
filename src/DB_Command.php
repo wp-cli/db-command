@@ -1123,7 +1123,7 @@ class DB_Command extends WP_CLI_Command {
 							return $first['Bytes'] > $second['Bytes'];
 						}
 
-						return strcmp( $first[$orderby], $second[$orderby] );
+						return strcmp( $first['Name'], $second['Name'] );
 					}
 				);
 			}

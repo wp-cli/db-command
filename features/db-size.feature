@@ -203,61 +203,33 @@ Feature: Display database size
       KB
       """
 
-  Scenario: Display ordered table sizes for a WordPress install
+  Scenario: Display ordered table names for a WordPress install
     Given a WP install
 
-    When I run `wp db size --tables --order=DESC`
+    When I run `wp db size --tables --order=asc --format=json`
     Then STDOUT should contain:
       """
-      wp_users	65536 B
-      wp_usermeta	49152 B
-      wp_terms	49152 B
-      wp_termmeta	49152 B
-      wp_term_taxonomy	49152 B
-      wp_term_relationships	32768 B
-      wp_posts	81920 B
-      wp_postmeta	49152 B
-      wp_options	49152 B
-      wp_links	32768 B
-      wp_comments	98304 B
-      wp_commentmeta	49152 B
+      [{"Name":"wp_commentmeta",
       """
 
-    When I run `wp db size --tables --orderby=size`
+    When I run `wp db size --tables --order=desc --format=json`
     Then STDOUT should contain:
       """
-      wp_links	32768 B
-      wp_term_relationships	32768 B
-      wp_commentmeta	49152 B
-      wp_options	49152 B
-      wp_postmeta	49152 B
-      wp_term_taxonomy	49152 B
-      wp_termmeta	49152 B
-      wp_terms	49152 B
-      wp_usermeta	49152 B
-      wp_users	65536 B
-      wp_posts	81920 B
-      wp_comments	98304 B
+      [{"Name":"wp_users",
       """
 
-    When I run `wp db size --tables --orderby=size --order=DESC`
+  Scenario: Display ordered table sizes for a WordPress install
+    Given a WP install
+    And I run `wp post generate --post_type=page --post_status=draft --count=300`
+
+    When I run `wp db size --tables --order=desc --orderby=size --format=json`
     Then STDOUT should contain:
       """
-      wp_comments	98304 B
-      wp_posts	81920 B
-      wp_users	65536 B
-      wp_commentmeta	49152 B
-      wp_options	49152 B
-      wp_postmeta	49152 B
-      wp_term_taxonomy	49152 B
-      wp_termmeta	49152 B
-      wp_terms	49152 B
-      wp_usermeta	49152 B
-      wp_links	32768 B
-      wp_term_relationships	32768 B
+      [{"Name":"wp_posts",
       """
 
-    But STDOUT should not contain:
+    When I run `wp db size --tables --order=asc --orderby=size --format=json`
+    Then STDOUT should not contain:
       """
-      wp_cli_test
+      [{"Name":"wp_posts",
       """
