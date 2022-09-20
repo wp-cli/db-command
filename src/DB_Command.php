@@ -970,7 +970,7 @@ class DB_Command extends WP_CLI_Command {
 		$tables                 = ! empty( $tables );
 		$all_tables             = Utils\get_flag_value( $assoc_args, 'all-tables' );
 		$all_tables_with_prefix = Utils\get_flag_value( $assoc_args, 'all-tables-with-prefix' );
-		$order                  = Utils\get_flag_value( $assoc_args, 'order', 'ASC' );
+		$order                  = Utils\get_flag_value( $assoc_args, 'order', 'asc' );
 		$orderby                = Utils\get_flag_value( $assoc_args, 'orderby', null );
 
 		if ( ! is_null( $size_format ) && $human_readable ) {
