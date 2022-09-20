@@ -973,9 +973,6 @@ class DB_Command extends WP_CLI_Command {
 		$order                  = Utils\get_flag_value( $assoc_args, 'order', 'ASC' );
 		$orderby                = Utils\get_flag_value( $assoc_args, 'orderby', null );
 
-		// Normalize the `orderby` value to match the array key format.
-		$orderby = ucfirst( $orderby );
-
 		if ( ! is_null( $size_format ) && $human_readable ) {
 			WP_CLI::error( 'Cannot use --size_format and --human-readable arguments at the same time.' );
 		}
