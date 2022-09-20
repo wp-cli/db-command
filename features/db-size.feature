@@ -205,6 +205,7 @@ Feature: Display database size
 
   Scenario: Display ordered table names for a WordPress install
     Given a WP install
+    And I run `wp site empty --yes`
 
     When I run `wp db size --tables --order=asc --format=json`
     Then STDOUT should contain:
