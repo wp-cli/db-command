@@ -1008,8 +1008,8 @@ class DB_Command extends WP_CLI_Command {
 
 				// Add the table size to the list.
 				$rows[] = [
-					'Name' => $table_name,
-					'Size' => strtoupper( $table_bytes ) . $default_unit,
+					'Name'  => $table_name,
+					'Size'  => strtoupper( $table_bytes ) . $default_unit,
 					'Bytes' => strtoupper( $table_bytes ),
 				];
 			}
@@ -1025,8 +1025,8 @@ class DB_Command extends WP_CLI_Command {
 
 			// Add the database size to the list.
 			$rows[] = [
-				'Name' => DB_NAME,
-				'Size' => strtoupper( $db_bytes ) . $default_unit,
+				'Name'  => DB_NAME,
+				'Size'  => strtoupper( $db_bytes ) . $default_unit,
 				'Bytes' => strtoupper( $db_bytes ),
 			];
 		}
@@ -1119,7 +1119,7 @@ class DB_Command extends WP_CLI_Command {
 						$orderby_array          = 'asc' === $order ? array( $a, $b ) : array( $b, $a );
 						list( $first, $second ) = $orderby_array;
 
-						if( 'size' === $orderby ) {
+						if ( 'size' === $orderby ) {
 							return $first['Bytes'] > $second['Bytes'];
 						}
 
