@@ -221,6 +221,7 @@ Feature: Display database size
 
   Scenario: Display ordered table sizes for a WordPress install
     Given a WP install
+    And I run `wp site empty --yes`
     And I run `wp post generate --post_type=page --post_status=draft --count=300`
 
     When I run `wp db size --tables --order=desc --orderby=size --format=json`
