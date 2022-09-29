@@ -203,6 +203,7 @@ Feature: Display database size
       KB
       """
 
+  @broken
   Scenario: Display ordered table names for a WordPress install
     Given a WP install
     And I run `wp site empty --yes`
@@ -219,6 +220,7 @@ Feature: Display database size
       [{"Name":"wp_users",
       """
 
+  @broken
   Scenario: Display ordered table sizes for a WordPress install
     Given a WP install
     And I run `wp site empty --yes`
