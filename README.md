@@ -721,7 +721,7 @@ Defaults to all tables registered to the $wpdb database handler.
 Displays the database name and size.
 
 ~~~
-wp db size [--size_format=<format>] [--tables] [--human-readable] [--format=<format>] [--scope=<scope>] [--network] [--decimals=<decimals>] [--all-tables-with-prefix] [--all-tables]
+wp db size [--size_format=<format>] [--tables] [--human-readable] [--format=<format>] [--scope=<scope>] [--network] [--decimals=<decimals>] [--all-tables-with-prefix] [--all-tables] [--order=<order>] [--orderby=<orderby>]
 ~~~
 
 Display the database name and size for `DB_NAME` specified in wp-config.php.
@@ -795,6 +795,24 @@ Available size formats include:
 
 	[--all-tables]
 		List all tables in the database, regardless of the prefix, and even if not registered on $wpdb. Overrides --all-tables-with-prefix.
+
+	[--order=<order>]
+		Ascending or Descending order.
+		---
+		default: asc
+		options:
+		  - asc
+		  - desc
+		---
+
+	[--orderby=<orderby>]
+		Order by fields.
+		---
+		default: name
+		options:
+		  - name
+		  - size
+		---
 
 **EXAMPLES**
 
