@@ -202,3 +202,38 @@ Feature: Display database size
       """
       KB
       """
+
+  @broken
+  Scenario: Display ordered table names for a WordPress install
+    Given a WP install
+    And I run `wp site empty --yes`
+
+    When I run `wp db size --tables --order=asc --format=json`
+    Then STDOUT should contain:
+      """
+      [{"Name":"wp_commentmeta",
+      """
+
+    When I run `wp db size --tables --order=desc --format=json`
+    Then STDOUT should contain:
+      """
+      [{"Name":"wp_users",
+      """
+
+  @broken
+  Scenario: Display ordered table sizes for a WordPress install
+    Given a WP install
+    And I run `wp site empty --yes`
+    And I run `wp post generate --post_type=page --post_status=draft --count=300`
+
+    When I run `wp db size --tables --order=desc --orderby=size --format=json`
+    Then STDOUT should contain:
+      """
+      [{"Name":"wp_posts",
+      """
+
+    When I run `wp db size --tables --order=asc --orderby=size --format=json`
+    Then STDOUT should not contain:
+      """
+      [{"Name":"wp_posts",
+      """
