@@ -237,3 +237,12 @@ Feature: Display database size
       """
       [{"Name":"wp_posts",
       """
+
+  Scenario: Display ordered table sizes for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --tables --all-tables --orderby=size --order=desc --size_format=mb`
+    Then STDOUT should contain:
+      """
+      wp_posts
+      """
