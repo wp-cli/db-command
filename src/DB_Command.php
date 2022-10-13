@@ -1102,7 +1102,7 @@ class DB_Command extends WP_CLI_Command {
 					$size_format_display = preg_replace( '/IB$/u', 'iB', strtoupper( $size_format ) );
 
 					$decimals               = Utils\get_flag_value( $assoc_args, 'decimals', 0 );
-					$rows[ $index ]['Size'] = round( $row['Size'] / $divisor, $decimals ) . ' ' . $size_format_display;
+					$rows[ $index ]['Size'] = round( (int) $row['Bytes'] / $divisor, $decimals ) . ' ' . $size_format_display;
 			}
 		}
 
