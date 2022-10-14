@@ -657,8 +657,8 @@ class DB_Command extends WP_CLI_Command {
 				. 'FROM information_schema.`TABLES` T, '
 				. 'information_schema.`COLLATION_CHARACTER_SET_APPLICABILITY` CCSA '
 				. 'WHERE CCSA.collation_name = T.table_collation '
-				. 'AND T.table_schema = "' . DB_NAME . '" '
-				. 'AND T.table_name LIKE "%\_posts";';
+				. "AND T.table_schema = '" . DB_NAME . "' "
+				. "AND T.table_name LIKE '%\_posts';";
 
 		list( $stdout, $stderr, $exit_code ) = self::run(
 			sprintf(
