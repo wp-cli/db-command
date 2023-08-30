@@ -1373,7 +1373,7 @@ class DB_Command extends WP_CLI_Command {
 			if ( ! $text_columns ) {
 				if ( $stats ) {
 					$skipped[] = $table;
-				// Don't bother warning for term relationships (which is just 3 int columns).
+					// Don't bother warning for term relationships (which is just 3 int columns).
 				} elseif ( ! preg_match( '/_term_relationships$/', $table ) ) {
 					WP_CLI::warning( $primary_keys ? "No text columns for table '$table' - skipped." : "No primary key or text columns for table '$table' - skipped." );
 				}
