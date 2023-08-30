@@ -1114,7 +1114,7 @@ class DB_Command extends WP_CLI_Command {
 			if ( $orderby ) {
 				usort(
 					$rows,
-					function( $a, $b ) use ( $order, $orderby ) {
+					function ( $a, $b ) use ( $order, $orderby ) {
 
 						$orderby_array          = 'asc' === $order ? array( $a, $b ) : array( $b, $a );
 						list( $first, $second ) = $orderby_array;
