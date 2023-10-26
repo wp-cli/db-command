@@ -226,6 +226,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/check-table.html)
 	 * for more details on the `CHECK TABLE` statement.
 	 *
+	 * This command does not check whether WordPress is installed;
+	 * to do that run `wp core is-installed`.
+	 *
 	 * ## OPTIONS
 	 *
 	 * [--dbuser=<value>]
@@ -258,6 +261,8 @@ class DB_Command extends WP_CLI_Command {
 
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 		WP_CLI::success( 'Database checked.' );
+		WP_CLI::log( 'Check whether the WordPress DB tables are installed: wp core is-installed', 'db' );
+		WP_CLI::log( 'Check whether the WordPress DB tables need to be updated: wp core update-db --dry-run', 'db' );
 	}
 
 	/**
