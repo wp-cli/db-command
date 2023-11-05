@@ -261,8 +261,6 @@ class DB_Command extends WP_CLI_Command {
 
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 		WP_CLI::success( 'Database checked.' );
-		WP_CLI::log( 'To check whether the WordPress DB tables are installed: wp core is-installed', 'db' );
-		WP_CLI::log( 'To check whether the WordPress DB tables need to be updated: wp core update-db --dry-run', 'db' );
 	}
 
 	/**
