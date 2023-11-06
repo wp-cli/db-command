@@ -226,6 +226,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/check-table.html)
 	 * for more details on the `CHECK TABLE` statement.
 	 *
+	 * This command does not check whether WordPress is installed;
+	 * to do that run `wp core is-installed`.
+	 *
 	 * ## OPTIONS
 	 *
 	 * [--dbuser=<value>]
