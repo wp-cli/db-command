@@ -1208,10 +1208,10 @@ class DB_Command extends WP_CLI_Command {
 	 * : Output the 'table:column' line once before all matching row lines in the table column rather than before each matching row.
 	 *
 	 * [--one_line]
-	 * : Place the 'table:column' output on the same line as the row id and match ('table:column:id:match'). Overrides --table_column_once.
+	 * : Deprecated: use `--format` instead. Place the 'table:column' output on the same line as the row id and match ('table:column:id:match'). Overrides --table_column_once.
 	 *
 	 * [--matches_only]
-	 * : Only output the string matches (including context). No 'table:column's or row ids are outputted.
+	 * : Deprecated: use `--format` instead. Only output the string matches (including context). No 'table:column's or row ids are outputted.
 	 *
 	 * [--stats]
 	 * : Output stats on the number of matches found, time taken, tables/columns/rows searched, tables skipped.
@@ -1224,6 +1224,12 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--match_color=<color_code>]
 	 * : Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
+	 *
+	 * [--fields=<fields>]
+	 * : Get a specific subset of the fields.
+	 *
+	 * [--format=<format>]
+	 * : Render output in a particular format.
 	 *
 	 * The percent color codes available are:
 	 *
@@ -1293,6 +1299,21 @@ class DB_Command extends WP_CLI_Command {
 	 *     # SQL search and delete records from database table 'wp_options' where 'option_name' match 'foo'
 	 *     wp db query "DELETE from wp_options where option_id in ($(wp db query "SELECT GROUP_CONCAT(option_id SEPARATOR ',') from wp_options where option_name like '%foo%';" --silent --skip-column-names))"
 	 *
+	 *     # Search for a string and print the result as a table
+	 *     $ wp db search https://localhost:8889 --format=table
+	 *     +------------+--------------+-----------+----+-----------------------------+
+	 *     | table      | column       | key       | ID | match                       |
+	 *     +------------+--------------+-----------+----+-----------------------------+
+	 *     | wp_options | option_value | option_id | 1  | https://localhost:8889      |
+	 *     | wp_options | option_value | option_id | 2  | https://localhost:8889      |
+	 *     | wp_posts   | guid         | ID        | 1  | https://localhost:8889/?p=1 |
+	 *     | wp_users   | user_url     | ID        | 1  | https://localhost:8889      |
+	 *     +------------+--------------+-----------+----+-----------------------------+
+	 *
+	 *     # Search for a string and get only the IDs (only works for a single table)
+	 *     $ wp db search https://localhost:8889 wp_options --format=ids
+	 *     1 2
+	 *
 	 * @when after_wp_load
 	 */
 	public function search( $args, $assoc_args ) {
@@ -1332,6 +1353,8 @@ class DB_Command extends WP_CLI_Command {
 		$one_line          = Utils\get_flag_value( $assoc_args, 'one_line', false );
 		$matches_only      = Utils\get_flag_value( $assoc_args, 'matches_only', false );
 		$stats             = Utils\get_flag_value( $assoc_args, 'stats', false );
+		$fields            = Utils\get_flag_value( $assoc_args, 'fields' );
+		$format            = Utils\get_flag_value( $assoc_args, 'format' );
 
 		$column_count = 0;
 		$row_count    = 0;
@@ -1365,6 +1388,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$tables = Utils\wp_get_table_names( $args, $assoc_args );
+
+		$search_results = [];
 
 		$start_search_time = microtime( true );
 
@@ -1409,7 +1434,7 @@ class DB_Command extends WP_CLI_Command {
 					foreach ( $results as $result ) {
 						$col_val = $result->$column;
 						if ( preg_match_all( $search_regex, $col_val, $matches, PREG_OFFSET_CAPTURE ) ) {
-							if ( ! $matches_only && ( ! $table_column_once || ! $outputted_table_column_once ) && ! $one_line ) {
+							if ( ! $format && ! $matches_only && ( ! $table_column_once || ! $outputted_table_column_once ) && ! $one_line ) {
 								WP_CLI::log( $table_column_val );
 								$outputted_table_column_once = true;
 							}
@@ -1457,11 +1482,44 @@ class DB_Command extends WP_CLI_Command {
 							$match_count += $match_cnt;
 							$col_val      = implode( ' [...] ', $bits );
 
-							WP_CLI::log( $matches_only ? $col_val : ( $one_line ? "{$table_column_val}:{$pk_val}{$col_val}" : "{$pk_val}{$col_val}" ) );
+							if ( $format ) {
+								$search_results[] = [
+									'table'  => $table,
+									'column' => $column,
+									'key'    => $primary_key,
+									'ID'     => $result->$primary_key,
+									// Remove the colors for the format output.
+									'match'  => str_replace( [ $colors['match'][0], $colors['match'][1] ], [ '', '' ], $col_val ),
+								];
+							} else {
+								WP_CLI::log( $matches_only ? $col_val : ( $one_line ? "{$table_column_val}:{$pk_val}{$col_val}" : "{$pk_val}{$col_val}" ) );
+							}
 						}
 					}
 				}
 			}
+		}
+
+		if ( $format ) {
+			$formatter_args   = [
+				'format' => $format,
+			];
+			$formatter_fields = [ 'table', 'column', 'key', 'ID', 'match' ];
+
+			if ( $fields ) {
+				$fields           = explode( ',', $assoc_args['fields'] );
+				$formatter_fields = array_values( array_intersect( $formatter_fields, $fields ) );
+			}
+
+			if ( in_array( $format, [ 'ids', 'count' ], true ) ) {
+				if ( count( $tables ) > 1 ) {
+					WP_CLI::error( 'The "ids" format can only be used for a single table.' );
+				}
+				$search_results = array_column( $search_results, 'ID' );
+			}
+
+			$formatter = new Formatter( $formatter_args, $formatter_fields );
+			$formatter->display_items( $search_results );
 		}
 
 		if ( $stats ) {
