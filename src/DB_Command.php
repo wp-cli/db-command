@@ -401,6 +401,10 @@ class DB_Command extends WP_CLI_Command {
 	 * Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 	 *  and `DB_PASSWORD` database credentials specified in wp-config.php.
 	 *
+	 * Use the `--skip-column-names` MySQL argument to exclude the headers
+	 * from a SELECT query. Pipe the output to remove the ASCII table
+	 * entirely.
+	 *
 	 * ## OPTIONS
 	 *
 	 * [<sql>]
@@ -422,6 +426,12 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     # Execute a query stored in a file
 	 *     $ wp db query < debug.sql
+	 *
+	 *     # Query for a specific value in the database (pipe the result to remove the ASCII table borders)
+	 *     $ wp db query 'SELECT option_value FROM wp_options WHERE option_name="home"' --skip-column-names
+	 *     +---------------------+
+	 *     | https://example.com |
+	 *     +---------------------+
 	 *
 	 *     # Check all tables in the database
 	 *     $ wp db query "CHECK TABLE $(wp db tables | paste -s -d, -);"
