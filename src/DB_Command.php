@@ -425,9 +425,9 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     # Query for a specific value in the database (pipe the result to remove the ASCII table borders)
 	 *     $ wp db query 'SELECT option_value FROM wp_options WHERE option_name="home"' --skip-column-names
-	 *     +----------------------+
-	 *     | https://vanilla.test |
-	 *     +----------------------+
+	 *     +---------------------+
+	 *     | https://example.com |
+	 *     +---------------------+
 	 *
 	 *     # Check all tables in the database
 	 *     $ wp db query "CHECK TABLE $(wp db tables | paste -s -d, -);"
