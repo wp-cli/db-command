@@ -401,6 +401,10 @@ class DB_Command extends WP_CLI_Command {
 	 * Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
 	 *  and `DB_PASSWORD` database credentials specified in wp-config.php.
 	 *
+	 * Use the `--skip-column-names` MySQL argument to exclude the headers
+	 * from a SELECT query. Pipe the output to remove the ASCII table
+	 * entirely.
+	 *
 	 * ## OPTIONS
 	 *
 	 * [<sql>]
