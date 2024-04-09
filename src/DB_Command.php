@@ -457,6 +457,29 @@ class DB_Command extends WP_CLI_Command {
 	 *     +---+------+------------------------------+-----+
 	 *     | 2 | home | http://wordpress-develop.dev | yes |
 	 *     +---+------+------------------------------+-----+
+	 * 
+	 * ## MULTISITE USAGE
+	 * 
+	 * Please note that the global `--url` parameter will have no effect on this command.
+	 * In order to query for data in a site other than your primary site,
+	 * you will need to manually modify the table names to use the prefix that includes the site's ID.
+	 * 
+	 * For example, to get the `home` option for your second site, modify the example above like so:
+	 * 
+	 *     $ wp db query 'SELECT option_value FROM wp_2_options WHERE option_name="home"' --skip-column-names
+	 *     +----------------------+
+	 *     | https://example2.com |
+	 *     +----------------------+
+	 * 
+	 * To confirm the ID for the site you want to query, you can use the `wp site list` command:
+	 * 
+	 *     # wp site list --fields=blog_id,url
+	 *     +---------+-----------------------+
+	 *     | blog_id | url                   |
+	 *     +---------+-----------------------+
+	 *     | 1       | https://example1.com/ |
+	 *     | 2       | https://example2.com/ |
+	 *     +---------+-----------------------+
 	 */
 	public function query( $args, $assoc_args ) {
 
