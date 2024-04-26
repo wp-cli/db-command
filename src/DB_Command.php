@@ -1484,12 +1484,16 @@ class DB_Command extends WP_CLI_Command {
 
 							if ( $format ) {
 								$search_results[] = [
-									'table'  => $table,
-									'column' => $column,
-									'key'    => $primary_key,
-									'value'  => $result->$primary_key,
+									'table'             => $table,
+									'column'            => $column,
 									// Remove the colors for the format output.
-									'match'  => str_replace( [ $colors['match'][0], $colors['match'][1] ], [ '', '' ], $col_val ),
+									'match'             => str_replace(
+										[ $colors['match'][0], $colors['match'][1] ],
+										[ '','' ],
+										$col_val
+									),
+									'primary_key_name'  => $primary_key,
+									'primary_key_value' => $result->$primary_key,
 								];
 							} else {
 								WP_CLI::log( $matches_only ? $col_val : ( $one_line ? "{$table_column_val}:{$pk_val}{$col_val}" : "{$pk_val}{$col_val}" ) );
@@ -1504,7 +1508,7 @@ class DB_Command extends WP_CLI_Command {
 			$formatter_args   = [
 				'format' => $format,
 			];
-			$formatter_fields = [ 'table', 'column', 'key', 'value', 'match' ];
+			$formatter_fields = [ 'table', 'column', 'match', 'primary_key_name', 'primary_key_value' ];
 
 			if ( $fields ) {
 				$fields           = explode( ',', $assoc_args['fields'] );
@@ -1515,7 +1519,7 @@ class DB_Command extends WP_CLI_Command {
 				if ( count( $tables ) > 1 ) {
 					WP_CLI::error( 'The "ids" format can only be used for a single table.' );
 				}
-				$search_results = array_column( $search_results, 'value' );
+				$search_results = array_column( $search_results, 'primary_key_value' );
 			}
 
 			$formatter = new Formatter( $formatter_args, $formatter_fields );

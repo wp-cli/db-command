@@ -1073,8 +1073,8 @@ Feature: Search through the database
     When I run `wp db search example.com --format=csv`
     Then STDOUT should contain:
       """
-      wp_options,option_value,option_id,14,mail.example.com
-      wp_options,option_value,option_id,15,login@example.com
+      wp_options,option_value,mail.example.com,option_id,14
+      wp_options,option_value,login@example.com,option_id,15
       """
 
     When I try `wp db search example.com --format=ids`
