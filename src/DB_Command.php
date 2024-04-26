@@ -1301,14 +1301,14 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     # Search for a string and print the result as a table
 	 *     $ wp db search https://localhost:8889 --format=table
-	 *     +------------+--------------+-----------+----+-----------------------------+
-	 *     | table      | column       | key       | ID | match                       |
-	 *     +------------+--------------+-----------+----+-----------------------------+
-	 *     | wp_options | option_value | option_id | 1  | https://localhost:8889      |
-	 *     | wp_options | option_value | option_id | 2  | https://localhost:8889      |
-	 *     | wp_posts   | guid         | ID        | 1  | https://localhost:8889/?p=1 |
-	 *     | wp_users   | user_url     | ID        | 1  | https://localhost:8889      |
-	 *     +------------+--------------+-----------+----+-----------------------------+
+	 *     +------------+--------------+-----------+-------+-----------------------------+
+	 *     | table      | column       | key       | value | match                       |
+	 *     +------------+--------------+-----------+-------+-----------------------------+
+	 *     | wp_options | option_value | option_id | 1     | https://localhost:8889      |
+	 *     | wp_options | option_value | option_id | 2     | https://localhost:8889      |
+	 *     | wp_posts   | guid         | ID        | 1     | https://localhost:8889/?p=1 |
+	 *     | wp_users   | user_url     | ID        | 1     | https://localhost:8889      |
+	 *     +------------+--------------+-----------+-------+-----------------------------+
 	 *
 	 *     # Search for a string and get only the IDs (only works for a single table)
 	 *     $ wp db search https://localhost:8889 wp_options --format=ids
@@ -1487,7 +1487,7 @@ class DB_Command extends WP_CLI_Command {
 									'table'  => $table,
 									'column' => $column,
 									'key'    => $primary_key,
-									'ID'     => $result->$primary_key,
+									'value'  => $result->$primary_key,
 									// Remove the colors for the format output.
 									'match'  => str_replace( [ $colors['match'][0], $colors['match'][1] ], [ '', '' ], $col_val ),
 								];
@@ -1504,7 +1504,7 @@ class DB_Command extends WP_CLI_Command {
 			$formatter_args   = [
 				'format' => $format,
 			];
-			$formatter_fields = [ 'table', 'column', 'key', 'ID', 'match' ];
+			$formatter_fields = [ 'table', 'column', 'key', 'value', 'match' ];
 
 			if ( $fields ) {
 				$fields           = explode( ',', $assoc_args['fields'] );
@@ -1515,7 +1515,7 @@ class DB_Command extends WP_CLI_Command {
 				if ( count( $tables ) > 1 ) {
 					WP_CLI::error( 'The "ids" format can only be used for a single table.' );
 				}
-				$search_results = array_column( $search_results, 'ID' );
+				$search_results = array_column( $search_results, 'value' );
 			}
 
 			$formatter = new Formatter( $formatter_args, $formatter_fields );
