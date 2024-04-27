@@ -1066,3 +1066,23 @@ Feature: Search through the database
       :aöXYXYX
       """
     And STDERR should be empty
+
+  Scenario: Search for a string and output the format as a table
+    Given a WP install
+
+    When I run `wp db search mail.example.com --format=csv`
+    Then STDOUT should contain:
+      """
+      wp_options,option_value,mail.example.com,option_id
+      """
+
+    When I try `wp db search example.com --format=ids`
+    Then STDERR should be:
+      """
+      Error: The "ids" format can only be used for a single table.
+      """
+    And STDOUT should be empty
+    And the return code should be 1
+
+    When I run `wp db search mail.example.com wp_options --format=ids`
+    Then STDOUT should not be empty
