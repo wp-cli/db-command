@@ -1208,10 +1208,10 @@ class DB_Command extends WP_CLI_Command {
 	 * : Output the 'table:column' line once before all matching row lines in the table column rather than before each matching row.
 	 *
 	 * [--one_line]
-	 * : Deprecated: use `--format` instead. Place the 'table:column' output on the same line as the row id and match ('table:column:id:match'). Overrides --table_column_once.
+	 * : Place the 'table:column' output on the same line as the row id and match ('table:column:id:match'). Overrides --table_column_once.
 	 *
 	 * [--matches_only]
-	 * : Deprecated: use `--format` instead. Only output the string matches (including context). No 'table:column's or row ids are outputted.
+	 * : Only output the string matches (including context). No 'table:column's or row ids are outputted.
 	 *
 	 * [--stats]
 	 * : Output stats on the number of matches found, time taken, tables/columns/rows searched, tables skipped.
@@ -1300,15 +1300,15 @@ class DB_Command extends WP_CLI_Command {
 	 *     wp db query "DELETE from wp_options where option_id in ($(wp db query "SELECT GROUP_CONCAT(option_id SEPARATOR ',') from wp_options where option_name like '%foo%';" --silent --skip-column-names))"
 	 *
 	 *     # Search for a string and print the result as a table
-	 *     $ wp db search https://localhost:8889 --format=table
-	 *     +------------+--------------+-----------+-------+-----------------------------+
-	 *     | table      | column       | key       | value | match                       |
-	 *     +------------+--------------+-----------+-------+-----------------------------+
-	 *     | wp_options | option_value | option_id | 1     | https://localhost:8889      |
-	 *     | wp_options | option_value | option_id | 2     | https://localhost:8889      |
-	 *     | wp_posts   | guid         | ID        | 1     | https://localhost:8889/?p=1 |
-	 *     | wp_users   | user_url     | ID        | 1     | https://localhost:8889      |
-	 *     +------------+--------------+-----------+-------+-----------------------------+
+	 *     $ wp db search https://localhost:8889 --format=table --fields=table,column,match
+	 *     +------------+--------------+-----------------------------+
+	 *     | table      | column       | match                       |
+	 *     +------------+--------------+-----------------------------+
+	 *     | wp_options | option_value | https://localhost:8889      |
+	 *     | wp_options | option_value | https://localhost:8889      |
+	 *     | wp_posts   | guid         | https://localhost:8889/?p=1 |
+	 *     | wp_users   | user_url     | https://localhost:8889      |
+	 *     +------------+--------------+-----------------------------+
 	 *
 	 *     # Search for a string and get only the IDs (only works for a single table)
 	 *     $ wp db search https://localhost:8889 wp_options --format=ids
