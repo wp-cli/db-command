@@ -45,18 +45,19 @@ class DB_Command extends WP_CLI_Command {
 	 * A list of incompatible SQL modes.
 	 *
 	 * Copied over from WordPress Core code.
+	 *
 	 * @see https://github.com/WordPress/wordpress-develop/blob/5.4.0/src/wp-includes/wp-db.php#L559-L572
 	 *
 	 * @var string[] Array of SQL mode names that are incompatible with WordPress.
 	 */
-	protected $sql_incompatible_modes = [
+	protected $sql_incompatible_modes = array(
 		'NO_ZERO_DATE',
 		'ONLY_FULL_GROUP_BY',
 		'STRICT_TRANS_TABLES',
 		'STRICT_ALL_TABLES',
 		'TRADITIONAL',
 		'ANSI',
-	];
+	);
 
 	/**
 	 * Creates a new database.
@@ -198,8 +199,8 @@ class DB_Command extends WP_CLI_Command {
 		);
 
 		$tables = Utils\wp_get_table_names(
-			[],
-			[ 'all-tables-with-prefix' => true ]
+			array(),
+			array( 'all-tables-with-prefix' => true )
 		);
 
 		foreach ( $tables as $table ) {
@@ -632,7 +633,7 @@ class DB_Command extends WP_CLI_Command {
 		$initial_command = sprintf( "{$mysqldump_binary}%s ", $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running initial shell command: {$initial_command}", 'db' );
 
-		$default_arguments = [ '%s' ];
+		$default_arguments = array( '%s' );
 
 		if ( $support_column_statistics ) {
 			$default_arguments[] = '--skip-column-statistics';
@@ -644,7 +645,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = $initial_command . implode( ' ', $default_arguments );
 
-		$command_esc_args = [ DB_NAME ];
+		$command_esc_args = array( DB_NAME );
 
 		if ( isset( $assoc_args['tables'] ) ) {
 			$tables = explode( ',', trim( $assoc_args['tables'], ',' ) );
@@ -667,7 +668,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
-		$escaped_command = call_user_func_array( '\WP_CLI\Utils\esc_cmd', array_merge( [ $command ], $command_esc_args ) );
+		$escaped_command = call_user_func_array( '\WP_CLI\Utils\esc_cmd', array_merge( array( $command ), $command_esc_args ) );
 
 		// Remove parameters not needed for SQL run.
 		unset( $assoc_args['porcelain'] );
@@ -701,7 +702,7 @@ class DB_Command extends WP_CLI_Command {
 				'/usr/bin/env mysql%s --no-auto-rehash --batch --skip-column-names',
 				$this->get_defaults_flag_string( $assoc_args )
 			),
-			[ 'execute' => $query ],
+			array( 'execute' => $query ),
 			false
 		);
 
@@ -764,7 +765,7 @@ class DB_Command extends WP_CLI_Command {
 
 		// Process options to MySQL.
 		$mysql_args = array_merge(
-			[ 'database' => DB_NAME ],
+			array( 'database' => DB_NAME ),
 			self::get_dbuser_dbpass_args( $assoc_args ),
 			self::get_mysql_args( $assoc_args )
 		);
@@ -1023,8 +1024,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		// Build rows for the formatter.
-		$rows   = [];
-		$fields = [ 'Name', 'Size' ];
+		$rows   = array();
+		$fields = array( 'Name', 'Size' );
 
 		$default_unit = ( empty( $size_format ) && ! $human_readable ) ? ' B' : '';
 
@@ -1043,11 +1044,11 @@ class DB_Command extends WP_CLI_Command {
 				);
 
 				// Add the table size to the list.
-				$rows[] = [
+				$rows[] = array(
 					'Name'  => $table_name,
 					'Size'  => strtoupper( $table_bytes ) . $default_unit,
 					'Bytes' => strtoupper( $table_bytes ),
-				];
+				);
 			}
 		} else {
 
@@ -1060,11 +1061,11 @@ class DB_Command extends WP_CLI_Command {
 			);
 
 			// Add the database size to the list.
-			$rows[] = [
+			$rows[] = array(
 				'Name'  => DB_NAME,
 				'Size'  => strtoupper( $db_bytes ) . $default_unit,
 				'Bytes' => strtoupper( $db_bytes ),
-			];
+			);
 		}
 
 		if ( ! empty( $size_format ) || $human_readable ) {
@@ -1086,7 +1087,7 @@ class DB_Command extends WP_CLI_Command {
 
 				if ( $human_readable ) {
 					$size_key = floor( log( $row['Size'] ) / log( 1000 ) );
-					$sizes    = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+					$sizes    = array( 'B', 'KB', 'MB', 'GB', 'TB' );
 
 					$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
 				}
@@ -1165,9 +1166,9 @@ class DB_Command extends WP_CLI_Command {
 			}
 
 			// Display the rows.
-			$args = [
+			$args = array(
 				'format' => $format,
-			];
+			);
 
 			$formatter = new Formatter( $args, $fields );
 			$formatter->display_items( $rows );
@@ -1266,7 +1267,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--exclude_revisions]
 	 * : Exclude revisions from the search.
-	 * 
+	 *
 	 * The percent color codes available are:
 	 *
 	 * | Code | Color
@@ -1378,11 +1379,11 @@ class DB_Command extends WP_CLI_Command {
 
 		$colors = self::get_colors(
 			$assoc_args,
-			[
+			array(
 				'table_column' => '%G',
 				'id'           => '%Y',
 				'match'        => $before_context || $after_context ? '%3%k' : '',
-			]
+			)
 		);
 
 		$table_column_once = Utils\get_flag_value( $assoc_args, 'table_column_once', false );
@@ -1396,7 +1397,7 @@ class DB_Command extends WP_CLI_Command {
 		$column_count = 0;
 		$row_count    = 0;
 		$match_count  = 0;
-		$skipped      = [];
+		$skipped      = array();
 
 		if ( $regex ) {
 			// Note the user must escape the delimiter in the search.
@@ -1426,7 +1427,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$tables = Utils\wp_get_table_names( $args, $assoc_args );
 
-		$search_results = [];
+		$search_results = array();
 
 		$start_search_time = microtime( true );
 
@@ -1466,15 +1467,14 @@ class DB_Command extends WP_CLI_Command {
 						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
 						$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}" );
 					}
+				} elseif ( $exclude_revisions && 'wp_posts' === $table ) {
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
+					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s AND {$post_type_sql} NOT IN ( 'revision' )", $esc_like_search ) );
 				} else {
-					if ( $exclude_revisions && 'wp_posts' === $table ) {
-						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-						$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s AND {$post_type_sql} NOT IN ( 'revision' )", $esc_like_search ) );
-					} else {
-						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-						$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s;", $esc_like_search ) );
-					}
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
+					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s;", $esc_like_search ) );
 				}
+
 				if ( $results ) {
 					$row_count                  += count( $results );
 					$table_column_val            = $colors['table_column'][0] . "{$table}:{$column}" . $colors['table_column'][1];
@@ -1488,7 +1488,7 @@ class DB_Command extends WP_CLI_Command {
 							}
 							$pk_val = $primary_key ? ( $colors['id'][0] . $result->$primary_key . $colors['id'][1] . ':' ) : '';
 
-							$bits         = [];
+							$bits         = array();
 							$col_encoding = $encoding;
 							if ( ! $col_encoding && ( $before_context || $after_context ) && function_exists( 'mb_detect_encoding' ) ) {
 								$col_encoding = mb_detect_encoding( $col_val, null, true /*strict*/ );
@@ -1531,18 +1531,18 @@ class DB_Command extends WP_CLI_Command {
 							$col_val      = implode( ' [...] ', $bits );
 
 							if ( $format ) {
-								$search_results[] = [
+								$search_results[] = array(
 									'table'             => $table,
 									'column'            => $column,
 									// Remove the colors for the format output.
 									'match'             => str_replace(
-										[ $colors['match'][0], $colors['match'][1] ],
-										[ '','' ],
+										array( $colors['match'][0], $colors['match'][1] ),
+										array( '', '' ),
 										$col_val
 									),
 									'primary_key_name'  => $primary_key,
 									'primary_key_value' => $result->$primary_key,
-								];
+								);
 							} else {
 								WP_CLI::log( $matches_only ? $col_val : ( $one_line ? "{$table_column_val}:{$pk_val}{$col_val}" : "{$pk_val}{$col_val}" ) );
 							}
@@ -1553,17 +1553,17 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		if ( $format ) {
-			$formatter_args   = [
+			$formatter_args   = array(
 				'format' => $format,
-			];
-			$formatter_fields = [ 'table', 'column', 'match', 'primary_key_name', 'primary_key_value' ];
+			);
+			$formatter_fields = array( 'table', 'column', 'match', 'primary_key_name', 'primary_key_value' );
 
 			if ( $fields ) {
 				$fields           = explode( ',', $assoc_args['fields'] );
 				$formatter_fields = array_values( array_intersect( $formatter_fields, $fields ) );
 			}
 
-			if ( in_array( $format, [ 'ids', 'count' ], true ) ) {
+			if ( in_array( $format, array( 'ids', 'count' ), true ) ) {
 				if ( count( $tables ) > 1 ) {
 					WP_CLI::error( 'The "ids" format can only be used for a single table.' );
 				}
@@ -1664,17 +1664,17 @@ class DB_Command extends WP_CLI_Command {
 
 		$format = Utils\get_flag_value( $assoc_args, 'format' );
 
-		Utils\wp_get_table_names( [ $args[0] ], [ 'all-tables' => true ] );
+		Utils\wp_get_table_names( array( $args[0] ), array( 'all-tables' => true ) );
 
 		$columns = $wpdb->get_results(
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Asserted to be a valid table name through wp_get_table_names.
 			'SHOW COLUMNS FROM ' . $args[0]
 		);
 
-		$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' ];
-		$formatter_args   = [
+		$formatter_fields = array( 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' );
+		$formatter_args   = array(
 			'format' => $format,
-		];
+		);
 
 		$formatter = new Formatter( $formatter_args, $formatter_fields );
 		$formatter->display_items( $columns );
@@ -1701,7 +1701,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @param string $query      Query to execute.
 	 * @param array  $assoc_args Optional. Associative array of arguments.
 	 */
-	protected function run_query( $query, $assoc_args = [] ) {
+	protected function run_query( $query, $assoc_args = array() ) {
 		// Ensure that the SQL mode is compatible with WPDB.
 		$query = $this->get_sql_mode_query( $assoc_args ) . $query;
 
@@ -1717,7 +1717,7 @@ class DB_Command extends WP_CLI_Command {
 				'/usr/bin/env mysql%s --no-auto-rehash',
 				$this->get_defaults_flag_string( $assoc_args )
 			),
-			array_merge( [ 'execute' => $query ], $mysql_args )
+			array_merge( array( 'execute' => $query ), $mysql_args )
 		);
 	}
 
@@ -1741,12 +1741,12 @@ class DB_Command extends WP_CLI_Command {
 	 *     @type int    $exit_code Exit code of the process.
 	 * }
 	 */
-	private static function run( $cmd, $assoc_args = [], $send_to_shell = true, $interactive = false ) {
-		$required = [
+	private static function run( $cmd, $assoc_args = array(), $send_to_shell = true, $interactive = false ) {
+		$required = array(
 			'host' => DB_HOST,
 			'user' => DB_USER,
 			'pass' => DB_PASSWORD,
-		];
+		);
 
 		if ( ! isset( $assoc_args['default-character-set'] )
 			&& defined( 'DB_CHARSET' ) && constant( 'DB_CHARSET' ) ) {
@@ -1789,7 +1789,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @return array Array with `dbuser' and 'dbpass' set if in passed-in associative args array.
 	 */
 	private static function get_dbuser_dbpass_args( $assoc_args ) {
-		$mysql_args = [];
+		$mysql_args = array();
 		$dbuser     = Utils\get_flag_value( $assoc_args, 'dbuser' );
 		if ( null !== $dbuser ) {
 			$mysql_args['dbuser'] = $dbuser;
@@ -1811,9 +1811,9 @@ class DB_Command extends WP_CLI_Command {
 		global $wpdb;
 
 		$table_sql       = self::esc_sql_ident( $table );
-		$primary_keys    = [];
-		$text_columns    = [];
-		$all_columns     = [];
+		$primary_keys    = array();
+		$text_columns    = array();
+		$all_columns     = array();
 		$suppress_errors = $wpdb->suppress_errors();
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
@@ -1832,7 +1832,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 		$wpdb->suppress_errors( $suppress_errors );
-		return [ $primary_keys, $text_columns, $all_columns ];
+		return array( $primary_keys, $text_columns, $all_columns );
 	}
 
 	/**
@@ -1842,7 +1842,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @return bool True if text column, false otherwise.
 	 */
 	private static function is_text_col( $type ) {
-		foreach ( [ 'text', 'varchar' ] as $token ) {
+		foreach ( array( 'text', 'varchar' ) as $token ) {
 			if ( false !== strpos( $type, $token ) ) {
 				return true;
 			}
@@ -1900,7 +1900,7 @@ class DB_Command extends WP_CLI_Command {
 					$colors[ $color_col ] = $matches[0];
 				}
 			}
-			$colors[ $color_col ] = $colors[ $color_col ] ? [ WP_CLI::colorize( $colors[ $color_col ] ), $color_reset ] : [ '', '' ];
+			$colors[ $color_col ] = $colors[ $color_col ] ? array( WP_CLI::colorize( $colors[ $color_col ] ), $color_reset ) : array( '', '' );
 		}
 
 		return $colors;
@@ -1914,7 +1914,7 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	private static function get_mysql_args( $assoc_args ) {
 
-		$allowed_mysql_options = [
+		$allowed_mysql_options = array(
 			'auto-rehash',
 			'auto-vertical-output',
 			'batch',
@@ -2001,9 +2001,9 @@ class DB_Command extends WP_CLI_Command {
 			'vertical',
 			'wait',
 			'xml',
-		];
+		);
 
-		$mysql_args = [];
+		$mysql_args = array();
 
 		foreach ( $assoc_args as $mysql_option_key => $mysql_option_value ) {
 			// Check flags to make sure they only contain valid options.
@@ -2053,7 +2053,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @return string Query string to use for setting the SQL modes to a
 	 *                compatible state.
 	 */
-	protected function get_sql_mode_query( $assoc_args, $modes = [] ) {
+	protected function get_sql_mode_query( $assoc_args, $modes = array() ) {
 		if ( empty( $modes ) ) {
 			$modes = $this->get_current_sql_modes( $assoc_args );
 		}
@@ -2102,22 +2102,22 @@ class DB_Command extends WP_CLI_Command {
 
 		// Make sure the provided arguments don't interfere with the expected
 		// output here.
-		$args = [];
-		foreach ( [] as $arg ) {
+		$args = array();
+		foreach ( array() as $arg ) {
 			if ( isset( $assoc_args[ $arg ] ) ) {
 				$args[ $arg ] = $assoc_args[ $arg ];
 			}
 		}
 
 		if ( null === $modes ) {
-			$modes = [];
+			$modes = array();
 
 			list( $stdout, $stderr, $exit_code ) = self::run(
 				sprintf(
 					'/usr/bin/env mysql%s --no-auto-rehash --batch --skip-column-names',
 					$this->get_defaults_flag_string( $assoc_args )
 				),
-				array_merge( $args, [ 'execute' => 'SELECT @@SESSION.sql_mode' ] ),
+				array_merge( $args, array( 'execute' => 'SELECT @@SESSION.sql_mode' ) ),
 				false
 			);
 
@@ -2139,7 +2139,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 
 			if ( false === $modes ) {
-				$modes = [];
+				$modes = array();
 			}
 		}
 
