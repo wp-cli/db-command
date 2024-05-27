@@ -1264,6 +1264,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--format=<format>]
 	 * : Render output in a particular format.
 	 *
+	 * [--exclude_revisions]
+	 * : Exclude revisions from the search.
+	 * 
 	 * The percent color codes available are:
 	 *
 	 * | Code | Color
@@ -1388,6 +1391,7 @@ class DB_Command extends WP_CLI_Command {
 		$stats             = Utils\get_flag_value( $assoc_args, 'stats', false );
 		$fields            = Utils\get_flag_value( $assoc_args, 'fields' );
 		$format            = Utils\get_flag_value( $assoc_args, 'format' );
+		$exclude_revisions = Utils\get_flag_value( $assoc_args, 'exclude_revisions', false );
 
 		$column_count = 0;
 		$row_count    = 0;
@@ -1452,13 +1456,24 @@ class DB_Command extends WP_CLI_Command {
 			}
 
 			foreach ( $text_columns as $column ) {
-				$column_sql = self::esc_sql_ident( $column );
+				$column_sql    = self::esc_sql_ident( $column );
+				$post_type_sql = self::esc_sql_ident( 'post_type' );
 				if ( $regex ) {
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-					$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}" );
+					if ( $exclude_revisions && 'wp_posts' === $table ) {
+						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
+						$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$post_type_sql} NOT IN ( 'revision' )" );
+					} else {
+						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
+						$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}" );
+					}
 				} else {
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s;", $esc_like_search ) );
+					if ( $exclude_revisions && 'wp_posts' === $table ) {
+						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
+						$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s AND {$post_type_sql} NOT IN ( 'revision' )", $esc_like_search ) );
+					} else {
+						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
+						$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s;", $esc_like_search ) );
+					}
 				}
 				if ( $results ) {
 					$row_count                  += count( $results );
