@@ -1459,19 +1459,19 @@ class DB_Command extends WP_CLI_Command {
 				$column_sql    = self::esc_sql_ident( $column );
 				$post_type_sql = self::esc_sql_ident( 'post_type' );
 				if ( $regex ) {
+					$sql = "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}";
 					if ( $exclude_revisions && 'wp_posts' === $table ) {
-						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-						$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$post_type_sql} NOT IN ( 'revision' )" );
-					} else {
-						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-						$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}" );
+						$sql .= " WHERE {$post_type_sql} NOT IN ( 'revision' )";
 					}
-				} elseif ( $exclude_revisions && 'wp_posts' === $table ) {
 					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s AND {$post_type_sql} NOT IN ( 'revision' )", $esc_like_search ) );
+					$results = $wpdb->get_results( $sql );
 				} else {
+					$sql = "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s";
+					if ( $exclude_revisions && 'wp_posts' === $table ) {
+						$sql .= " AND {$post_type_sql} NOT IN ( 'revision' )";
+					}
 					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s;", $esc_like_search ) );
+					$results = $wpdb->get_results( $wpdb->prepare( $sql, $esc_like_search ) );
 				}
 				if ( $results ) {
 					$row_count                  += count( $results );
