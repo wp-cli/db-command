@@ -149,7 +149,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database reset.
 	 */
 	public function reset( $_, $assoc_args ) {
-		WP_CLI::confirm( "TEST HELLO! Are you sure you want to reset the '" . DB_NAME . "' database?", $assoc_args );
+		WP_CLI::confirm( "Are you sure you want to reset the '" . DB_NAME . "' database?", $assoc_args );
 
 		$this->run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ), $assoc_args );
 		$this->run_query( self::get_create_query(), $assoc_args );
