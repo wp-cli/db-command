@@ -149,7 +149,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database reset.
 	 */
 	public function reset( $_, $assoc_args ) {
-		WP_CLI::confirm( "Are you sure you want to reset the '" . DB_NAME . "' database?", $assoc_args );
+		WP_CLI::confirm( "TEST HELLO! Are you sure you want to reset the '" . DB_NAME . "' database?", $assoc_args );
 
 		$this->run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ), $assoc_args );
 		$this->run_query( self::get_create_query(), $assoc_args );
@@ -586,6 +586,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     ...
 	 *
 	 * @alias dump
+	 * @when after_wp_load
 	 */
 	public function export( $args, $assoc_args ) {
 		if ( ! empty( $args[0] ) ) {
@@ -596,6 +597,13 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
 
 		}
+
+		if ( WP_SQLite_Export::get_sqlite_version() ) {
+			$export = new WP_SQLite_Export();
+			$export->run();
+			return;
+		}
+
 		$stdout    = ( '-' === $result_file );
 		$porcelain = Utils\get_flag_value( $assoc_args, 'porcelain' );
 
@@ -762,6 +770,13 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
 
+		// We need to detect if the site is using SQLite
+		if( WP_SQLite_Import::get_sqlite_version() ) {
+			$importer = new WP_SQLite_Import();
+			$importer->run( $args[0] );
+			return;
+		}
+
 		// Process options to MySQL.
 		$mysql_args = array_merge(
 			[ 'database' => DB_NAME ],
@@ -843,7 +858,6 @@ class DB_Command extends WP_CLI_Command {
 	 *     $ wp db export --tables=$(wp db tables --url=sub.example.com --format=csv)
 	 *     Success: Exported to wordpress_dbase.sql
 	 *
-	 * @when after_wp_load
 	 */
 	public function tables( $args, $assoc_args ) {
 
