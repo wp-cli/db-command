@@ -586,7 +586,6 @@ class DB_Command extends WP_CLI_Command {
 	 *     ...
 	 *
 	 * @alias dump
-	 * @when after_wp_load
 	 */
 	public function export( $args, $assoc_args ) {
 		if ( ! empty( $args[0] ) ) {
