@@ -20,9 +20,9 @@ class WP_SQLite_Import extends WP_SQLite_Base {
 		$this->load_dependencies();
 		$translator = new WP_SQLite_Translator();
 		foreach ( $this->parse_statements( $sql_file_path ) as $statement ) {
-			$result = $translator->query($statement);
-			if ( $result === false ) {
-				WP_CLI::warning( "Could not execute statement: " . $statement );
+			$result = $translator->query( $statement );
+			if ( false === $result ) {
+				WP_CLI::warning( 'Could not execute statement: ' . $statement );
 			}
 		}
 	}
@@ -35,55 +35,56 @@ class WP_SQLite_Import extends WP_SQLite_Base {
 	 * @throws Exception
 	 */
 	public function parse_statements( $sql_file_path ) {
-		$handle = fopen($sql_file_path, 'r');
-		if (!$handle) {
-			throw new Exception("Unable to open file: $sql_file_path");
+		$handle = fopen( $sql_file_path, 'r' );
+		if ( ! $handle ) {
+			throw new Exception( "Unable to open file: $sql_file_path" );
 		}
 
 		$single_quotes = 0;
 		$double_quotes = 0;
-		$in_comment = false;
-		$buffer = '';
+		$in_comment    = false;
+		$buffer        = '';
 
-		while (($line = fgets($handle)) !== false) {
-			$line = trim($line);
+		while ( ( $line = fgets( $handle ) ) !== false ) {
+			$line = trim( $line );
 
 			// Skip empty lines and comments
-			if (empty($line) || strpos($line, '--') === 0 || strpos($line, '#') === 0) {
+			if ( empty( $line ) || strpos( $line, '--' ) === 0 || strpos( $line, '#' ) === 0 ) {
 				continue;
 			}
 
 			// Handle multi-line comments
-			if (! $in_comment && strpos($line, '/*') === 0) {
+			if ( ! $in_comment && strpos( $line, '/*' ) === 0 ) {
 				$in_comment = true;
 			}
-			if ($in_comment) {
-				if (strpos($line, '*/') !== false) {
+			if ( $in_comment ) {
+				if ( strpos( $line, '*/' ) !== false ) {
 					$in_comment = false;
 				}
 				continue;
 			}
 
-			for ($i = 0; $i < strlen($line); $i++) {
-				$ch = $line[$i];
+			$strlen = strlen( $line );
+			for ( $i = 0; $i < $strlen; $i++ ) {
+				$ch = $line[ $i ];
 
 				// Handle escaped characters
-				if ($i > 0 && $line[$i - 1] == '\\') {
+				if ( $i > 0 && '\\' === $line[ $i - 1 ] ) {
 					$buffer .= $ch;
 					continue;
 				}
 
 				// Handle quotes
-				if ($ch == "'" && $double_quotes == 0) {
+				if ( "'" === $ch && 0 === $double_quotes ) {
 					$single_quotes = 1 - $single_quotes;
 				}
-				if ($ch == '"' && $single_quotes == 0) {
+				if ( '"' === $ch && 0 === $single_quotes ) {
 					$double_quotes = 1 - $double_quotes;
 				}
 
 				// Process statement end
-				if ($ch == ';' && $single_quotes == 0 && $double_quotes == 0) {
-					yield trim($buffer);
+				if ( ';' === $ch && 0 === $single_quotes && 0 === $double_quotes ) {
+					yield trim( $buffer );
 					$buffer = '';
 				} else {
 					$buffer .= $ch;
@@ -92,10 +93,10 @@ class WP_SQLite_Import extends WP_SQLite_Base {
 		}
 
 		// Handle any remaining buffer content
-		if (!empty($buffer)) {
-			yield trim($buffer);
+		if ( ! empty( $buffer ) ) {
+			yield trim( $buffer );
 		}
 
-		fclose($handle);
+		fclose( $handle );
 	}
 }

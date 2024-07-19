@@ -771,7 +771,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		// Check if SQLite is enabled and use it if it is.
-		if( WP_SQLite_Import::get_sqlite_version() ) {
+		if ( WP_SQLite_Import::get_sqlite_version() ) {
 			$importer = new WP_SQLite_Import();
 			$importer->run( $args[0], $args );
 			return;

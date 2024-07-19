@@ -11,7 +11,7 @@ class WP_SQLite_Base {
 	 */
 	public static function get_sqlite_version() {
 		// Check if there is a db.php file in the wp-content directory.
-		if ( ! file_exists( ABSPATH . '/wp-content/db.php') ) {
+		if ( ! file_exists( ABSPATH . '/wp-content/db.php' ) ) {
 			return false;
 		}
 		// If the file is found, we need to check that it is the sqlite integration plugin.
@@ -27,20 +27,20 @@ class WP_SQLite_Base {
 		}
 
 		// Load the translator class from the plugin.
-		if( ! defined( 'SQLITE_DB_DROPIN_VERSION' ) ) {
+		if ( ! defined( 'SQLITE_DB_DROPIN_VERSION' ) ) {
 			define( 'SQLITE_DB_DROPIN_VERSION', self::get_sqlite_version() );
 		}
 
 		# A hack to add the do_action and apply_filters functions to the global namespace.
 		# This is necessary because during the import WP has not been loaded, and we
 		# need to define these functions to avoid fatal errors.
-		if( ! function_exists( 'do_action') ) {
-			function do_action(){};
-			function apply_filters(){};
+		if ( ! function_exists( 'do_action' ) ) {
+			function do_action() {}
+			function apply_filters() {}
 		}
 
 		// We also need to selectively load the necessary classes from the plugin.
-		require_once  $plugin_directory . '/php-polyfills.php';
+		require_once $plugin_directory . '/php-polyfills.php';
 		require_once $plugin_directory . '/constants.php';
 		require_once $plugin_directory . '/wp-includes/sqlite/class-wp-sqlite-lexer.php';
 		require_once $plugin_directory . '/wp-includes/sqlite/class-wp-sqlite-query-rewriter.php';

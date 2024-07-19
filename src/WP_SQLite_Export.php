@@ -25,33 +25,36 @@ class WP_SQLite_Export extends WP_SQLite_Base {
 		$this->load_dependencies();
 
 		$exclude_tables = isset( $args['exclude_tables'] ) ? explode( ',', $args['exclude_tables'] ) : [];
-		$exclude_tables = array_merge($exclude_tables , [
-			'_mysql_data_types_cache',
-			'sqlite_master',
-			'sqlite_sequence',
-		] );
+		$exclude_tables = array_merge(
+			$exclude_tables,
+			[
+				'_mysql_data_types_cache',
+				'sqlite_master',
+				'sqlite_sequence',
+			]
+		);
 
 		$include_tables = isset( $args['tables'] ) ? explode( ',', $args['tables'] ) : [];
 
 		$translator = new WP_SQLite_Translator();
 		$handle     = fopen( 'export.sql', 'w' );
 
-		foreach ( $translator->query('SHOW TABLES') as $table ) {
+		foreach ( $translator->query( 'SHOW TABLES' ) as $table ) {
 
 			// Skip tables that are not in the include_tables list if the list is defined
-			if ( ! empty( $include_tables ) && ! in_array( $table->name, $include_tables ) ) {
+			if ( ! empty( $include_tables ) && ! in_array( $table->name, $include_tables, true ) ) {
 				continue;
 			}
 
 			// Skip tables that are in the exclude_tables list
-			if ( in_array( $table->name, $exclude_tables ) ) {
+			if ( in_array( $table->name, $exclude_tables, true ) ) {
 				continue;
 			}
 
-			fwrite($handle, "DROP TABLE IF EXISTS `" . $table->name ."`;\n");
+			fwrite( $handle, 'DROP TABLE IF EXISTS `' . $table->name . "`;\n" );
 			fwrite( $handle, $this->get_create_statement( $table, $translator ) . "\n" );
 
-			foreach( $this->get_insert_statements( $table, $translator->get_pdo() ) as $insert_statement ) {
+			foreach ( $this->get_insert_statements( $table, $translator->get_pdo() ) as $insert_statement ) {
 				fwrite( $handle, $insert_statement . "\n" );
 			}
 		}
@@ -66,15 +69,15 @@ class WP_SQLite_Export extends WP_SQLite_Base {
 	}
 
 	protected function get_create_statement( $table, $translator ) {
-		$create = $translator->query('SHOW CREATE TABLE ' . $table->name );
+		$create = $translator->query( 'SHOW CREATE TABLE ' . $table->name );
 		return $create[0]->{'Create Table'};
 	}
 
 	protected function get_insert_statements( $table, $pdo ) {
-		$stmt = $pdo->prepare('SELECT * FROM ' . $table->name );
+		$stmt = $pdo->prepare( 'SELECT * FROM ' . $table->name );
 		$stmt->execute();
-		while ( $row = $stmt->fetch(PDO::FETCH_ASSOC, PDO::FETCH_ORI_NEXT) ) {
-			yield sprintf("INSERT INTO `%1s` VALUES (%2s);", $table->name, $this->escape_values( $pdo, $row ));
+		while ( $row = $stmt->fetch( PDO::FETCH_ASSOC, PDO::FETCH_ORI_NEXT ) ) {
+			yield sprintf( 'INSERT INTO `%1s` VALUES (%2s);', $table->name, $this->escape_values( $pdo, $row ) );
 		}
 	}
 
@@ -89,8 +92,8 @@ class WP_SQLite_Export extends WP_SQLite_Base {
 	protected function escape_values( PDO $pdo, $values ) {
 		// Get a mysql PDO instance
 		$escaped_values = [];
-		foreach( $values as $value ) {
-			if( is_null( $value ) ) {
+		foreach ( $values as $value ) {
+			if ( is_null( $value ) ) {
 				$escaped_values[] = 'NULL';
 			} elseif ( is_numeric( $value ) ) {
 				$escaped_values[] = $value;
@@ -98,6 +101,6 @@ class WP_SQLite_Export extends WP_SQLite_Base {
 				$escaped_values[] = $pdo->quote( $value );
 			}
 		}
-		return implode(",", $escaped_values );
+		return implode( ',', $escaped_values );
 	}
 }
