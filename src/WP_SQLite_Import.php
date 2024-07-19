@@ -2,18 +2,27 @@
 
 class WP_SQLite_Import extends WP_SQLite_Base {
 
+	protected $unsupported_arguments = [
+		'skip-optimization',
+		'defaults',
+		'fields',
+		'dbuser',
+		'dbpass',
+	];
+
 	/**
+	 * Execute the import command for SQLite.
+	 *
 	 * @throws Exception
 	 */
-	public function run( $sql_file_path ) {
+	public function run( $sql_file_path, $args ) {
+		$this->check_arguments( $args );
 		$this->load_dependencies();
 		$translator = new WP_SQLite_Translator();
 		foreach ( $this->parse_statements( $sql_file_path ) as $statement ) {
 			$result = $translator->query($statement);
 			if ( $result === false ) {
-				echo "Error: could not execute statement\n";
-				echo "Statement: $statement\n";
-				echo "\n\n";
+				WP_CLI::warning( "Could not execute statement: " . $statement );
 			}
 		}
 	}
@@ -45,7 +54,7 @@ class WP_SQLite_Import extends WP_SQLite_Base {
 			}
 
 			// Handle multi-line comments
-			if (!$in_comment && strpos($line, '/*') === 0) {
+			if (! $in_comment && strpos($line, '/*') === 0) {
 				$in_comment = true;
 			}
 			if ($in_comment) {
@@ -89,6 +98,4 @@ class WP_SQLite_Import extends WP_SQLite_Base {
 
 		fclose($handle);
 	}
-
-
 }

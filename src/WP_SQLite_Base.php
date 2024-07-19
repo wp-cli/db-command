@@ -2,6 +2,8 @@
 
 class WP_SQLite_Base {
 
+	protected $unsupported_arguments = [];
+
 	/**
 	 * Tries to determine if the current site is using SQL by checking
 	 * for an active sqlite integration plugin.
@@ -63,5 +65,16 @@ class WP_SQLite_Base {
 		}
 
 		return null;
+	}
+
+	protected function check_arguments( $args ) {
+		if ( array_intersect_key( $args, array_flip( $this->unsupported_arguments ) ) ) {
+			WP_CLI::error(
+				sprintf(
+					'The following arguments are not supported by SQLite exports: %s',
+					implode( ', ', $this->unsupported_arguments )
+				)
+			);
+		}
 	}
 }

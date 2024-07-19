@@ -597,6 +597,7 @@ class DB_Command extends WP_CLI_Command {
 
 		}
 
+		// Check if SQLite is enabled and use it if it is.
 		if ( WP_SQLite_Export::get_sqlite_version() ) {
 			$export = new WP_SQLite_Export();
 			$export->run( $result_file, $assoc_args );
@@ -769,10 +770,10 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
 
-		// We need to detect if the site is using SQLite
+		// Check if SQLite is enabled and use it if it is.
 		if( WP_SQLite_Import::get_sqlite_version() ) {
 			$importer = new WP_SQLite_Import();
-			$importer->run( $args[0] );
+			$importer->run( $args[0], $args );
 			return;
 		}
 
