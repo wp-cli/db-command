@@ -599,7 +599,7 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( WP_SQLite_Export::get_sqlite_version() ) {
 			$export = new WP_SQLite_Export();
-			$export->run();
+			$export->run( $result_file, $assoc_args );
 			return;
 		}
 
