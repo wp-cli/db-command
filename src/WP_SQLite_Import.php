@@ -45,6 +45,7 @@ class WP_SQLite_Import extends WP_SQLite_Base {
 		$in_comment    = false;
 		$buffer        = '';
 
+		// phpcs:ignore
 		while ( ( $line = fgets( $handle ) ) !== false ) {
 			$line = trim( $line );
 

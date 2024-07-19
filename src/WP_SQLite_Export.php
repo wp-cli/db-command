@@ -76,6 +76,7 @@ class WP_SQLite_Export extends WP_SQLite_Base {
 	protected function get_insert_statements( $table, $pdo ) {
 		$stmt = $pdo->prepare( 'SELECT * FROM ' . $table->name );
 		$stmt->execute();
+		// phpcs:ignore
 		while ( $row = $stmt->fetch( PDO::FETCH_ASSOC, PDO::FETCH_ORI_NEXT ) ) {
 			yield sprintf( 'INSERT INTO `%1s` VALUES (%2s);', $table->name, $this->escape_values( $pdo, $row ) );
 		}
