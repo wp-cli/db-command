@@ -859,7 +859,7 @@ class DB_Command extends WP_CLI_Command {
 	 *     # Export only tables for a single site
 	 *     $ wp db export --tables=$(wp db tables --url=sub.example.com --format=csv)
 	 *     Success: Exported to wordpress_dbase.sql
-	 *
+	 * @when after_wp_load
 	 */
 	public function tables( $args, $assoc_args ) {
 
