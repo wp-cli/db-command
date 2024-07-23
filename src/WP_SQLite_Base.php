@@ -1,4 +1,5 @@
 <?php
+namespace WP_CLI\DB;
 
 class WP_SQLite_Base {
 
@@ -23,7 +24,7 @@ class WP_SQLite_Base {
 	protected function load_dependencies() {
 		$plugin_directory = $this->get_plugin_directory();
 		if ( ! $plugin_directory ) {
-			throw new Exception( 'Could not locate the SQLite integration plugin.' );
+			throw new \Exception( 'Could not locate the SQLite integration plugin.' );
 		}
 
 		// Load the translator class from the plugin.
@@ -31,13 +32,11 @@ class WP_SQLite_Base {
 			define( 'SQLITE_DB_DROPIN_VERSION', self::get_sqlite_version() ); // phpcs:ignore
 		}
 
-		# A hack to add the do_action and apply_filters functions to the global namespace.
-		# This is necessary because during the import WP has not been loaded, and we
-		# need to define these functions to avoid fatal errors.
-		if ( ! function_exists( 'do_action' ) ) {
-			function do_action() {} // phpcs:ignore
-			function apply_filters() {} // phpcs:ignore
-		}
+		# WordPress is not loaded during the execution of the export and import commands.
+		# The SQLite database integration plugin uses do_action and apply_filters to hook
+		# into the WordPress core. To prevent a fatal error, we can define these functions
+		# as no-op functions.
+		require_once __DIR__ . '/noop.php';
 
 		// We also need to selectively load the necessary classes from the plugin.
 		require_once $plugin_directory . '/php-polyfills.php';
@@ -69,7 +68,7 @@ class WP_SQLite_Base {
 
 	protected function check_arguments( $args ) {
 		if ( array_intersect_key( $args, array_flip( $this->unsupported_arguments ) ) ) {
-			WP_CLI::error(
+			\WP_CLI::error(
 				sprintf(
 					'The following arguments are not supported by SQLite exports: %s',
 					implode( ', ', $this->unsupported_arguments )

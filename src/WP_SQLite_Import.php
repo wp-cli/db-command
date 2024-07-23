@@ -1,4 +1,10 @@
 <?php
+namespace WP_CLI\DB;
+
+use Exception;
+use Generator;
+use WP_CLI;
+use WP_SQLite_Translator;
 
 class WP_SQLite_Import extends WP_SQLite_Base {
 
