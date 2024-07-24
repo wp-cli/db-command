@@ -43,7 +43,7 @@ class WP_SQLite_Export extends WP_SQLite_Base {
 		$include_tables = isset( $args['tables'] ) ? explode( ',', $args['tables'] ) : [];
 
 		$translator = new WP_SQLite_Translator();
-		$handle     = fopen( 'export.sql', 'w' );
+		$handle     = fopen( $result_file, 'w' );
 
 		foreach ( $translator->query( 'SHOW TABLES' ) as $table ) {
 

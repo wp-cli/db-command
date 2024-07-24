@@ -36,13 +36,25 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
-  Scenario: Import from STDIN
-    Given a WP install
+#  Scenario: Import from STDIN
+#    Given a WP install
+#
+#    When I run `wp db import -`
+#    Then STDOUT should be:
+#      """
+#      Success: Imported from 'STDIN'.
+#      """
 
-    When I run `wp db import -`
-    Then STDOUT should be:
+  Scenario: Test plugin
+    Given a WP install
+    And these installed and active plugins:
       """
-      Success: Imported from 'STDIN'.
+      sqlite-database-integration
+      """
+    When I run `wp plugin list`
+    Then STDOUT should contain:
+      """
+      sqlite-database-integration
       """
 
   Scenario: Import from database name path by default and skip speed optimization

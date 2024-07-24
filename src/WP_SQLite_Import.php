@@ -12,8 +12,6 @@ class WP_SQLite_Import extends WP_SQLite_Base {
 		'skip-optimization',
 		'defaults',
 		'fields',
-		'dbuser',
-		'dbpass',
 	];
 
 	/**
@@ -31,6 +29,8 @@ class WP_SQLite_Import extends WP_SQLite_Base {
 				WP_CLI::warning( 'Could not execute statement: ' . $statement );
 			}
 		}
+
+		WP_CLI::success( sprintf("Imported from '%s'.", $sql_file_path ) );
 	}
 
 	/**
