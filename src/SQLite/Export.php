@@ -66,7 +66,7 @@ class Export extends Base {
 			}
 		}
 
-		fwrite( $handle, sprintf( '-- Dump completed on %s', date('c') ) );
+		fwrite( $handle, sprintf( '-- Dump completed on %s', gmdate( 'c' ) ) );
 		fclose( $handle );
 
 		if ( $is_stdout ) {
@@ -78,8 +78,6 @@ class Export extends Base {
 		} else {
 			WP_CLI::success( 'Export complete. File written to ' . $result_file );
 		}
-
-
 	}
 
 	protected function get_create_statement( $table, $translator ) {

@@ -8,6 +8,7 @@ use WP_SQLite_Translator;
 
 class Import extends Base {
 
+
 	protected $unsupported_arguments = [
 		'skip-optimization',
 		'defaults',
@@ -26,7 +27,7 @@ class Import extends Base {
 		$this->load_dependencies();
 		$translator = new WP_SQLite_Translator();
 
-		$is_stdin = '-' === $sql_file_path;
+		$is_stdin    = '-' === $sql_file_path;
 		$import_file = $is_stdin ? 'php://stdin' : $sql_file_path;
 
 		foreach ( $this->parse_statements( $import_file ) as $statement ) {
@@ -37,7 +38,7 @@ class Import extends Base {
 		}
 
 		$imported_from = $is_stdin ? 'STDIN' : $sql_file_path;
-		WP_CLI::success( sprintf("Imported from '%s'.", $imported_from ) );
+		WP_CLI::success( sprintf( "Imported from '%s'.", $imported_from ) );
 	}
 
 	/**
