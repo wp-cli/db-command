@@ -608,7 +608,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		// Check if SQLite is enabled and use it if it is.
-		if ( Export::get_sqlite_version() ) {
+		if ( Export::get_sqlite_plugin_version() ) {
 			$export = new Export();
 			$export->run( $result_file, $assoc_args );
 			return;
@@ -773,7 +773,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		// Check if SQLite is enabled and use it if it is.
-		if ( Import::get_sqlite_version() ) {
+		if ( Import::get_sqlite_plugin_version() ) {
 			$importer = new Import();
 			$importer->run( $result_file, $assoc_args );
 			return;

@@ -10,26 +10,65 @@ class Base {
 	 * for an active sqlite integration plugin.
 	 * @return false|void
 	 */
-	public static function get_sqlite_version() {
+	public static function get_sqlite_plugin_version() {
 		// Check if there is a db.php file in the wp-content directory.
 		if ( ! file_exists( ABSPATH . '/wp-content/db.php' ) ) {
 			return false;
 		}
 		// If the file is found, we need to check that it is the sqlite integration plugin.
 		$plugin_file = file_get_contents( ABSPATH . '/wp-content/db.php' );
-		preg_match( '/define\( \'SQLITE_DB_DROPIN_VERSION\', \'([0-9.]+)\' \)/', $plugin_file, $matches );
-		return isset( $matches[1] ) ? $matches[1] : false;
+		if ( ! preg_match( '/define\( \'SQLITE_DB_DROPIN_VERSION\', \'([0-9.]+)\' \)/', $plugin_file ) ) {
+			return false;
+		}
+
+		$plugin_path = self::get_plugin_directory();
+		if ( ! $plugin_path ) {
+			return false;
+		}
+
+		$plugin_file = file_get_contents( $plugin_path . '/readme.txt' );
+
+		preg_match( '/^Stable tag:\s*?(.+)$/m', $plugin_file, $matches );
+
+		return isset( $matches[1] ) ? trim( $matches[1] ) : false;
+	}
+
+	/**
+	 * @return string|null
+	 */
+	protected static function get_plugin_directory() {
+		$plugin_folders = [
+			ABSPATH . '/wp-content/plugins/sqlite-database-integration',
+			ABSPATH . '/wp-content/mu-plugins/sqlite-database-integration',
+		];
+
+		foreach ( $plugin_folders as $folder ) {
+			if ( file_exists( $folder ) && is_dir( $folder ) ) {
+				return $folder;
+			}
+		}
+
+		return null;
 	}
 
 	protected function load_dependencies() {
-		$plugin_directory = $this->get_plugin_directory();
+		$plugin_directory = self::get_plugin_directory();
 		if ( ! $plugin_directory ) {
-			throw new \Exception( 'Could not locate the SQLite integration plugin.' );
+			\WP_CLI::error( 'Could not locate the SQLite integration plugin.' );
+		}
+
+		$sqlite_plugin_version = self::get_sqlite_plugin_version();
+		if ( ! $sqlite_plugin_version ) {
+			\WP_CLI::error( 'Could not determine the version of the SQLite integration plugin.' );
+		}
+
+		if ( version_compare( $sqlite_plugin_version, '2.1.11', '<' ) ) {
+			\WP_CLI::error( 'The SQLite integration plugin must be version 2.1.11 or higher.' );
 		}
 
 		// Load the translator class from the plugin.
 		if ( ! defined( 'SQLITE_DB_DROPIN_VERSION' ) ) {
-			define( 'SQLITE_DB_DROPIN_VERSION', self::get_sqlite_version() ); // phpcs:ignore
+			define( 'SQLITE_DB_DROPIN_VERSION', $sqlite_plugin_version ); // phpcs:ignore
 		}
 
 		# WordPress is not loaded during the execution of the export and import commands.
@@ -46,24 +85,6 @@ class Base {
 		require_once $plugin_directory . '/wp-includes/sqlite/class-wp-sqlite-translator.php';
 		require_once $plugin_directory . '/wp-includes/sqlite/class-wp-sqlite-token.php';
 		require_once $plugin_directory . '/wp-includes/sqlite/class-wp-sqlite-pdo-user-defined-functions.php';
-	}
-
-	/**
-	 * @return string|null
-	 */
-	protected function get_plugin_directory() {
-		$plugin_folders = [
-			ABSPATH . '/wp-content/plugins/sqlite-database-integration',
-			ABSPATH . '/wp-content/mu-plugins/sqlite-database-integration',
-		];
-
-		foreach ( $plugin_folders as $folder ) {
-			if ( file_exists( $folder ) && is_dir( $folder ) ) {
-				return $folder;
-			}
-		}
-
-		return null;
 	}
 
 	protected function check_arguments( $args ) {
