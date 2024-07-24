@@ -1,12 +1,12 @@
 <?php
-namespace WP_CLI\DB;
+namespace WP_CLI\DB\SQLite;
 
 use Exception;
 use PDO;
 use WP_CLI;
 use WP_SQLite_Translator;
 
-class WP_SQLite_Export extends WP_SQLite_Base {
+class Export extends Base {
 
 	protected $unsupported_arguments = [
 		'fields',
@@ -29,6 +29,7 @@ class WP_SQLite_Export extends WP_SQLite_Base {
 
 		$this->check_arguments( $args );
 		$this->load_dependencies();
+		$is_stdout = '-' === $result_file;
 
 		$exclude_tables = isset( $args['exclude_tables'] ) ? explode( ',', $args['exclude_tables'] ) : [];
 		$exclude_tables = array_merge(
@@ -43,7 +44,7 @@ class WP_SQLite_Export extends WP_SQLite_Base {
 		$include_tables = isset( $args['tables'] ) ? explode( ',', $args['tables'] ) : [];
 
 		$translator = new WP_SQLite_Translator();
-		$handle     = fopen( $result_file, 'w' );
+		$handle     = $is_stdout ? fopen( 'php://stdout', 'w' ) : fopen( $result_file, 'w' );
 
 		foreach ( $translator->query( 'SHOW TABLES' ) as $table ) {
 
@@ -65,13 +66,20 @@ class WP_SQLite_Export extends WP_SQLite_Base {
 			}
 		}
 
+		fwrite( $handle, sprintf( '-- Dump completed on %s', date('c') ) );
+		fclose( $handle );
+
+		if ( $is_stdout ) {
+			return;
+		}
+
 		if ( isset( $args['porcelain'] ) ) {
 			WP_CLI::line( $result_file );
 		} else {
-			WP_CLI::line( 'Export complete. File written to ' . $result_file );
+			WP_CLI::success( 'Export complete. File written to ' . $result_file );
 		}
 
-		fclose( $handle );
+
 	}
 
 	protected function get_create_statement( $table, $translator ) {

@@ -75,23 +75,23 @@ Feature: Query the database with WordPress' MySQL config
   Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 
-  When I try `wp db query --defaults --debug`
+    When I try `"select 1" | wp db query --defaults --debug`
     Then STDERR should contain:
       """
       Debug (db): Running shell command: /usr/bin/env mysql --no-auto-rehash
       """
 
-    When I try `wp db query --debug`
+    When I try `"select 1" | wp db query --debug`
     Then STDERR should contain:
       """
       Debug (db): Running shell command: /usr/bin/env mysql --no-defaults --no-auto-rehash
       """
 
-    When I try `wp db query --no-defaults --debug`
+    When I try `"select 1" | wp db query --no-defaults --debug`
     Then STDERR should contain:
       """
       Debug (db): Running shell command: /usr/bin/env mysql --no-defaults --no-auto-rehash
-      """
+        """
 
   Scenario: SQL modes do not include any of the modes incompatible with WordPress
     Given a WP install

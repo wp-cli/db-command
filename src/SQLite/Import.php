@@ -1,17 +1,19 @@
 <?php
-namespace WP_CLI\DB;
+namespace WP_CLI\DB\SQLite;
 
 use Exception;
 use Generator;
 use WP_CLI;
 use WP_SQLite_Translator;
 
-class WP_SQLite_Import extends WP_SQLite_Base {
+class Import extends Base {
 
 	protected $unsupported_arguments = [
 		'skip-optimization',
 		'defaults',
 		'fields',
+		'dbuser',
+		'dbpass',
 	];
 
 	/**
@@ -23,14 +25,19 @@ class WP_SQLite_Import extends WP_SQLite_Base {
 		$this->check_arguments( $args );
 		$this->load_dependencies();
 		$translator = new WP_SQLite_Translator();
-		foreach ( $this->parse_statements( $sql_file_path ) as $statement ) {
+
+		$is_stdin = '-' === $sql_file_path;
+		$import_file = $is_stdin ? 'php://stdin' : $sql_file_path;
+
+		foreach ( $this->parse_statements( $import_file ) as $statement ) {
 			$result = $translator->query( $statement );
 			if ( false === $result ) {
 				WP_CLI::warning( 'Could not execute statement: ' . $statement );
 			}
 		}
 
-		WP_CLI::success( sprintf("Imported from '%s'.", $sql_file_path ) );
+		$imported_from = $is_stdin ? 'STDIN' : $sql_file_path;
+		WP_CLI::success( sprintf("Imported from '%s'.", $imported_from ) );
 	}
 
 	/**
@@ -41,9 +48,11 @@ class WP_SQLite_Import extends WP_SQLite_Base {
 	 * @throws Exception
 	 */
 	public function parse_statements( $sql_file_path ) {
+
 		$handle = fopen( $sql_file_path, 'r' );
+
 		if ( ! $handle ) {
-			throw new Exception( "Unable to open file: $sql_file_path" );
+			WP_CLI::error( "Unable to open file: $sql_file_path" );
 		}
 
 		$single_quotes = 0;

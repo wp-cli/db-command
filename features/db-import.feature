@@ -12,6 +12,7 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  @require-mysql
   Scenario: Import from database name path by default with mysql defaults
     Given a WP install
 
@@ -24,6 +25,7 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  @require-mysql
   Scenario: Import from database name path by default with --no-defaults
     Given a WP install
 
@@ -36,27 +38,19 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
-#  Scenario: Import from STDIN
-#    Given a WP install
-#
-#    When I run `wp db import -`
-#    Then STDOUT should be:
-#      """
-#      Success: Imported from 'STDIN'.
-#      """
+    Scenario: Import from STDIN
+      Given a WP install
 
-  Scenario: Test plugin
-    Given a WP install
-    And these installed and active plugins:
-      """
-      sqlite-database-integration
-      """
-    When I run `wp plugin list`
-    Then STDOUT should contain:
-      """
-      sqlite-database-integration
-      """
+      When I run `wp db export wp_cli_test.sql`
+      Then the wp_cli_test.sql file should exist
 
+      When I run `cat wp_cli_test.sql | wp db import -`
+      Then STDOUT should be:
+        """
+        Success: Imported from 'STDIN'.
+        """
+
+  @require-mysql
   Scenario: Import from database name path by default and skip speed optimization
     Given a WP install
 
@@ -68,7 +62,7 @@ Feature: Import a WordPress database
       """
       Success: Imported from 'wp_cli_test.sql'.
       """
-
+  @require-mysql
   Scenario: Import from database name path by default with passed-in dbuser/dbpass
     Given a WP install
 
@@ -103,6 +97,7 @@ Feature: Import a WordPress database
       Success: Imported from 'debug.sql'.
       """
 
+  @require-mysql
   Scenario: Help runs properly at various points of a functional WP install
     Given an empty directory
 
@@ -140,6 +135,7 @@ Feature: Import a WordPress database
       """
       wp db import
       """
+  @require-mysql
   Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 
@@ -164,7 +160,7 @@ Feature: Import a WordPress database
       Debug (db): Running shell command: /usr/bin/env mysql --no-defaults --no-auto-rehash
       """
 
-  @require-wp-4.2
+  @require-wp-4.2 @require-mysql
   Scenario: Import db that has emoji in post
     Given a WP install
 

@@ -1,7 +1,7 @@
 <?php
 
-use WP_CLI\DB\WP_SQLite_Export;
-use WP_CLI\DB\WP_SQLite_Import;
+use WP_CLI\DB\SQLite\Export;
+use WP_CLI\DB\SQLite\Import;
 use WP_CLI\Formatter;
 use WP_CLI\Utils;
 
@@ -599,19 +599,19 @@ class DB_Command extends WP_CLI_Command {
 
 		}
 
-		// Check if SQLite is enabled and use it if it is.
-		if ( WP_SQLite_Export::get_sqlite_version() ) {
-			$export = new WP_SQLite_Export();
-			$export->run( $result_file, $assoc_args );
-			return;
-		}
-
 		$stdout    = ( '-' === $result_file );
 		$porcelain = Utils\get_flag_value( $assoc_args, 'porcelain' );
 
 		// Bail if both porcelain and STDOUT are set.
 		if ( $stdout && $porcelain ) {
 			WP_CLI::error( 'Porcelain is not allowed when output mode is STDOUT.' );
+		}
+
+		// Check if SQLite is enabled and use it if it is.
+		if ( Export::get_sqlite_version() ) {
+			$export = new Export();
+			$export->run( $result_file, $assoc_args );
+			return;
 		}
 
 		if ( ! $stdout ) {
@@ -773,9 +773,9 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		// Check if SQLite is enabled and use it if it is.
-		if ( WP_SQLite_Import::get_sqlite_version() ) {
-			$importer = new WP_SQLite_Import();
-			$importer->run( $result_file, $args );
+		if ( Import::get_sqlite_version() ) {
+			$importer = new Import();
+			$importer->run( $result_file, $assoc_args );
 			return;
 		}
 

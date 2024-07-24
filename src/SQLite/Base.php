@@ -1,7 +1,7 @@
 <?php
-namespace WP_CLI\DB;
+namespace WP_CLI\DB\SQLite;
 
-class WP_SQLite_Base {
+class Base {
 
 	protected $unsupported_arguments = [];
 
