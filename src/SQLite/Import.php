@@ -19,29 +19,47 @@ class Import extends Base {
 	protected $translator;
 	protected $args;
 
+	public function __construct() {
+		$this->load_dependencies();
+		$this->translator = new WP_SQLite_Translator();
+	}
+
 	/**
 	 * Execute the import command for SQLite.
 	 *
-	 * @throws Exception
+	 * @param string $sql_file_path The path to the SQL dump file.
+	 * @param array  $args          The arguments passed to the command.
+	 *
+	 * @return void
 	 */
 	public function run( $sql_file_path, $args ) {
 		$this->args = $args;
 		$this->check_arguments( $args );
-		$this->load_dependencies();
-		$translator = new WP_SQLite_Translator();
 
 		$is_stdin    = '-' === $sql_file_path;
 		$import_file = $is_stdin ? 'php://stdin' : $sql_file_path;
 
+		$this->execute_statements( $import_file );
+
+		$imported_from = $is_stdin ? 'STDIN' : $sql_file_path;
+		WP_CLI::success( sprintf( "Imported from '%s'.", $imported_from ) );
+	}
+
+	/**
+	 * Execute SQL statements from an SQL dump file.
+	 *
+	 * @param $import_file
+	 *
+	 * @return void
+	 * @throws Exception
+	 */
+	protected function execute_statements( $import_file ) {
 		foreach ( $this->parse_statements( $import_file ) as $statement ) {
-			$result = $translator->query( $statement );
+			$result = $this->translator->query( $statement );
 			if ( false === $result ) {
 				WP_CLI::warning( 'Could not execute statement: ' . $statement );
 			}
 		}
-
-		$imported_from = $is_stdin ? 'STDIN' : $sql_file_path;
-		WP_CLI::success( sprintf( "Imported from '%s'.", $imported_from ) );
 	}
 
 	/**
@@ -49,7 +67,6 @@ class Import extends Base {
 	 * @param string $sql_file_path The path to the SQL dump file.
 	 *
 	 * @return Generator A generator that yields SQL statements.
-	 * @throws Exception
 	 */
 	public function parse_statements( $sql_file_path ) {
 
