@@ -1,6 +1,8 @@
 <?php
 namespace WP_CLI\DB\SQLite;
 
+use WP_CLI;
+
 class Base {
 
 	protected $unsupported_arguments = [];
@@ -54,16 +56,16 @@ class Base {
 	protected function load_dependencies() {
 		$plugin_directory = self::get_plugin_directory();
 		if ( ! $plugin_directory ) {
-			\WP_CLI::error( 'Could not locate the SQLite integration plugin.' );
+			WP_CLI::error( 'Could not locate the SQLite integration plugin.' );
 		}
 
 		$sqlite_plugin_version = self::get_sqlite_plugin_version();
 		if ( ! $sqlite_plugin_version ) {
-			\WP_CLI::error( 'Could not determine the version of the SQLite integration plugin.' );
+			WP_CLI::error( 'Could not determine the version of the SQLite integration plugin.' );
 		}
 
 		if ( version_compare( $sqlite_plugin_version, '2.1.11', '<' ) ) {
-			\WP_CLI::error( 'The SQLite integration plugin must be version 2.1.11 or higher.' );
+			WP_CLI::error( 'The SQLite integration plugin must be version 2.1.11 or higher.' );
 		}
 
 		// Load the translator class from the plugin.
@@ -89,7 +91,7 @@ class Base {
 
 	protected function check_arguments( $args ) {
 		if ( array_intersect_key( $args, array_flip( $this->unsupported_arguments ) ) ) {
-			\WP_CLI::error(
+			WP_CLI::error(
 				sprintf(
 					'The following arguments are not supported by SQLite exports: %s',
 					implode( ', ', $this->unsupported_arguments )
