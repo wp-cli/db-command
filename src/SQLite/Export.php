@@ -8,6 +8,10 @@ use WP_SQLite_Translator;
 
 class Export extends Base {
 
+	/**
+	 * List of arguments that are not supported by the export command.
+	 * @var string[]
+	 */
 	protected $unsupported_arguments = [
 		'fields',
 		'include-tablespaces',
@@ -15,6 +19,15 @@ class Export extends Base {
 		'dbuser',
 		'dbpass',
 	];
+
+	protected $translator;
+	protected $args      = array();
+	protected $is_stdout = false;
+
+	public function __construct() {
+		$this->load_dependencies();
+		$this->translator = new WP_SQLite_Translator();
+	}
 
 	/**
 	 * Run the export command.
@@ -26,26 +39,74 @@ class Export extends Base {
 	 * @throws Exception
 	 */
 	public function run( $result_file, $args ) {
-
+		$this->args = $args;
 		$this->check_arguments( $args );
-		$this->load_dependencies();
-		$is_stdout = '-' === $result_file;
 
-		$exclude_tables = isset( $args['exclude_tables'] ) ? explode( ',', $args['exclude_tables'] ) : [];
-		$exclude_tables = array_merge(
-			$exclude_tables,
-			[
-				'_mysql_data_types_cache',
-				'sqlite_master',
-				'sqlite_sequence',
-			]
-		);
+		$handle = $this->open_output_stream( $result_file );
 
-		$include_tables = isset( $args['tables'] ) ? explode( ',', $args['tables'] ) : [];
+		$this->write_sql_statements( $handle );
+		$this->close_output_stream( $handle );
 
-		$translator = new WP_SQLite_Translator();
-		$handle     = $is_stdout ? fopen( 'php://stdout', 'w' ) : fopen( $result_file, 'w' );
+		$this->display_result_message( $result_file );
+	}
 
+	/**
+	 * Get output stream for the export.
+	 *
+	 * @param $result_file
+	 *
+	 * @return false|resource
+	 * @throws WP_CLI\ExitException
+	 */
+	protected function open_output_stream( $result_file ) {
+		$this->is_stdout = '-' === $result_file;
+		$handle          = $this->is_stdout ? fopen( 'php://stdout', 'w' ) : fopen( $result_file, 'w' );
+		if ( ! $handle ) {
+			WP_CLI::error( "Unable to open file: $result_file" );
+		}
+		return $handle;
+	}
+
+	/**
+	 * Close the output stream.
+	 *
+	 * @param $handle
+	 *
+	 * @return void
+	 * @throws WP_CLI\ExitException
+	 */
+	protected function close_output_stream( $handle ) {
+		if ( ! fclose( $handle ) ) {
+			WP_CLI::error( 'Error closing output stream.' );
+		}
+	}
+
+	/**
+	 * Write SQL statements to the output stream.
+	 *
+	 * @param resource $handle The output stream.
+	 *
+	 * @return void
+	 * @throws Exception
+	 */
+	protected function write_sql_statements( $handle ) {
+		foreach ( $this->get_sql_statements() as $statement ) {
+			fwrite( $handle, $statement . PHP_EOL );
+		}
+
+		fwrite( $handle, sprintf( '-- Dump completed on %s', gmdate( 'c' ) ) );
+	}
+
+	/**
+	 * Get SQL statements for the dump.
+	 *
+	 * @return \Generator
+	 * @throws Exception
+	 */
+	protected function get_sql_statements() {
+		$include_tables = $this->get_include_tables();
+		$exclude_tables = $this->get_exclude_tables();
+		$translator     = $this->translator;
 		foreach ( $translator->query( 'SHOW TABLES' ) as $table ) {
 
 			// Skip tables that are not in the include_tables list if the list is defined
@@ -58,33 +119,36 @@ class Export extends Base {
 				continue;
 			}
 
-			fwrite( $handle, 'DROP TABLE IF EXISTS `' . $table->name . "`;\n" );
-			fwrite( $handle, $this->get_create_statement( $table, $translator ) . "\n" );
+			yield sprintf( 'DROP TABLE IF EXISTS `%s`;', $table->name );
+			yield $this->get_create_statement( $table, $translator );
 
 			foreach ( $this->get_insert_statements( $table, $translator->get_pdo() ) as $insert_statement ) {
-				fwrite( $handle, $insert_statement . "\n" );
+				yield $insert_statement;
 			}
-		}
-
-		fwrite( $handle, sprintf( '-- Dump completed on %s', gmdate( 'c' ) ) );
-		fclose( $handle );
-
-		if ( $is_stdout ) {
-			return;
-		}
-
-		if ( isset( $args['porcelain'] ) ) {
-			WP_CLI::line( $result_file );
-		} else {
-			WP_CLI::success( 'Export complete. File written to ' . $result_file );
 		}
 	}
 
+	/**
+	 * Get the CREATE TABLE statement for a table.
+	 *
+	 * @param $table
+	 * @param $translator
+	 *
+	 * @return mixed
+	 */
 	protected function get_create_statement( $table, $translator ) {
 		$create = $translator->query( 'SHOW CREATE TABLE ' . $table->name );
 		return $create[0]->{'Create Table'};
 	}
 
+	/**
+	 * Get the INSERT statements for a table.
+	 *
+	 * @param $table
+	 * @param $pdo
+	 *
+	 * @return \Generator
+	 */
 	protected function get_insert_statements( $table, $pdo ) {
 		$stmt = $pdo->prepare( 'SELECT * FROM ' . $table->name );
 		$stmt->execute();
@@ -92,6 +156,44 @@ class Export extends Base {
 		while ( $row = $stmt->fetch( PDO::FETCH_ASSOC, PDO::FETCH_ORI_NEXT ) ) {
 			yield sprintf( 'INSERT INTO `%1s` VALUES (%2s);', $table->name, $this->escape_values( $pdo, $row ) );
 		}
+	}
+
+	/**
+	 * Get the tables to exclude from the export.
+	 *
+	 * @return array|false|string[]
+	 */
+	protected function get_exclude_tables() {
+		$exclude_tables = isset( $this->args['exclude_tables'] ) ? explode( ',', $this->args['exclude_tables'] ) : [];
+		return array_merge(
+			$exclude_tables,
+			[
+				'_mysql_data_types_cache',
+				'sqlite_master',
+				'sqlite_sequence',
+			]
+		);
+	}
+
+	protected function display_result_message( $result_file ) {
+		if ( $this->is_stdout ) {
+			return;
+		}
+
+		if ( isset( $this->args['porcelain'] ) ) {
+			WP_CLI::line( $result_file );
+		} else {
+			WP_CLI::success( 'Export complete. File written to ' . $result_file );
+		}
+	}
+
+	/**
+	 * Get the tables to include in the export.
+	 *
+	 * @return array|false|string[]
+	 */
+	protected function get_include_tables() {
+		return isset( $this->args['tables'] ) ? explode( ',', $this->args['tables'] ) : [];
 	}
 
 	/**

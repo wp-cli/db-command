@@ -8,7 +8,6 @@ use WP_SQLite_Translator;
 
 class Import extends Base {
 
-
 	protected $unsupported_arguments = [
 		'skip-optimization',
 		'defaults',
@@ -17,12 +16,16 @@ class Import extends Base {
 		'dbpass',
 	];
 
+	protected $translator;
+	protected $args;
+
 	/**
 	 * Execute the import command for SQLite.
 	 *
 	 * @throws Exception
 	 */
 	public function run( $sql_file_path, $args ) {
+		$this->args = $args;
 		$this->check_arguments( $args );
 		$this->load_dependencies();
 		$translator = new WP_SQLite_Translator();
