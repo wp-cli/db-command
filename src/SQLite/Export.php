@@ -119,12 +119,21 @@ class Export extends Base {
 				continue;
 			}
 
+			// Create table statement
+			yield $this->get_dump_comment( sprintf( 'Table structure for table `%s`', $table->name ) ) . "\n";
 			yield sprintf( 'DROP TABLE IF EXISTS `%s`;', $table->name );
 			yield $this->get_create_statement( $table, $translator );
 
+			// Insert statements
+			if ( ! $this->table_has_rows( $table ) ) {
+				continue;
+			}
+
+			yield $this->get_dump_comment( sprintf( 'Dumping data for table `%s`', $table->name ) ) . "\n";
 			foreach ( $this->get_insert_statements( $table, $translator->get_pdo() ) as $insert_statement ) {
 				yield $insert_statement;
 			}
+			yield "\n";
 		}
 	}
 
@@ -138,7 +147,7 @@ class Export extends Base {
 	 */
 	protected function get_create_statement( $table, $translator ) {
 		$create = $translator->query( 'SHOW CREATE TABLE ' . $table->name );
-		return $create[0]->{'Create Table'};
+		return $create[0]->{'Create Table'} . "\n";
 	}
 
 	/**
@@ -218,5 +227,26 @@ class Export extends Base {
 			}
 		}
 		return implode( ',', $escaped_values );
+	}
+
+	/**
+	 * Get a comment for the dump.
+	 *
+	 * @param $comment
+	 *
+	 * @return string
+	 */
+	protected function get_dump_comment( $comment ) {
+		return implode(
+			"\n",
+			array( '--', sprintf( '-- %s', $comment ), '--' )
+		);
+	}
+
+	protected function table_has_rows( $table ) {
+		$pdo  = $this->translator->get_pdo();
+		$stmt = $pdo->prepare( 'SELECT COUNT(*) FROM ' . $table->name );
+		$stmt->execute();
+		return $stmt->fetchColumn() > 0;
 	}
 }
