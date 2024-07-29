@@ -213,7 +213,8 @@ class Export extends Base {
 			} elseif ( is_numeric( $value ) ) {
 				$escaped_values[] = $value;
 			} else {
-				$escaped_values[] = $pdo->quote( $value );
+				// Quote the values and escape encode the newlines so the insert statement appears on a single line.
+				$escaped_values[] = str_replace( "\n", "\\n", $pdo->quote( $value ) );
 			}
 		}
 		return implode( ',', $escaped_values );
