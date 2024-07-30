@@ -234,10 +234,22 @@ class Export extends Base {
 				$escaped_values[] = $value;
 			} else {
 				// Quote the values and escape encode the newlines so the insert statement appears on a single line.
-				$escaped_values[] = str_replace( "\n", "\\n", $pdo->quote( $value ) );
+				$escaped_values[] = $this->escape_string( $value );
 			}
 		}
 		return implode( ',', $escaped_values );
+	}
+
+	/**
+	 * Escapes a string for use in an insert statement.
+	 *
+	 * @param $value
+	 *
+	 * @return string
+	 */
+	protected function escape_string( $value ) {
+		$pdo = $this->translator->get_pdo();
+		return addcslashes( $pdo->quote( $value ), "\\\n" );
 	}
 
 	/**
