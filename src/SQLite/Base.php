@@ -84,12 +84,6 @@ class Base {
 			define( 'SQLITE_DB_DROPIN_VERSION', $sqlite_plugin_version ); // phpcs:ignore
 		}
 
-		# WordPress is not loaded during the execution of the export and import commands.
-		# The SQLite database integration plugin uses do_action and apply_filters to hook
-		# into the WordPress core. To prevent a fatal error, we can define these functions
-		# as no-op functions.
-		require_once __DIR__ . '/noop.php';
-
 		// We also need to selectively load the necessary classes from the plugin.
 		require_once $plugin_directory . '/php-polyfills.php';
 		require_once $plugin_directory . '/constants.php';
