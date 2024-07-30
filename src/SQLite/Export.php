@@ -90,25 +90,9 @@ class Export extends Base {
 	 * @throws Exception
 	 */
 	protected function write_sql_statements( $handle ) {
-		foreach ( $this->get_sql_statements() as $statement ) {
-			fwrite( $handle, $statement . PHP_EOL );
-		}
-
-		fwrite( $handle, sprintf( '-- Dump completed on %s', gmdate( 'c' ) ) );
-	}
-
-	/**
-	 * Get SQL statements for the dump.
-	 *
-	 * @return \Generator
-	 * @throws Exception
-	 */
-	protected function get_sql_statements() {
 		$include_tables = $this->get_include_tables();
 		$exclude_tables = $this->get_exclude_tables();
-		$translator     = $this->translator;
-		foreach ( $translator->query( 'SHOW TABLES' ) as $table ) {
-
+		foreach ( $this->translator->query( 'SHOW TABLES' ) as $table ) {
 			// Skip tables that are not in the include_tables list if the list is defined
 			if ( ! empty( $include_tables ) && ! in_array( $table->name, $include_tables, true ) ) {
 				continue;
@@ -119,51 +103,78 @@ class Export extends Base {
 				continue;
 			}
 
-			// Create table statement
-			yield $this->get_dump_comment( sprintf( 'Table structure for table `%s`', $table->name ) ) . "\n";
-			yield sprintf( 'DROP TABLE IF EXISTS `%s`;', $table->name );
-			yield $this->get_create_statement( $table, $translator );
-
-			// Insert statements
-			if ( ! $this->table_has_rows( $table ) ) {
-				continue;
-			}
-
-			yield $this->get_dump_comment( sprintf( 'Dumping data for table `%s`', $table->name ) ) . "\n";
-			foreach ( $this->get_insert_statements( $table, $translator->get_pdo() ) as $insert_statement ) {
-				yield $insert_statement;
-			}
-			yield "\n";
+			$this->write_create_table_statement( $handle, $table->name );
+			$this->write_insert_statements( $handle, $table->name );
 		}
+
+		fwrite( $handle, sprintf( '-- Dump completed on %s', gmdate( 'c' ) ) );
+	}
+
+	/**
+	 * Write the create statement for a table to the output stream.
+	 *
+	 * @param resource $handle
+	 * @param string   $table_name
+	 *
+	 * @throws Exception
+	 */
+	protected function write_create_table_statement( $handle, $table_name ) {
+		$comment = $this->get_dump_comment( sprintf( 'Table structure for table `%s`', $table_name ) );
+		fwrite( $handle, $comment . PHP_EOL . PHP_EOL );
+		fwrite( $handle, sprintf( 'DROP TABLE IF EXISTS `%s`;', $table_name ) . PHP_EOL );
+		fwrite( $handle, $this->get_create_statement( $table_name ) . PHP_EOL );
+	}
+
+	/**
+	 * Write the insert statements for a table to the output stream.
+	 *
+	 * @param $handle
+	 * @param $table_name
+	 *
+	 * @return void
+	 */
+	protected function write_insert_statements( $handle, $table_name ) {
+
+		if ( ! $this->table_has_records( $table_name ) ) {
+			return;
+		}
+
+		$comment = $this->get_dump_comment( sprintf( 'Dumping data for table `%s`', $table_name ) );
+		fwrite( $handle, $comment . PHP_EOL . PHP_EOL );
+		foreach ( $this->get_insert_statements( $table_name ) as $insert_statement ) {
+			fwrite( $handle, $insert_statement . PHP_EOL );
+		}
+
+		fwrite( $handle, PHP_EOL );
 	}
 
 	/**
 	 * Get the CREATE TABLE statement for a table.
 	 *
-	 * @param $table
-	 * @param $translator
+	 * @param string $table_name
 	 *
 	 * @return mixed
+	 * @throws Exception
 	 */
-	protected function get_create_statement( $table, $translator ) {
-		$create = $translator->query( 'SHOW CREATE TABLE ' . $table->name );
+	protected function get_create_statement( $table_name ) {
+		$create = $this->translator->query( 'SHOW CREATE TABLE ' . $table_name );
 		return $create[0]->{'Create Table'} . "\n";
 	}
 
 	/**
 	 * Get the INSERT statements for a table.
 	 *
-	 * @param $table
-	 * @param $pdo
+	 * @param string $table_name
 	 *
 	 * @return \Generator
 	 */
-	protected function get_insert_statements( $table, $pdo ) {
-		$stmt = $pdo->prepare( 'SELECT * FROM ' . $table->name );
+	protected function get_insert_statements( $table_name ) {
+		$pdo  = $this->translator->get_pdo();
+		$stmt = $pdo->prepare( 'SELECT * FROM ' . $table_name );
 		$stmt->execute();
 		// phpcs:ignore
 		while ( $row = $stmt->fetch( PDO::FETCH_ASSOC, PDO::FETCH_ORI_NEXT ) ) {
-			yield sprintf( 'INSERT INTO `%1s` VALUES (%2s);', $table->name, $this->escape_values( $pdo, $row ) );
+			yield sprintf( 'INSERT INTO `%1s` VALUES (%2s);', $table_name, $this->escape_values( $pdo, $row ) );
 		}
 	}
 
@@ -243,9 +254,16 @@ class Export extends Base {
 		);
 	}
 
-	protected function table_has_rows( $table ) {
+	/**
+	 * Check if the given table has records.
+	 *
+	 * @param string $table_name
+	 *
+	 * @return bool
+	 */
+	protected function table_has_records( $table_name ) {
 		$pdo  = $this->translator->get_pdo();
-		$stmt = $pdo->prepare( 'SELECT COUNT(*) FROM ' . $table->name );
+		$stmt = $pdo->prepare( 'SELECT COUNT(*) FROM ' . $table_name );
 		$stmt->execute();
 		return $stmt->fetchColumn() > 0;
 	}
