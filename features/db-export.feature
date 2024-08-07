@@ -43,6 +43,7 @@ Feature: Export a WordPress database
       -- Dump completed on
       """
 
+  @require-mysql
   Scenario: Export database with mysql defaults to STDOUT
     Given a WP install
 
@@ -52,6 +53,7 @@ Feature: Export a WordPress database
       -- Dump completed on
       """
 
+  @require-mysql
   Scenario: Export database with mysql --no-defaults to STDOUT
     Given a WP install
 
@@ -61,6 +63,7 @@ Feature: Export a WordPress database
       -- Dump completed on
       """
 
+  @require-mysql
   Scenario: Export database with passed-in options
     Given a WP install
 
@@ -78,6 +81,7 @@ Feature: Export a WordPress database
       """
     And STDOUT should be empty
 
+  @require-mysql
   Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 

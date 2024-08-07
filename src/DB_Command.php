@@ -1,5 +1,7 @@
 <?php
 
+use WP_CLI\DB\SQLite\Export;
+use WP_CLI\DB\SQLite\Import;
 use WP_CLI\Formatter;
 use WP_CLI\Utils;
 
@@ -596,12 +598,20 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
 
 		}
+
 		$stdout    = ( '-' === $result_file );
 		$porcelain = Utils\get_flag_value( $assoc_args, 'porcelain' );
 
 		// Bail if both porcelain and STDOUT are set.
 		if ( $stdout && $porcelain ) {
 			WP_CLI::error( 'Porcelain is not allowed when output mode is STDOUT.' );
+		}
+
+		// Check if SQLite is enabled and use it if it is.
+		if ( Export::get_sqlite_plugin_version() ) {
+			$export = new Export();
+			$export->run( $result_file, $assoc_args );
+			return;
 		}
 
 		if ( ! $stdout ) {
@@ -762,6 +772,13 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
 
+		// Check if SQLite is enabled and use it if it is.
+		if ( Import::get_sqlite_plugin_version() ) {
+			$importer = new Import();
+			$importer->run( $result_file, $assoc_args );
+			return;
+		}
+
 		// Process options to MySQL.
 		$mysql_args = array_merge(
 			[ 'database' => DB_NAME ],
@@ -842,7 +859,6 @@ class DB_Command extends WP_CLI_Command {
 	 *     # Export only tables for a single site
 	 *     $ wp db export --tables=$(wp db tables --url=sub.example.com --format=csv)
 	 *     Success: Exported to wordpress_dbase.sql
-	 *
 	 * @when after_wp_load
 	 */
 	public function tables( $args, $assoc_args ) {
