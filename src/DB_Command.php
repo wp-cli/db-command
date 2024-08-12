@@ -535,6 +535,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--porcelain]
 	 * : Output filename for the exported database.
 	 *
+	 * [--add-drop-table]
+	 * : Include a `DROP TABLE IF EXISTS` statement before each `CREATE TABLE` statement.
+	 *
 	 * [--defaults]
 	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
