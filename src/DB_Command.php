@@ -1266,6 +1266,15 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--format=<format>]
 	 * : Render output in a particular format.
+	 * ---
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - json
+	 *   - yaml
+	 *   - ids
+	 *   - count
+	 * ---
 	 *
 	 * The percent color codes available are:
 	 *
@@ -1300,6 +1309,16 @@ class DB_Command extends WP_CLI_Command {
 	 * |  %F  | Blink (unlikely to work)
 	 *
 	 * They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background `%3%k` can be made black on a bright yellow background with `%Y%0%8`.
+	 *
+	 * ## AVAILABLE FIELDS
+	 *
+	 * These fields will be displayed by default for each result:
+	 *
+	 * * table
+	 * * column
+	 * * match
+	 * * primary_key_name
+	 * * primary_key_value
 	 *
 	 * ## EXAMPLES
 	 *
