@@ -1553,7 +1553,7 @@ class DB_Command extends WP_CLI_Command {
 
 			if ( in_array( $format, [ 'ids', 'count' ], true ) ) {
 				if ( count( $tables ) > 1 ) {
-					WP_CLI::error( 'The "ids" format can only be used for a single table.' );
+					WP_CLI::error( "The \"{$format}\" format can only be used for a single table." );
 				}
 				$search_results = array_column( $search_results, 'primary_key_value' );
 			}
