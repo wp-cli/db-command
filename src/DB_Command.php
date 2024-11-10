@@ -2168,9 +2168,7 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	private static function sanitize_mysql_command( $command, $default_flags ) {
 		return sprintf(
-			'/usr/bin/env $(test -L $(command -v %s) && /usr/bin/readlink -f $(command -v %s) || command -v %s)%s',
-			$command,
-			$command,
+			'/usr/bin/env $(/usr/bin/readlink -f $(command -v %s))%s',
 			$command,
 			$default_flags
 		);
