@@ -250,7 +250,12 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function check( $_, $assoc_args ) {
 
-		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
+		$command = sprintf(
+			'/usr/bin/env %s%s %s',
+			$this->get_check_command(),
+			$this->get_defaults_flag_string( $assoc_args ),
+			'%s'
+		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['check'] = true;
@@ -293,8 +298,12 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database optimized.
 	 */
 	public function optimize( $_, $assoc_args ) {
-
-		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
+		$command = sprintf(
+			'/usr/bin/env %s%s %s',
+			$this->get_check_command(),
+			$this->get_defaults_flag_string( $assoc_args ),
+			'%s'
+		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['optimize'] = true;
@@ -337,8 +346,12 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database repaired.
 	 */
 	public function repair( $_, $assoc_args ) {
-
-		$command = sprintf( '/usr/bin/env mysqlcheck%s %s', $this->get_defaults_flag_string( $assoc_args ), '%s' );
+		$command = sprintf(
+			'/usr/bin/env %s%s %s',
+			$this->get_check_command(),
+			$this->get_defaults_flag_string( $assoc_args ),
+			'%s'
+		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['repair'] = true;
@@ -611,7 +624,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$mysqldump_binary = Utils\force_env_on_nix_systems( 'mysqldump' );
+		$mysqldump_binary = Utils\force_env_on_nix_systems( $this->get_dump_command() );
 
 		$support_column_statistics = exec( $mysqldump_binary . ' --help | grep "column-statistics"' );
 
@@ -2151,5 +2164,23 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		return $modes;
+	}
+
+	/**
+	 * Returns the correct `check` command based on the detected database type.
+	 *
+	 * @return string The appropriate check command.
+	 */
+	private function get_check_command() {
+		return ( strpos( Utils\get_mysql_version(), 'MariaDB' ) !== false ) ? 'mariadb-check' : 'mysqlcheck';
+	}
+
+	/**
+	 * Returns the correct `dump` command based on the detected database type.
+	 *
+	 * @return string The appropriate dump command.
+	 */
+	private function get_dump_command() {
+		return ( strpos( Utils\get_mysql_version(), 'MariaDB' ) !== false ) ? 'mariadb-dump' : 'mysqldump';
 	}
 }
