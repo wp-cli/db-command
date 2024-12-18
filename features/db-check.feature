@@ -128,19 +128,11 @@ Feature: Check the database
     Given a WP install
 
     When I try `wp db check --defaults --debug`
-    Then STDERR should contain:
-      """
-      Debug (db): Running shell command: /usr/bin/env mysqlcheck %s
-      """
+    Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysqlcheck|mariadb-check) %s#
 
     When I try `wp db check --debug`
-    Then STDERR should contain:
-      """
-      Debug (db): Running shell command: /usr/bin/env mysqlcheck --no-defaults %s
-      """
+    Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysqlcheck|mariadb-check) --no-defaults %s#
 
     When I try `wp db check --no-defaults --debug`
-    Then STDERR should contain:
-      """
-      Debug (db): Running shell command: /usr/bin/env mysqlcheck --no-defaults %s
-      """
+    Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysqlcheck|mariadb-check) --no-defaults %s#
+
