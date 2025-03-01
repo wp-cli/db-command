@@ -2054,7 +2054,6 @@ class DB_Command extends WP_CLI_Command {
 			if ( true === Utils\get_flag_value( $assoc_args, 'defaults' ) ) {
 				$flag_string = '';
 			}
-
 		}
 
 		return $flag_string;
