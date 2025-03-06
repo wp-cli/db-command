@@ -506,9 +506,10 @@ class DB_Command extends WP_CLI_Command {
 		if ( isset( $assoc_args['execute'] ) ) {
 			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
 		}
-	
-		// Check if the query is an UPDATE or DELETE.
-		if ( isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT)\b/i', $assoc_args['execute'] ) ) {
+
+		$is_update_or_delete = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT)\b/i', $assoc_args['execute'] );
+
+		if ( $is_update_or_delete ) {
 			// Append `SELECT ROW_COUNT()` to the query.
 			$assoc_args['execute'] .= '; SELECT ROW_COUNT();';
 		}
@@ -521,7 +522,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		// For UPDATE/DELETE queries, parse the output to get the number of rows affected.
-		if ( isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT)\b/i', $assoc_args['execute'] ) ) {
+		if ( $is_update_or_delete ) {
 			$output_lines  = explode( "\n", trim( $stdout ) );
 			$affected_rows = (int) trim( end( $output_lines ) );
 			WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
