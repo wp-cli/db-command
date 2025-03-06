@@ -498,11 +498,11 @@ class DB_Command extends WP_CLI_Command {
 		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 		$assoc_args['database'] = DB_NAME;
-	
+
 		if ( ! empty( $args ) ) {
 			$assoc_args['execute'] = $args[0];
 		}
-	
+
 		if ( isset( $assoc_args['execute'] ) ) {
 			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
 		}
@@ -512,14 +512,14 @@ class DB_Command extends WP_CLI_Command {
 			// Append `SELECT ROW_COUNT()` to the query.
 			$assoc_args['execute'] .= '; SELECT ROW_COUNT();';
 		}
-	
+
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 		list( $stdout, $stderr, $exit_code ) = self::run( $command, $assoc_args, false );
-	
+
 		if ( $exit_code ) {
 			WP_CLI::error( "Query failed: {$stderr}" );
 		}
-	
+
 		// For UPDATE/DELETE queries, parse the output to get the number of rows affected.
 		if ( isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT)\b/i', $assoc_args['execute'] ) ) {
 			$output_lines  = explode( "\n", trim( $stdout ) );
