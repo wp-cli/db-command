@@ -526,6 +526,8 @@ class DB_Command extends WP_CLI_Command {
 			$output_lines  = explode( "\n", trim( $stdout ) );
 			$affected_rows = (int) trim( end( $output_lines ) );
 			WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
+		} else {
+			WP_CLI::line( $stdout );
 		}
 	}
 
