@@ -326,3 +326,13 @@ Feature: Perform database operations
       """
       latin1_spanish_ci
       """
+
+  Scenario: Running an UPDATE query should return the number of affected rows
+    Given a WP install
+    When I run `wp db query "UPDATE wp_users SET user_status = 1 WHERE ID = 2"`
+    Then STDOUT should contain "Rows affected: 1"
+
+  Scenario: Running an DELETE query should return the number of affected rows
+    Given a WP install
+    When I run `wp db query "DELETE FROM wp_users WHERE ID = 2"`
+    Then STDOUT should contain "Rows affected: 1"
