@@ -330,9 +330,15 @@ Feature: Perform database operations
   Scenario: Running an UPDATE query should return the number of affected rows
     Given a WP install
     When I run `wp db query "UPDATE wp_users SET user_status = 1 WHERE ID = 1"`
-    Then STDOUT should contain "Query succeeded. Rows affected: 1"
+    Then STDOUT should contain:
+      """
+      Query succeeded. Rows affected: 1
+      """
 
   Scenario: Running an DELETE query should return the number of affected rows
     Given a WP install
     When I run `wp db query "DELETE FROM wp_users WHERE ID = 1"`
-    Then STDOUT should contain "Query succeeded. Rows affected: 1"
+    Then STDOUT should contain:
+      """
+      Query succeeded. Rows affected: 1
+      """
