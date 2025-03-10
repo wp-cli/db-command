@@ -495,22 +495,25 @@ class DB_Command extends WP_CLI_Command {
 	 *     +---------+-----------------------+
 	 */
 	public function query( $args, $assoc_args ) {
+		
 		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+
 		$assoc_args['database'] = DB_NAME;
 
+		// The query might come from STDIN.
 		if ( ! empty( $args ) ) {
 			$assoc_args['execute'] = $args[0];
 		}
 
 		if ( isset( $assoc_args['execute'] ) ) {
+			// Ensure that the SQL mode is compatible with WPDB.
 			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
 		}
 
-		$is_update_or_delete = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT)\b/i', $assoc_args['execute'] );
+		$is_row_modifying_query = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE|LOAD DATA)\b/i', $assoc_args['execute'] );
 
-		if ( $is_update_or_delete ) {
-			// Append `SELECT ROW_COUNT()` to the query.
+		if ( $is_row_modifying_query ) {
 			$assoc_args['execute'] .= '; SELECT ROW_COUNT();';
 		}
 
@@ -521,8 +524,7 @@ class DB_Command extends WP_CLI_Command {
 			WP_CLI::error( "Query failed: {$stderr}" );
 		}
 
-		// For UPDATE/DELETE queries, parse the output to get the number of rows affected.
-		if ( $is_update_or_delete ) {
+		if ( $is_row_modifying_query ) {
 			$output_lines  = explode( "\n", trim( $stdout ) );
 			$affected_rows = (int) trim( end( $output_lines ) );
 			WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
