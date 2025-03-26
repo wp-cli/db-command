@@ -398,8 +398,8 @@ class DB_Command extends WP_CLI_Command {
 	public function cli( $_, $assoc_args ) {
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -501,8 +501,8 @@ class DB_Command extends WP_CLI_Command {
 	public function query( $args, $assoc_args ) {
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -740,8 +740,8 @@ class DB_Command extends WP_CLI_Command {
 
 		list( $stdout, $stderr, $exit_code ) = self::run(
 			sprintf(
-				'/usr/bin/env %s%s --no-auto-rehash --batch --skip-column-names',
-				$this->get_mysql_command(),
+				'%s%s --no-auto-rehash --batch --skip-column-names',
+				Utils\get_mysql_binary_path(),
 				$this->get_defaults_flag_string( $assoc_args )
 			),
 			[ 'execute' => $query ],
@@ -829,8 +829,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -1765,8 +1765,8 @@ class DB_Command extends WP_CLI_Command {
 
 		self::run(
 			sprintf(
-				'/usr/bin/env %s%s --no-auto-rehash',
-				$this->get_mysql_command(),
+				'%s%s --no-auto-rehash',
+				Utils\get_mysql_binary_path(),
 				$this->get_defaults_flag_string( $assoc_args )
 			),
 			array_merge( [ 'execute' => $query ], $mysql_args )
@@ -2166,7 +2166,7 @@ class DB_Command extends WP_CLI_Command {
 
 			list( $stdout, $stderr, $exit_code ) = self::run(
 				sprintf(
-					'/usr/bin/env %s%s --no-auto-rehash --batch --skip-column-names',
+					'%s%s --no-auto-rehash --batch --skip-column-names',
 					$this->get_mysql_command(),
 					$this->get_defaults_flag_string( $assoc_args )
 				),
@@ -2200,21 +2200,12 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Returns the correct `mysql` command based on the detected database type.
-	 *
-	 * @return string The appropriate check command.
-	 */
-	private function get_mysql_command() {
-		return ( strpos( Utils\get_mysql_version(), 'MariaDB' ) !== false ) ? 'mariadb' : 'mysql';
-	}
-
-	/**
 	 * Returns the correct `check` command based on the detected database type.
 	 *
 	 * @return string The appropriate check command.
 	 */
 	private function get_check_command() {
-		return ( strpos( Utils\get_mysql_version(), 'MariaDB' ) !== false ) ? 'mariadb-check' : 'mysqlcheck';
+		return 'mariadb' === Utils\get_db_type() ? 'mariadb-check' : 'mysqlcheck';
 	}
 
 	/**
@@ -2223,6 +2214,6 @@ class DB_Command extends WP_CLI_Command {
 	 * @return string The appropriate dump command.
 	 */
 	private function get_dump_command() {
-		return ( strpos( Utils\get_mysql_version(), 'MariaDB' ) !== false ) ? 'mariadb-dump' : 'mysqldump';
+		return 'mariadb' === Utils\get_db_type() ? 'mariadb-dump' : 'mysqldump';
 	}
 }
