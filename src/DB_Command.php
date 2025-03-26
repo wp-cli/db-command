@@ -2167,7 +2167,7 @@ class DB_Command extends WP_CLI_Command {
 			list( $stdout, $stderr, $exit_code ) = self::run(
 				sprintf(
 					'%s%s --no-auto-rehash --batch --skip-column-names',
-					$this->get_mysql_command(),
+					Utils\get_mysql_binary_path(),
 					$this->get_defaults_flag_string( $assoc_args )
 				),
 				array_merge( $args, [ 'execute' => 'SELECT @@SESSION.sql_mode' ] ),
