@@ -398,7 +398,7 @@ class DB_Command extends WP_CLI_Command {
 	public function cli( $_, $assoc_args ) {
 
 		$command = sprintf(
-			'%s%s --no-auto-rehash',
+			'/usr/bin/env %s%s --no-auto-rehash',
 			$this->get_mysql_command(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
@@ -501,7 +501,7 @@ class DB_Command extends WP_CLI_Command {
 	public function query( $args, $assoc_args ) {
 
 		$command = sprintf(
-			'%s%s --no-auto-rehash',
+			'/usr/bin/env %s%s --no-auto-rehash',
 			$this->get_mysql_command(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
