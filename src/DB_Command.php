@@ -829,7 +829,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$command = sprintf(
-			'%s%s --no-auto-rehash',
+			'/usr/bin/env %s%s --no-auto-rehash',
 			$this->get_mysql_command(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
