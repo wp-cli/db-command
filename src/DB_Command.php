@@ -252,7 +252,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
-			$this->get_check_command(),
+			Utils\get_sql_check_command(),
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -300,7 +300,7 @@ class DB_Command extends WP_CLI_Command {
 	public function optimize( $_, $assoc_args ) {
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
-			$this->get_check_command(),
+			Utils\get_sql_check_command(),
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -348,7 +348,7 @@ class DB_Command extends WP_CLI_Command {
 	public function repair( $_, $assoc_args ) {
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
-			$this->get_check_command(),
+			Utils\get_sql_check_command(),
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -650,7 +650,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$mysqldump_binary = Utils\force_env_on_nix_systems( $this->get_dump_command() );
+		$mysqldump_binary = Utils\force_env_on_nix_systems( Utils\get_sql_dump_command() );
 
 		$support_column_statistics = exec( $mysqldump_binary . ' --help | grep "column-statistics"' );
 
@@ -2206,23 +2206,5 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	private function get_mysql_command() {
 		return 'mariadb' === Utils\get_db_type() ? 'mariadb' : 'mysql';
-	}
-
-	/**
-	 * Returns the correct `check` command based on the detected database type.
-	 *
-	 * @return string The appropriate check command.
-	 */
-	private function get_check_command() {
-		return 'mariadb' === Utils\get_db_type() ? 'mariadb-check' : 'mysqlcheck';
-	}
-
-	/**
-	 * Returns the correct `dump` command based on the detected database type.
-	 *
-	 * @return string The appropriate dump command.
-	 */
-	private function get_dump_command() {
-		return 'mariadb' === Utils\get_db_type() ? 'mariadb-dump' : 'mysqldump';
 	}
 }
