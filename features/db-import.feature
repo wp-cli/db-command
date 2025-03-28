@@ -135,22 +135,13 @@ Feature: Import a WordPress database
     Then the wp_cli_test.sql file should exist
 
     When I try `wp db import --defaults --debug`
-    Then STDERR should contain:
-      """
-      Debug (db): Running shell command: /usr/bin/env mysql --no-auto-rehash
-      """
+    Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysql|mariadb) --no-auto-rehash#
 
     When I try `wp db import --debug`
-    Then STDERR should contain:
-      """
-      Debug (db): Running shell command: /usr/bin/env mysql --no-defaults --no-auto-rehash
-      """
+    Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysql|mariadb) --no-defaults --no-auto-rehash#
 
     When I try `wp db import --no-defaults --debug`
-    Then STDERR should contain:
-      """
-      Debug (db): Running shell command: /usr/bin/env mysql --no-defaults --no-auto-rehash
-      """
+    Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysql|mariadb) --no-defaults --no-auto-rehash#
 
   @require-wp-4.2
   Scenario: Import db that has emoji in post
