@@ -79,8 +79,7 @@ Feature: Import a WordPress database
 
   Scenario: Import database with passed-in options
     Given a WP install
-
-    Given a debug.sql file:
+    And a debug.sql file:
       """
       INSERT INTO `wp_options` (`option_id`, `option_name`, `option_value`, `autoload`) VALUES (999, 'testoption',  'testval',  'yes'),(999, 'testoption',  'testval',  'yes');
       """

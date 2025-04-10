@@ -31,7 +31,7 @@ Feature: Query the database with WordPress' MySQL config
       """
 
     When I try `wp db query "SELECT COUNT(ID) FROM wp_posts;" --dbuser=no_such_user`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -48,7 +48,7 @@ Feature: Query the database with WordPress' MySQL config
       """
 
     When I try `wp db query --defaults "SELECT COUNT(ID) FROM wp_posts;" --dbuser=no_such_user`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -65,7 +65,7 @@ Feature: Query the database with WordPress' MySQL config
       """
 
     When I try `wp db query --no-defaults "SELECT COUNT(ID) FROM wp_posts;" --dbuser=no_such_user`
-	Then the return code should not be 0
+    Then the return code should not be 0
     And STDERR should contain:
       """
       Access denied
@@ -75,7 +75,7 @@ Feature: Query the database with WordPress' MySQL config
   Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 
-  When I try `wp db query --defaults --debug`
+    When I try `wp db query --defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysql|mariadb) --no-auto-rehash#
 
     When I try `wp db query --debug`
