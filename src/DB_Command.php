@@ -2052,6 +2052,7 @@ class DB_Command extends WP_CLI_Command {
 			'ssl-fips-mode',
 			'ssl-key',
 			'ssl-mode',
+			'ssl-verify-server-cert',
 			'syslog',
 			'table',
 			'tee',
@@ -2162,13 +2163,8 @@ class DB_Command extends WP_CLI_Command {
 		static $modes = null;
 
 		// Make sure the provided arguments don't interfere with the expected
-		// output here.
-		$args = [];
-		foreach ( [] as $arg ) {
-			if ( isset( $assoc_args[ $arg ] ) ) {
-				$args[ $arg ] = $assoc_args[ $arg ];
-			}
-		}
+		// output here. We need to preserve all valid MySQL arguments for connection.
+		$args = self::get_mysql_args( $assoc_args );
 
 		if ( null === $modes ) {
 			$modes = [];
