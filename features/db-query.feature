@@ -84,6 +84,16 @@ Feature: Query the database with WordPress' MySQL config
     When I try `wp db query --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysql|mariadb) --no-defaults --no-auto-rehash#
 
+  Scenario: SQL mode discovery respects --defaults flag
+    Given a WP install
+
+    When I try `wp db query "SELECT 1;" --defaults --debug`
+    Then STDERR should match #Running shell command: /usr/bin/env (mysql|mariadb) --no-auto-rehash#
+    And STDERR should not match #Running shell command: /usr/bin/env (mysql|mariadb) --no-defaults#
+
+    When I try `wp db query "SELECT 1;" --debug`
+    Then STDERR should match #Running shell command: /usr/bin/env (mysql|mariadb) --no-defaults --no-auto-rehash#
+
   Scenario: SQL modes do not include any of the modes incompatible with WordPress
     Given a WP install
 
