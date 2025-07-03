@@ -709,7 +709,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
-		$escaped_command = \WP_CLI\Utils\esc_cmd( $command, $command_esc_args );
+		$escaped_command = \WP_CLI\Utils\esc_cmd( $command, ...$command_esc_args );
 
 		// Remove parameters not needed for SQL run.
 		unset( $assoc_args['porcelain'] );
@@ -1120,6 +1120,8 @@ class DB_Command extends WP_CLI_Command {
 			];
 		}
 
+		$size_format_display = '';
+
 		if ( ! empty( $size_format ) || $human_readable ) {
 			foreach ( $rows as $index => $row ) {
 				// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Backfilling WP native constants.
@@ -1209,7 +1211,7 @@ class DB_Command extends WP_CLI_Command {
 						list( $first, $second ) = $orderby_array;
 
 						if ( 'size' === $orderby ) {
-							return $first['Bytes'] > $second['Bytes'];
+							return $first['Bytes'] > $second['Bytes'] ? 1 : -1;
 						}
 
 						return strcmp( $first['Name'], $second['Name'] );
@@ -1491,7 +1493,7 @@ class DB_Command extends WP_CLI_Command {
 			$esc_like_search = '%' . Utils\esc_like( $search ) . '%';
 		}
 
-		$encoding = null;
+		$encoding = false;
 		if ( 0 === strpos( $wpdb->charset, self::ENCODING_UTF8 ) ) {
 			$encoding = 'UTF-8';
 		}
@@ -1571,7 +1573,7 @@ class DB_Command extends WP_CLI_Command {
 								}
 								if ( $after_context ) {
 									$end_offset = $offset + strlen( $match );
-									$after      = \cli\safe_substr( substr( $col_val, $end_offset ), 0, $after_context, false /*is_width*/, $col_encoding );
+									$after      = (string) \cli\safe_substr( substr( $col_val, $end_offset ), 0, $after_context, false /*is_width*/, $col_encoding );
 									// To lessen context duplication in output, shorten the after context if it overlaps with the next match.
 									if ( $i + 1 < $match_cnt && $end_offset + strlen( $after ) > $matches[0][ $i + 1 ][1] ) {
 										$after           = substr( $after, 0, $matches[0][ $i + 1 ][1] - $end_offset );
