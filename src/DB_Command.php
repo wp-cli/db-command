@@ -709,7 +709,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
-		$escaped_command = \WP_CLI\Utils\esc_cmd( $command, ...$command_esc_args );
+		$escaped_command = Utils\esc_cmd( $command, ...$command_esc_args );
 
 		// Remove parameters not needed for SQL run.
 		unset( $assoc_args['porcelain'] );
