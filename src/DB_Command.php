@@ -1211,7 +1211,7 @@ class DB_Command extends WP_CLI_Command {
 						list( $first, $second ) = $orderby_array;
 
 						if ( 'size' === $orderby ) {
-							return $first['Bytes'] > $second['Bytes'] ? 1 : -1;
+							return $first['Bytes'] <=> $second['Bytes'];
 						}
 
 						return strcmp( $first['Name'], $second['Name'] );
