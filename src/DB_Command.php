@@ -816,26 +816,32 @@ class DB_Command extends WP_CLI_Command {
 			if ( ! is_readable( $result_file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
 			}
-		
-		// Check for MariaDB sandbox directive and skip it if found
-		$first_line = fgets( fopen( $result_file, 'r' ) );
-		if ( strpos( $first_line, '/*!999999\\' ) !== false ) {
-			WP_CLI::debug( 'MariaDB sandbox directive found. Creating sanitized temp file.', 'db' );
 
-			$input = fopen( $result_file, 'r' );
-			$tmp   = tmpfile();
-			$tmp_path = stream_get_meta_data( $tmp )['uri'];
+			// Check for MariaDB sandbox directive and skip it if found
+			$first_line = fgets( fopen( $result_file, 'r' ) );
+			if ( strpos( $first_line, '/*!999999\\' ) !== false ) {
+				WP_CLI::debug( 'MariaDB sandbox directive found. Creating sanitized temp file.', 'db' );
 
-			$line_number = 0;
-			while ( ( $line = fgets( $input ) ) !== false ) {
-				if ( $line_number > 0 ) {
-					fwrite( $tmp, $line );
+				$input       = fopen( $result_file, 'r' );
+				$tmp         = tmpfile();
+				$tmp_path    = stream_get_meta_data( $tmp )['uri'];
+				$line_number = 0;
+
+				while ( true ) {
+					$line = fgets( $input );
+					if ( false === $line ) {
+						break;
+					}
+
+					if ( $line_number > 0 ) {
+						fwrite( $tmp, $line );
+					}
+
+					++$line_number; // Use pre-increment
 				}
-				$line_number++;
-			}
-			fclose( $input );
 
-			$result_file = $tmp_path;
+				fclose( $input );
+				$result_file = $tmp_path;
 			}
 
 			$query = Utils\get_flag_value( $assoc_args, 'skip-optimization' )
