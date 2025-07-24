@@ -526,18 +526,17 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
-		list( $stdout, $stderr, $exit_code ) = self::run( $command, $assoc_args, false );
-
-		if ( $exit_code ) {
-			WP_CLI::error( "Query failed: {$stderr}" );
-		}
 
 		if ( $is_row_modifying_query ) {
-			$output_lines  = explode( "\n", trim( $stdout ) );
-			$affected_rows = (int) trim( end( $output_lines ) );
+			list( $stdout, $stderr, $exit_code ) = self::run( $command, $assoc_args, false );
+			$output_lines                        = explode( "\n", trim( $stdout ) );
+			$affected_rows                       = (int) trim( end( $output_lines ) );
+			if ( $exit_code ) {
+				WP_CLI::error( "Query failed: {$stderr}" );
+			}
 			WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
-		} elseif ( ! empty( $stdout ) ) {
-			WP_CLI::line( $stdout );
+		} else {
+			self::run( $command, $assoc_args );
 		}
 	}
 
