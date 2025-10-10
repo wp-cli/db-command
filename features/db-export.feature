@@ -34,6 +34,16 @@ Feature: Export a WordPress database
       wp_options
       """
 
+  Scenario: Exclude data of certain tables when exporting the database
+    Given a WP install
+
+    When I run `wp db export wp_cli_test.sql --exclude_tables_data=wp_actionscheduler_logs --porcelain`
+    Then the wp_cli_test.sql file should exist
+    And the wp_cli_test.sql file should contain:
+      """
+      wp_actionscheduler_logs
+      """
+
   Scenario: Export database to STDOUT
     Given a WP install
 
