@@ -37,11 +37,15 @@ Feature: Export a WordPress database
   Scenario: Exclude data of certain tables when exporting the database
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql --exclude_tables_data=wp_actionscheduler_logs --porcelain`
+    When I run `wp db export wp_cli_test.sql --exclude_tables_data=wp_users --porcelain`
     Then the wp_cli_test.sql file should exist
     And the wp_cli_test.sql file should contain:
       """
-      wp_actionscheduler_logs
+      wp_users
+      """
+    And the wp_cli_test.sql file should not contain:
+      """
+      INSERT INTO `wp_users`
       """
 
   Scenario: Export database to STDOUT
