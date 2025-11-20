@@ -314,23 +314,26 @@ trait DB_Command_SQLite {
 			$tables = $pdo->query( "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name" )->fetchAll( PDO::FETCH_COLUMN );
 
 			foreach ( $tables as $table ) {
+				// Escape table name for identifiers.
+				$escaped_table = '"' . str_replace( '"', '""', $table ) . '"';
+
 				// Get CREATE TABLE statement.
 				$create_stmt = $pdo->query( "SELECT sql FROM sqlite_master WHERE type='table' AND name=" . $pdo->quote( $table ) )->fetchColumn();
 
 				if ( isset( $assoc_args['add-drop-table'] ) ) {
-					fwrite( $output, "DROP TABLE IF EXISTS {$table};\n" );
+					fwrite( $output, "DROP TABLE IF EXISTS {$escaped_table};\n" );
 				}
 
 				fwrite( $output, $create_stmt . ";\n\n" );
 
 				// Export data.
-				$rows = $pdo->query( "SELECT * FROM {$table}" )->fetchAll( PDO::FETCH_ASSOC );
+				$rows = $pdo->query( "SELECT * FROM {$escaped_table}" )->fetchAll( PDO::FETCH_ASSOC );
 
 				foreach ( $rows as $row ) {
 					$columns = array_keys( $row );
 					$values  = array_map( [ $pdo, 'quote' ], array_values( $row ) );
 
-					fwrite( $output, "INSERT INTO {$table} (" . implode( ', ', $columns ) . ') VALUES (' . implode( ', ', $values ) . ");\n" );
+					fwrite( $output, "INSERT INTO {$escaped_table} (" . implode( ', ', $columns ) . ') VALUES (' . implode( ', ', $values ) . ");\n" );
 				}
 
 				fwrite( $output, "\n" );
