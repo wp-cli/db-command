@@ -169,8 +169,24 @@ trait DB_Command_SQLite {
 			}
 		}
 
-		// Recreate.
-		$this->sqlite_create( $assoc_args );
+		// Create directory if needed.
+		$db_dir = dirname( $db_path );
+		if ( ! is_dir( $db_dir ) ) {
+			if ( ! mkdir( $db_dir, 0755, true ) ) {
+				WP_CLI::error( "Could not create directory: {$db_dir}" );
+			}
+		}
+
+		// Recreate the SQLite database file.
+		try {
+			$pdo = new PDO( 'sqlite:' . $db_path );
+			$pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
+			// Execute a simple query to initialize the database.
+			$pdo->exec( 'CREATE TABLE IF NOT EXISTS _wpcli_test (id INTEGER)' );
+			$pdo->exec( 'DROP TABLE _wpcli_test' );
+		} catch ( PDOException $e ) {
+			WP_CLI::error( 'Could not create SQLite database: ' . $e->getMessage() );
+		}
 
 		WP_CLI::success( 'Database reset.' );
 	}
