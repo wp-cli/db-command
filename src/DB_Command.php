@@ -89,7 +89,7 @@ class DB_Command extends WP_CLI_Command {
 		$this->maybe_load_sqlite_dropin();
 
 		if ( $this->is_sqlite() ) {
-			$this->sqlite_create( $assoc_args );
+			$this->sqlite_create();
 			return;
 		}
 
@@ -130,7 +130,7 @@ class DB_Command extends WP_CLI_Command {
 		if ( $this->is_sqlite() ) {
 			$db_path = $this->get_sqlite_db_path();
 			WP_CLI::confirm( "Are you sure you want to drop the SQLite database at '{$db_path}'?", $assoc_args );
-			$this->sqlite_drop( $assoc_args );
+			$this->sqlite_drop();
 			return;
 		}
 
@@ -173,7 +173,7 @@ class DB_Command extends WP_CLI_Command {
 		if ( $this->is_sqlite() ) {
 			$db_path = $this->get_sqlite_db_path();
 			WP_CLI::confirm( "Are you sure you want to reset the SQLite database at '{$db_path}'?", $assoc_args );
-			$this->sqlite_reset( $assoc_args );
+			$this->sqlite_reset();
 			return;
 		}
 
@@ -568,7 +568,7 @@ class DB_Command extends WP_CLI_Command {
 				WP_CLI::error( 'No query specified.' );
 			}
 
-			$this->sqlite_query( $query, $assoc_args );
+			$this->sqlite_query( $query );
 			return;
 		}
 
@@ -888,7 +888,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		if ( $this->is_sqlite() ) {
-			$this->sqlite_import( $result_file, $assoc_args );
+			$this->sqlite_import( $result_file );
 			return;
 		}
 

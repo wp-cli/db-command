@@ -102,10 +102,8 @@ trait DB_Command_SQLite {
 
 	/**
 	 * Create SQLite database.
-	 *
-	 * @param array $assoc_args Associative arguments (unused for SQLite).
 	 */
-	protected function sqlite_create( $assoc_args ) {
+	protected function sqlite_create() {
 		$db_path = $this->get_sqlite_db_path();
 		$db_dir  = dirname( $db_path );
 
@@ -137,10 +135,8 @@ trait DB_Command_SQLite {
 
 	/**
 	 * Drop SQLite database.
-	 *
-	 * @param array $assoc_args Associative arguments (unused for SQLite).
 	 */
-	protected function sqlite_drop( $assoc_args ) {
+	protected function sqlite_drop() {
 		$db_path = $this->get_sqlite_db_path();
 
 		if ( ! file_exists( $db_path ) ) {
@@ -156,10 +152,8 @@ trait DB_Command_SQLite {
 
 	/**
 	 * Reset SQLite database.
-	 *
-	 * @param array $assoc_args Associative arguments (unused for SQLite).
 	 */
-	protected function sqlite_reset( $assoc_args ) {
+	protected function sqlite_reset() {
 		$db_path = $this->get_sqlite_db_path();
 
 		// Delete if exists.
@@ -194,10 +188,9 @@ trait DB_Command_SQLite {
 	/**
 	 * Execute a query against the SQLite database.
 	 *
-	 * @param string $query      SQL query to execute.
-	 * @param array  $assoc_args Associative arguments.
+	 * @param string $query SQL query to execute.
 	 */
-	protected function sqlite_query( $query, $assoc_args ) {
+	protected function sqlite_query( $query ) {
 		$pdo = $this->get_sqlite_pdo();
 
 		if ( ! $pdo ) {
@@ -357,10 +350,9 @@ trait DB_Command_SQLite {
 	/**
 	 * Import SQL into SQLite database.
 	 *
-	 * @param string $file       Input file path.
-	 * @param array  $assoc_args Associative arguments.
+	 * @param string $file Input file path.
 	 */
-	protected function sqlite_import( $file, $assoc_args ) {
+	protected function sqlite_import( $file ) {
 		$pdo = $this->get_sqlite_pdo();
 
 		if ( ! $pdo ) {
