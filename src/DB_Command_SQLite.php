@@ -1,5 +1,7 @@
 <?php
 
+use WP_CLI\Utils;
+
 /**
  * SQLite-specific database operations for DB_Command.
  *
@@ -320,6 +322,10 @@ trait DB_Command_SQLite {
 			WP_CLI::error( "Could not open file for writing: {$file}" );
 		}
 
+		$exclude_tables = Utils\get_flag_value( $assoc_args, 'exclude_tables', '' );
+		$exclude_tables = explode( ',', trim( $assoc_args['exclude_tables'], ',' ) );
+		$exclude_tables = array_map( 'strtolower', $exclude_tables );
+
 		try {
 			// Export schema and data as SQL.
 			fwrite( $output, "-- SQLite database dump\n" );
@@ -335,6 +341,10 @@ trait DB_Command_SQLite {
 			$tables = $stmt->fetchAll( PDO::FETCH_COLUMN );
 
 			foreach ( $tables as $table ) {
+				if ( in_array( $table, $exclude_tables, true ) ) {
+					continue;
+				}
+
 				// Escape table name for identifiers.
 				$escaped_table = '"' . str_replace( '"', '""', $table ) . '"';
 

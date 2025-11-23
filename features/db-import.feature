@@ -127,6 +127,8 @@ Feature: Import a WordPress database
       """
       wp db import
       """
+
+  @require-mysql-or-mariadb
   Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 

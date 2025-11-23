@@ -23,24 +23,10 @@ Feature: Export a WordPress database
   Scenario: Exclude tables when exporting the database
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql --exclude_tables=wp_users --porcelain`
+    When I try `wp db export wp_cli_test.sql --exclude_tables=wp_users --porcelain`
     Then the wp_cli_test.sql file should exist
-    And the wp_cli_test.sql file should not contain:
-      """
-      CREATE TABLE wp_users
-      """
-    And the wp_cli_test.sql file should contain:
-      """
-      CREATE TABLE wp_options
-      """
-    And the wp_cli_test.sql file should not contain:
-      """
-      CREATE TABLE "wp_users"
-      """
-    And the wp_cli_test.sql file should contain:
-      """
-      CREATE TABLE "wp_options"
-      """
+    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE "?wp_users"?/
+    And the contents of the wp_cli_test.sql file should match /CREATE TABLE "?wp_options"?/
 
   Scenario: Export database to STDOUT
     Given a WP install
@@ -86,6 +72,7 @@ Feature: Export a WordPress database
       """
     And STDOUT should be empty
 
+  @require-mysql-or-mariadb
   Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 
