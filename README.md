@@ -7,44 +7,6 @@ Performs basic database operations using credentials stored in wp-config.php.
 
 Quick links: [Using](#using) | [Installing](#installing) | [Contributing](#contributing) | [Support](#support)
 
-## SQLite Support
-
-This package now supports SQLite databases in addition to MySQL/MariaDB. When using the [SQLite Database Integration plugin](https://github.com/WordPress/sqlite-database-integration/), most `wp db` commands will automatically detect and work with SQLite databases.
-
-**Supported commands with SQLite:**
-- `wp db create` - Creates the SQLite database file
-- `wp db drop` - Deletes the SQLite database file
-- `wp db reset` - Recreates the SQLite database file
-- `wp db query` - Executes SQL queries via PDO
-- `wp db export` - Exports the SQLite database to SQL
-- `wp db import` - Imports SQL into the SQLite database
-- `wp db tables` - Lists tables (via $wpdb)
-- `wp db size` - Shows database file size
-- `wp db prefix` - Shows table prefix (via $wpdb)
-- `wp db columns` - Shows column information (via $wpdb)
-- `wp db search` - Searches database content (via $wpdb)
-- `wp db clean` - Removes tables with prefix (via $wpdb)
-
-**Commands not applicable to SQLite:**
-- `wp db check` - Shows a warning (SQLite doesn't require manual checking)
-- `wp db optimize` - Shows a warning (SQLite auto-optimizes with VACUUM)
-- `wp db repair` - Shows a warning (SQLite doesn't require manual repair)
-- `wp db cli` - Shows a warning (use `wp db query` instead)
-
-**SQLite Detection:**
-
-The command automatically detects SQLite databases when:
-1. The `DB_ENGINE` constant is set to `'sqlite'` in wp-config.php
-2. The `SQLITE_DB_DROPIN_VERSION` constant is defined (plugin loaded)
-3. A `db.php` drop-in exists with SQLite integration
-
-**Database File Location:**
-
-By default, the SQLite database is expected at `wp-content/database/.ht.sqlite`. You can customize this location using:
-- `FQDB` constant - Full path to the database file
-- `FQDBDIR` constant - Directory containing the database
-- `DB_FILE` constant - Database filename (used with FQDBDIR)
-
 ## Using
 
 This package implements the following commands:
