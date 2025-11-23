@@ -1210,7 +1210,7 @@ class DB_Command extends WP_CLI_Command {
 						DB_NAME
 					)
 				);
-				$db_name = DB_NAME;
+				$db_name  = DB_NAME;
 			}
 
 			// Add the database size to the list.

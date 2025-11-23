@@ -208,7 +208,7 @@ trait DB_Command_SQLite {
 			$is_row_modifying_query = preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE)\b/i', $query );
 
 			if ( $is_row_modifying_query ) {
-				$stmt          = $pdo->prepare( $query );
+				$stmt = $pdo->prepare( $query );
 				$stmt->execute();
 				$affected_rows = $stmt->rowCount();
 				WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
@@ -252,10 +252,10 @@ trait DB_Command_SQLite {
 		}
 
 		// Display header.
-		$separator = '+';
+		$separator   = '+';
 		$header_line = '|';
 		foreach ( $headers as $header ) {
-			$separator  .= str_repeat( '-', $widths[ $header ] + 2 ) . '+';
+			$separator   .= str_repeat( '-', $widths[ $header ] + 2 ) . '+';
 			$header_line .= ' ' . str_pad( $header, $widths[ $header ] ) . ' |';
 		}
 
@@ -308,7 +308,7 @@ trait DB_Command_SQLite {
 		try {
 			// Export schema and data as SQL.
 			fwrite( $output, "-- SQLite database dump\n" );
-			fwrite( $output, "-- Database: " . basename( $db_path ) . "\n\n" );
+			fwrite( $output, '-- Database: ' . basename( $db_path ) . "\n\n" );
 
 			// Get all tables.
 			$tables = $pdo->query( "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name" )->fetchAll( PDO::FETCH_COLUMN );
