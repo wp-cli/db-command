@@ -14,8 +14,8 @@ Feature: Optimize the database
   Scenario: SQLite commands that show warnings for optimize
     Given a WP install
 
-    When I run `wp db optimize`
-    Then STDOUT should contain:
+    When I try `wp db optimize`
+    Then STDERR should contain:
       """
       Warning: Database optimization is not supported for SQLite databases
       """

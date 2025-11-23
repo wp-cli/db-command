@@ -14,8 +14,8 @@ Feature: Repair the database
   Scenario: SQLite commands that show warnings for repair
     Given a WP install
 
-    When I run `wp db repair`
-    Then STDOUT should contain:
+    When I try `wp db repair`
+    Then STDERR should contain:
       """
       Warning: Database repair is not supported for SQLite databases
       """

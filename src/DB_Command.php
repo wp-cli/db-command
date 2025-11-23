@@ -708,8 +708,7 @@ class DB_Command extends WP_CLI_Command {
 		} else {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.rand_mt_rand -- WordPress is not loaded.
 			$hash        = substr( md5( (string) mt_rand() ), 0, 7 );
-			$db_name     = $this->is_sqlite() ? 'sqlite-db' : DB_NAME;
-			$result_file = sprintf( '%s-%s-%s.sql', $db_name, date( 'Y-m-d' ), $hash ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
+			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
 
 		}
 
@@ -884,7 +883,7 @@ class DB_Command extends WP_CLI_Command {
 		if ( ! empty( $args[0] ) ) {
 			$result_file = $args[0];
 		} else {
-			$result_file = $this->is_sqlite() ? 'sqlite-db.sql' : sprintf( '%s.sql', DB_NAME );
+			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
 
 		if ( $this->is_sqlite() ) {
@@ -1614,8 +1613,8 @@ class DB_Command extends WP_CLI_Command {
 			if ( ! $text_columns ) {
 				if ( $stats ) {
 					$skipped[] = $table;
-					// Don't bother warning for term relationships (which is just 3 int columns).
-				} elseif ( ! preg_match( '/_term_relationships$/', $table ) ) {
+					// Don't bother warning for term relationships (which is just 3 int columns) or SQLite.
+				} elseif ( ! preg_match( '/_term_relationships$/', $table ) && ! $this->is_sqlite() ) {
 					WP_CLI::warning( $primary_keys ? "No text columns for table '$table' - skipped." : "No primary key or text columns for table '$table' - skipped." );
 				}
 				continue;

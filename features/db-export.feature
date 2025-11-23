@@ -27,11 +27,19 @@ Feature: Export a WordPress database
     Then the wp_cli_test.sql file should exist
     And the wp_cli_test.sql file should not contain:
       """
-      wp_users
+      CREATE TABLE wp_users
       """
     And the wp_cli_test.sql file should contain:
       """
-      wp_options
+      CREATE TABLE wp_options
+      """
+    And the wp_cli_test.sql file should not contain:
+      """
+      CREATE TABLE "wp_users"
+      """
+    And the wp_cli_test.sql file should contain:
+      """
+      CREATE TABLE "wp_options"
       """
 
   Scenario: Export database to STDOUT

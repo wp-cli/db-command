@@ -145,8 +145,8 @@ Feature: Check the database
   Scenario: SQLite commands that show warnings
     Given a WP install
 
-    When I run `wp db check`
-    Then STDOUT should contain:
+    When I try `wp db check`
+    Then STDERR should contain:
       """
       Warning: Database check is not supported for SQLite databases
       """

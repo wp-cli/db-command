@@ -2,6 +2,7 @@
 
 Feature: Display database size
 
+  @require-mysql-or-mariadb
   Scenario: Display only database size for a WordPress install
     Given a WP install
 
@@ -9,6 +10,21 @@ Feature: Display database size
     Then STDOUT should contain:
       """
       wp_cli_test
+      """
+
+    And STDOUT should contain:
+      """
+      B
+      """
+
+  @require-sqlite
+  Scenario: Display only database size for a WordPress install
+    Given a WP install
+
+    When I run `wp db size`
+    Then STDOUT should contain:
+      """
+      .ht.sqlite
       """
 
     And STDOUT should contain:
@@ -27,6 +43,7 @@ Feature: Display database size
       wp_cli_test
       """
 
+  @require-mysql-or-mariadb
   Scenario: Display only database size in a human readable format for a WordPress install
     Given a WP install
 
@@ -48,6 +65,21 @@ Feature: Display database size
       Cannot use --size_format and --human-readable arguments at the same time.
       """
     And STDOUT should be empty
+
+  @require-sqlite
+  Scenario: Display only database size in a human readable format for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --human-readable`
+    Then STDOUT should contain:
+      """
+      .ht.sqlite
+      """
+
+    And STDOUT should contain:
+      """
+      KB
+      """
 
   Scenario: Display only table sizes in a human readable format for a WordPress install
     Given a WP install
