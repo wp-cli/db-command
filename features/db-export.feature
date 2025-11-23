@@ -25,8 +25,8 @@ Feature: Export a WordPress database
 
     When I try `wp db export wp_cli_test.sql --exclude_tables=wp_users --porcelain`
     Then the wp_cli_test.sql file should exist
-    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE "?wp_users"?/
-    And the contents of the wp_cli_test.sql file should match /CREATE TABLE "?wp_options"?/
+    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_users["`]?/
+    And the contents of the wp_cli_test.sql file should match /CREATE TABLE ["`]?wp_options["`]?/
 
   Scenario: Export database to STDOUT
     Given a WP install
