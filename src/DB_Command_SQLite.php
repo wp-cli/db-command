@@ -105,7 +105,10 @@ trait DB_Command_SQLite {
 	 */
 	protected function sqlite_create() {
 		$db_path = $this->get_sqlite_db_path();
-		$db_dir  = dirname( $db_path );
+		if ( ! $db_path ) {
+			WP_CLI::error( 'Could not determine the database path.' );
+		}
+		$db_dir = dirname( $db_path );
 
 		// Create directory if it doesn't exist.
 		if ( ! is_dir( $db_dir ) ) {
@@ -139,6 +142,10 @@ trait DB_Command_SQLite {
 	protected function sqlite_drop() {
 		$db_path = $this->get_sqlite_db_path();
 
+		if ( ! $db_path ) {
+			WP_CLI::error( 'Could not determine the database path.' );
+		}
+
 		if ( ! file_exists( $db_path ) ) {
 			WP_CLI::error( 'Database does not exist.' );
 		}
@@ -155,6 +162,10 @@ trait DB_Command_SQLite {
 	 */
 	protected function sqlite_reset() {
 		$db_path = $this->get_sqlite_db_path();
+
+		if ( ! $db_path ) {
+			WP_CLI::error( 'Could not determine the database path.' );
+		}
 
 		// Delete if exists.
 		if ( file_exists( $db_path ) ) {
@@ -207,6 +218,12 @@ trait DB_Command_SQLite {
 				WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
 			} else {
 				$stmt = $pdo->query( $query );
+
+				if ( ! $stmt ) {
+					// There was an error.
+					$error_info = $pdo->errorInfo();
+					WP_CLI::error( 'Query failed: ' . $error_info[2] );
+				}
 
 				// Fetch and display results.
 				$results = $stmt->fetchAll( PDO::FETCH_ASSOC );
@@ -278,6 +295,10 @@ trait DB_Command_SQLite {
 	protected function sqlite_export( $file, $assoc_args ) {
 		$db_path = $this->get_sqlite_db_path();
 
+		if ( ! $db_path ) {
+			WP_CLI::error( 'Could not determine the database path.' );
+		}
+
 		if ( ! file_exists( $db_path ) ) {
 			WP_CLI::error( 'Database does not exist.' );
 		}
@@ -293,9 +314,10 @@ trait DB_Command_SQLite {
 			$output = fopen( 'php://stdout', 'w' );
 		} else {
 			$output = fopen( $file, 'w' );
-			if ( ! $output ) {
-				WP_CLI::error( "Could not open file for writing: {$file}" );
-			}
+		}
+
+		if ( ! $output ) {
+			WP_CLI::error( "Could not open file for writing: {$file}" );
 		}
 
 		try {
@@ -304,14 +326,26 @@ trait DB_Command_SQLite {
 			fwrite( $output, '-- Database: ' . basename( $db_path ) . "\n\n" );
 
 			// Get all tables.
-			$tables = $pdo->query( "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name" )->fetchAll( PDO::FETCH_COLUMN );
+			$stmt = $pdo->query( "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name" );
+			if ( ! $stmt ) {
+				// There was an error.
+				$error_info = $pdo->errorInfo();
+				WP_CLI::error( 'Could not retrieve table list: ' . $error_info[2] );
+			}
+			$tables = $stmt->fetchAll( PDO::FETCH_COLUMN );
 
 			foreach ( $tables as $table ) {
 				// Escape table name for identifiers.
 				$escaped_table = '"' . str_replace( '"', '""', $table ) . '"';
 
 				// Get CREATE TABLE statement.
-				$create_stmt = $pdo->query( "SELECT sql FROM sqlite_master WHERE type='table' AND name=" . $pdo->quote( $table ) )->fetchColumn();
+				$stmt = $pdo->query( "SELECT sql FROM sqlite_master WHERE type='table' AND name=" . $pdo->quote( $table ) );
+				if ( ! $stmt ) {
+					// There was an error.
+					$error_info = $pdo->errorInfo();
+					WP_CLI::error( "Could not retrieve CREATE TABLE statement for table {$escaped_table}: " . $error_info[2] );
+				}
+				$create_stmt = $stmt->fetchColumn();
 
 				if ( isset( $assoc_args['add-drop-table'] ) ) {
 					fwrite( $output, "DROP TABLE IF EXISTS {$escaped_table};\n" );
@@ -320,7 +354,13 @@ trait DB_Command_SQLite {
 				fwrite( $output, $create_stmt . ";\n\n" );
 
 				// Export data.
-				$rows = $pdo->query( "SELECT * FROM {$escaped_table}" )->fetchAll( PDO::FETCH_ASSOC );
+				$stmt = $pdo->query( "SELECT * FROM {$escaped_table}" );
+				if ( ! $stmt ) {
+					// There was an error.
+					$error_info = $pdo->errorInfo();
+					WP_CLI::error( "Could not retrieve data for table {$escaped_table}: " . $error_info[2] );
+				}
+				$rows = $stmt->fetchAll( PDO::FETCH_ASSOC );
 
 				foreach ( $rows as $row ) {
 					$columns = array_keys( $row );
@@ -374,10 +414,14 @@ trait DB_Command_SQLite {
 
 		try {
 			// Split SQL into individual statements.
+			$lines = preg_split( '/;[\r\n]+/', $sql );
+			if ( ! is_array( $lines ) ) {
+				$lines = [];
+			}
 			$statements = array_filter(
 				array_map(
 					'trim',
-					preg_split( '/;[\r\n]+/', $sql )
+					$lines
 				)
 			);
 
@@ -408,11 +452,16 @@ trait DB_Command_SQLite {
 	protected function sqlite_size() {
 		$db_path = $this->get_sqlite_db_path();
 
-		if ( ! file_exists( $db_path ) ) {
+		if ( ! $db_path || ! file_exists( $db_path ) ) {
 			return 0;
 		}
 
-		return filesize( $db_path );
+		$size = filesize( $db_path );
+		if ( false === $size ) {
+			return 0;
+		}
+
+		return $size;
 	}
 
 	/**

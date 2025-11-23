@@ -1202,7 +1202,8 @@ class DB_Command extends WP_CLI_Command {
 			// Get the database size.
 			if ( $is_sqlite ) {
 				$db_bytes = $this->sqlite_size();
-				$db_name  = basename( $this->get_sqlite_db_path() );
+				$db_path  = $this->get_sqlite_db_path();
+				$db_name  = $db_path ? basename( $db_path ) : '';
 			} else {
 				$db_bytes = $wpdb->get_var(
 					$wpdb->prepare(
