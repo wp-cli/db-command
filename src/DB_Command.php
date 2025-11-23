@@ -1244,6 +1244,10 @@ class DB_Command extends WP_CLI_Command {
 					$size_key = floor( log( (float) $row['Size'] ) / log( 1000 ) );
 					$sizes    = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
 
+					if ( is_infinite( $size_key ) ) {
+						$size_key = 0;
+					}
+
 					$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
 				}
 

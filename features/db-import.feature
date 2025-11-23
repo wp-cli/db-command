@@ -144,7 +144,7 @@ Feature: Import a WordPress database
     When I try `wp db import --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysql|mariadb) --no-defaults --no-auto-rehash#
 
-  @require-wp-4.2
+  @require-wp-4.2 @require-mysql-or-mariadb
   Scenario: Import db that has emoji in post
     Given a WP install
 
@@ -167,6 +167,35 @@ Feature: Import a WordPress database
       """
       Setting missing default character set to utf8mb4
       """
+
+    When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'wp_cli_test.sql'.
+      """
+
+    When I run `wp post list`
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      🍣
+      """
+
+  @require-wp-4.2 @require-sqlite
+  Scenario: Import db that has emoji in post
+    Given a WP install
+
+    When I run `wp post create --post_title="🍣"`
+    And I run `wp post list`
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      🍣
+      """
+
+    When I try `wp db export wp_cli_test.sql --debug`
+    Then the return code should be 0
+    And the wp_cli_test.sql file should exist
 
     When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
     Then STDOUT should be:

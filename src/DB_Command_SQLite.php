@@ -323,7 +323,7 @@ trait DB_Command_SQLite {
 		}
 
 		$exclude_tables = Utils\get_flag_value( $assoc_args, 'exclude_tables', '' );
-		$exclude_tables = explode( ',', trim( $assoc_args['exclude_tables'], ',' ) );
+		$exclude_tables = explode( ',', trim( $exclude_tables, ',' ) );
 		$exclude_tables = array_map( 'strtolower', $exclude_tables );
 
 		try {
