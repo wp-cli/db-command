@@ -372,7 +372,7 @@ trait DB_Command_SQLite {
 				fwrite( $output, "\n" );
 			}
 
-			fwrite( $output, '-- Dump completed on ' . date( 'Y-m-d H:i:s' ) . "\n\n" );
+			fwrite( $output, '-- Dump completed on ' . gmdate( 'Y-m-d H:i:s' ) . "\n\n" );
 		} catch ( PDOException $e ) {
 			fclose( $output );
 			WP_CLI::error( 'Export failed: ' . $e->getMessage() );
