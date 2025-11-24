@@ -204,6 +204,46 @@ trait DB_Command_SQLite {
 	 * @param string $query SQL query to execute.
 	 */
 	protected function sqlite_query( $query ) {
+		global $wpdb;
+
+		// Use $wpdb if the SQLite drop-in is loaded.
+		if ( isset( $wpdb ) && $wpdb instanceof \WP_SQLite_DB ) {
+			try {
+				$is_row_modifying_query = preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE)\b/i', $query );
+
+				if ( $is_row_modifying_query ) {
+					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+					$affected_rows = $wpdb->query( $query );
+					if ( false === $affected_rows ) {
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+						WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
+					}
+					WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
+				} else {
+					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+					$results = $wpdb->get_results( $query, ARRAY_A );
+
+					if ( $wpdb->last_error ) {
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+						WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
+					}
+
+					if ( empty( $results ) ) {
+						// No results to display.
+						return;
+					}
+
+					// Display as a table similar to MySQL output.
+					$headers = array_keys( $results[0] );
+					$this->display_table( $headers, $results );
+				}
+			} catch ( Exception $e ) {
+				WP_CLI::error( 'Query failed: ' . $e->getMessage() );
+			}
+			return;
+		}
+
+		// Fallback to PDO if the drop-in is not loaded.
 		$pdo = $this->get_sqlite_pdo();
 
 		if ( ! $pdo ) {
@@ -499,14 +539,24 @@ trait DB_Command_SQLite {
 			return;
 		}
 
+		// Constants used in wp-includes/functions.php
+		if ( ! defined( 'WPINC' ) ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
+			define( 'WPINC', 'wp-includes' );
+		}
+
+		if ( ! defined( 'WP_CONTENT_DIR' ) ) {
+			define( 'WP_CONTENT_DIR', ABSPATH . 'wp-content' );
+		}
+
 		// Load required WordPress files if not already loaded.
 		if ( ! function_exists( 'add_action' ) ) {
-			$wpinc = defined( 'WPINC' ) ? WPINC : 'wp-includes';
-
 			$required_files = [
-				ABSPATH . $wpinc . '/compat.php',
-				ABSPATH . $wpinc . '/plugin.php',
-				ABSPATH . $wpinc . '/class-wpdb.php',
+				ABSPATH . WPINC . '/compat.php',
+				ABSPATH . WPINC . '/plugin.php',
+				// Defines `wp_debug_backtrace_summary()` as used by wpdb.
+				ABSPATH . WPINC . '/functions.php',
+				ABSPATH . WPINC . '/class-wpdb.php',
 			];
 
 			foreach ( $required_files as $required_file ) {
