@@ -60,5 +60,5 @@ Feature: Display information about a given table.
     When I try `wp db columns not_wp`
     Then STDOUT should be a table containing rows:
       | Field         | Type       | Null | Key | Default |
-      | date          | date       | NO   | PRI |         |
-      | awesome_stuff | text       | YES  |     |         |
+      | date          | TEXT       | NO   | PRI | ''      |
+      | awesome_stuff | TEXT       | YES  |     |         |
