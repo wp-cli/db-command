@@ -7,4 +7,7 @@ namespace {
 	define( 'DB_PASSWORD', '' );
 	define( 'DB_CHARSET', '' );
 	define( 'DB_COLLATE', '' );
+
+	class WP_SQLite_DB extends \wpdb {
+	}
 }
