@@ -412,7 +412,8 @@ trait DB_Command_SQLite {
 		}
 
 		if ( '-' === $file ) {
-			$sql = stream_get_contents( STDIN );
+			$sql  = stream_get_contents( STDIN );
+			$file = 'STDIN';
 		} else {
 			if ( ! is_readable( $file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $file ) );

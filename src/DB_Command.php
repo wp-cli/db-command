@@ -1176,9 +1176,12 @@ class DB_Command extends WP_CLI_Command {
 
 				// Get the table size.
 				if ( $is_sqlite ) {
-					// For SQLite, we cannot get individual table sizes easily.
-					// Just report 0 as a placeholder.
-					$table_bytes = 0;
+					$table_bytes = $wpdb->get_var(
+						$wpdb->prepare(
+							'SELECT SUM(pgsize) as size_in_bytes FROM dbstat where name = %s LIMIT 1',
+							$table_name
+						)
+					);
 				} else {
 					$table_bytes = $wpdb->get_var(
 						$wpdb->prepare(
@@ -1840,7 +1843,12 @@ class DB_Command extends WP_CLI_Command {
 		);
 
 		$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' ];
-		$formatter_args   = [
+
+		if ( $this->is_sqlite() ) {
+			$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default' ];
+		}
+
+		$formatter_args = [
 			'format' => $format,
 		];
 

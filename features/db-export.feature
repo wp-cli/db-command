@@ -55,6 +55,7 @@ Feature: Export a WordPress database
       -- Dump completed on
       """
 
+  @require-mysql-or-mariadb
   Scenario: Export database with passed-in options
     Given a WP install
 
@@ -71,6 +72,24 @@ Feature: Export a WordPress database
       Access denied
       """
     And STDOUT should be empty
+
+  @require-sqlite
+  Scenario: Export database with passed-in options
+    Given a WP install
+
+    When I run `wp db export - --skip-comments`
+    Then STDOUT should not contain:
+      """
+      -- Table structure
+      """
+
+    # dbpass has no effect on SQLite
+    When I try `wp db export - --dbpass=no_such_pass`
+    Then the return code should be 0
+    And STDERR should not contain:
+      """
+      Access denied
+      """
 
   @require-mysql-or-mariadb
   Scenario: MySQL defaults are available as appropriate with --defaults flag
