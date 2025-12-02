@@ -252,7 +252,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
-			$this->get_check_command(),
+			Utils\get_sql_check_command(),
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -300,7 +300,7 @@ class DB_Command extends WP_CLI_Command {
 	public function optimize( $_, $assoc_args ) {
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
-			$this->get_check_command(),
+			Utils\get_sql_check_command(),
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -348,7 +348,7 @@ class DB_Command extends WP_CLI_Command {
 	public function repair( $_, $assoc_args ) {
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
-			$this->get_check_command(),
+			Utils\get_sql_check_command(),
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -397,7 +397,11 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function cli( $_, $assoc_args ) {
 
-		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
+		$command = sprintf(
+			'/usr/bin/env %s%s --no-auto-rehash',
+			$this->get_mysql_command(),
+			$this->get_defaults_flag_string( $assoc_args )
+		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		if ( ! isset( $assoc_args['database'] ) ) {
@@ -405,7 +409,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
-		self::run( $command, $assoc_args, null, true );
+		self::run( $command, $assoc_args, false, true );
 	}
 
 	/**
@@ -496,7 +500,11 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	public function query( $args, $assoc_args ) {
 
-		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
+		$command = sprintf(
+			'/usr/bin/env %s%s --no-auto-rehash',
+			$this->get_mysql_command(),
+			$this->get_defaults_flag_string( $assoc_args )
+		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['database'] = DB_NAME;
@@ -511,8 +519,25 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
 		}
 
+		$is_row_modifying_query = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE|LOAD DATA)\b/i', $assoc_args['execute'] );
+
+		if ( $is_row_modifying_query ) {
+			$assoc_args['execute'] .= '; SELECT ROW_COUNT();';
+		}
+
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
-		self::run( $command, $assoc_args );
+
+		if ( $is_row_modifying_query ) {
+			list( $stdout, $stderr, $exit_code ) = self::run( $command, $assoc_args, false );
+			$output_lines                        = explode( "\n", trim( $stdout ) );
+			$affected_rows                       = (int) trim( end( $output_lines ) );
+			if ( $exit_code ) {
+				WP_CLI::error( "Query failed: {$stderr}" );
+			}
+			WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
+		} else {
+			self::run( $command, $assoc_args );
+		}
 	}
 
 	/**
@@ -608,7 +633,7 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = $args[0];
 		} else {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.rand_mt_rand -- WordPress is not loaded.
-			$hash        = substr( md5( mt_rand() ), 0, 7 );
+			$hash        = substr( md5( (string) mt_rand() ), 0, 7 );
 			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
 
 		}
@@ -624,7 +649,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$mysqldump_binary = Utils\force_env_on_nix_systems( $this->get_dump_command() );
+		$mysqldump_binary = Utils\force_env_on_nix_systems( Utils\get_sql_dump_command() );
 
 		$support_column_statistics = exec( $mysqldump_binary . ' --help | grep "column-statistics"' );
 
@@ -683,7 +708,7 @@ class DB_Command extends WP_CLI_Command {
 			}
 		}
 
-		$escaped_command = call_user_func_array( '\WP_CLI\Utils\esc_cmd', array_merge( [ $command ], $command_esc_args ) );
+		$escaped_command = Utils\esc_cmd( $command, ...$command_esc_args );
 
 		// Remove parameters not needed for SQL run.
 		unset( $assoc_args['porcelain'] );
@@ -701,7 +726,7 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Get the current character set of the posts table.
 	 *
-	 * @param array Associative array of associative arguments.
+	 * @param array $assoc_args Associative arguments.
 	 * @return string Posts table character set.
 	 */
 	private function get_posts_table_charset( $assoc_args ) {
@@ -714,7 +739,8 @@ class DB_Command extends WP_CLI_Command {
 
 		list( $stdout, $stderr, $exit_code ) = self::run(
 			sprintf(
-				'/usr/bin/env mysql%s --no-auto-rehash --batch --skip-column-names',
+				'%s%s --no-auto-rehash --batch --skip-column-names',
+				$this->get_mysql_command(),
 				$this->get_defaults_flag_string( $assoc_args )
 			),
 			[ 'execute' => $query ],
@@ -801,7 +827,11 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = 'STDIN';
 		}
 
-		$command = sprintf( '/usr/bin/env mysql%s --no-auto-rehash', $this->get_defaults_flag_string( $assoc_args ) );
+		$command = sprintf(
+			'/usr/bin/env %s%s --no-auto-rehash',
+			$this->get_mysql_command(),
+			$this->get_defaults_flag_string( $assoc_args )
+		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
@@ -860,6 +890,9 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Exported to wordpress_dbase.sql
 	 *
 	 * @when after_wp_load
+	 *
+	 * @param array<string> $args Positional arguments.
+	 * @param array{scope?: string, network?: bool, 'all-tables-with-prefix'?: bool, 'all-tables'?: bool, format: string} $assoc_args Associative arguments.
 	 */
 	public function tables( $args, $assoc_args ) {
 
@@ -1011,6 +1044,9 @@ class DB_Command extends WP_CLI_Command {
 	 *     6
 	 *
 	 * @when after_wp_load
+	 *
+	 * @param array $args Positional arguments. Unused.
+	 * @param array{size_format?: string, tables?: bool, 'human-readable'?: bool, format?: string, scope?: string, network?: bool, decimals?: string, 'all-tables-with-prefix'?: bool, 'all-tables'?: bool, order: string, orderby: string} $assoc_args Associative arguments.
 	 */
 	public function size( $args, $assoc_args ) {
 		global $wpdb;
@@ -1083,6 +1119,8 @@ class DB_Command extends WP_CLI_Command {
 			];
 		}
 
+		$size_format_display = '';
+
 		if ( ! empty( $size_format ) || $human_readable ) {
 			foreach ( $rows as $index => $row ) {
 				// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Backfilling WP native constants.
@@ -1101,7 +1139,7 @@ class DB_Command extends WP_CLI_Command {
 				// phpcs:enable
 
 				if ( $human_readable ) {
-					$size_key = floor( log( $row['Size'] ) / log( 1000 ) );
+					$size_key = floor( log( (float) $row['Size'] ) / log( 1000 ) );
 					$sizes    = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
 
 					$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
@@ -1153,7 +1191,7 @@ class DB_Command extends WP_CLI_Command {
 				}
 					$size_format_display = preg_replace( '/IB$/u', 'iB', strtoupper( $size_format ) );
 
-					$decimals               = Utils\get_flag_value( $assoc_args, 'decimals', 0 );
+					$decimals               = (int) Utils\get_flag_value( $assoc_args, 'decimals', 0 );
 					$rows[ $index ]['Size'] = round( (int) $row['Bytes'] / $divisor, $decimals ) . ' ' . $size_format_display;
 			}
 		}
@@ -1172,7 +1210,7 @@ class DB_Command extends WP_CLI_Command {
 						list( $first, $second ) = $orderby_array;
 
 						if ( 'size' === $orderby ) {
-							return $first['Bytes'] > $second['Bytes'];
+							return $first['Bytes'] <=> $second['Bytes'];
 						}
 
 						return strcmp( $first['Name'], $second['Name'] );
@@ -1397,6 +1435,10 @@ class DB_Command extends WP_CLI_Command {
 		$after_context = Utils\get_flag_value( $assoc_args, 'after_context', 40 );
 		$after_context = '' === $after_context ? $after_context : (int) $after_context;
 
+		$default_regex_delimiter = false;
+		$regex_flags             = false;
+		$regex_delimiter         = '';
+
 		$regex = Utils\get_flag_value( $assoc_args, 'regex', false );
 		if ( false !== $regex ) {
 			$regex_flags             = Utils\get_flag_value( $assoc_args, 'regex-flags', false );
@@ -1450,7 +1492,7 @@ class DB_Command extends WP_CLI_Command {
 			$esc_like_search = '%' . Utils\esc_like( $search ) . '%';
 		}
 
-		$encoding = null;
+		$encoding = false;
 		if ( 0 === strpos( $wpdb->charset, self::ENCODING_UTF8 ) ) {
 			$encoding = 'UTF-8';
 		}
@@ -1530,7 +1572,7 @@ class DB_Command extends WP_CLI_Command {
 								}
 								if ( $after_context ) {
 									$end_offset = $offset + strlen( $match );
-									$after      = \cli\safe_substr( substr( $col_val, $end_offset ), 0, $after_context, false /*is_width*/, $col_encoding );
+									$after      = (string) \cli\safe_substr( substr( $col_val, $end_offset ), 0, $after_context, false /*is_width*/, $col_encoding );
 									// To lessen context duplication in output, shorten the after context if it overlaps with the next match.
 									if ( $i + 1 < $match_cnt && $end_offset + strlen( $after ) > $matches[0][ $i + 1 ][1] ) {
 										$after           = substr( $after, 0, $matches[0][ $i + 1 ][1] - $end_offset );
@@ -1734,7 +1776,8 @@ class DB_Command extends WP_CLI_Command {
 
 		self::run(
 			sprintf(
-				'/usr/bin/env mysql%s --no-auto-rehash',
+				'%s%s --no-auto-rehash',
+				$this->get_mysql_command(),
 				$this->get_defaults_flag_string( $assoc_args )
 			),
 			array_merge( [ 'execute' => $query ], $mysql_args )
@@ -1829,7 +1872,7 @@ class DB_Command extends WP_CLI_Command {
 	 * Gets the column names of a db table differentiated into key columns and text columns and all columns.
 	 *
 	 * @param string $table The table name.
-	 * @return array A 3 element array consisting of an array of primary key column names, an array of text column names, and an array containing all column names.
+	 * @return array{0: string[], 1: string[], 2: string[]} A 3 element array consisting of an array of primary key column names, an array of text column names, and an array containing all column names.
 	 */
 	private static function get_columns( $table ) {
 		global $wpdb;
@@ -1862,7 +1905,7 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Determines whether a column is considered text or not.
 	 *
-	 * @param string Column type.
+	 * @param string $type Column type.
 	 * @return bool True if text column, false otherwise.
 	 */
 	private static function is_text_col( $type ) {
@@ -1881,6 +1924,8 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * @param string|array $idents A single identifier or an array of identifiers.
 	 * @return string|array An escaped string if given a string, or an array of escaped strings if given an array of strings.
+	 *
+	 * @phpstan-return ($idents is string ? string : array)
 	 */
 	private static function esc_sql_ident( $idents ) {
 		$backtick = static function ( $v ) {
@@ -2124,18 +2169,14 @@ class DB_Command extends WP_CLI_Command {
 		// Make sure the provided arguments don't interfere with the expected
 		// output here.
 		$args = [];
-		foreach ( [] as $arg ) {
-			if ( isset( $assoc_args[ $arg ] ) ) {
-				$args[ $arg ] = $assoc_args[ $arg ];
-			}
-		}
 
 		if ( null === $modes ) {
 			$modes = [];
 
 			list( $stdout, $stderr, $exit_code ) = self::run(
 				sprintf(
-					'/usr/bin/env mysql%s --no-auto-rehash --batch --skip-column-names',
+					'%s%s --no-auto-rehash --batch --skip-column-names',
+					$this->get_mysql_command(),
 					$this->get_defaults_flag_string( $assoc_args )
 				),
 				array_merge( $args, [ 'execute' => 'SELECT @@SESSION.sql_mode' ] ),
@@ -2151,16 +2192,13 @@ class DB_Command extends WP_CLI_Command {
 			}
 
 			if ( ! empty( $stdout ) ) {
+				$lines = preg_split( "/\r\n|\n|\r|,/", $stdout );
 				$modes = array_filter(
 					array_map(
 						'trim',
-						preg_split( "/\r\n|\n|\r|,/", $stdout )
+						$lines ? $lines : []
 					)
 				);
-			}
-
-			if ( false === $modes ) {
-				$modes = [];
 			}
 		}
 
@@ -2168,20 +2206,11 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Returns the correct `check` command based on the detected database type.
+	 * Returns the correct `mysql` command based on the detected database type.
 	 *
 	 * @return string The appropriate check command.
 	 */
-	private function get_check_command() {
-		return ( strpos( Utils\get_mysql_version(), 'MariaDB' ) !== false ) ? 'mariadb-check' : 'mysqlcheck';
-	}
-
-	/**
-	 * Returns the correct `dump` command based on the detected database type.
-	 *
-	 * @return string The appropriate dump command.
-	 */
-	private function get_dump_command() {
-		return ( strpos( Utils\get_mysql_version(), 'MariaDB' ) !== false ) ? 'mariadb-dump' : 'mysqldump';
+	private function get_mysql_command() {
+		return 'mariadb' === Utils\get_db_type() ? 'mariadb' : 'mysql';
 	}
 }

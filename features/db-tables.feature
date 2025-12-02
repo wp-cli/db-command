@@ -44,7 +44,7 @@ Feature: List database tables
     # See https://core.trac.wordpress.org/ticket/19755
 
     # Leave out wp_blogmeta for old WP compat.
-    And STDOUT should contain:
+    Then STDOUT should contain:
       """
       wp_blogs
       wp_commentmeta
