@@ -1,0 +1,22 @@
+parameters:
+  level: 9
+  paths:
+    - src
+    - db-command.php
+  scanDirectories:
+    - vendor/wp-cli/wp-cli/php
+  scanFiles:
+    - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+    - tests/phpstan/scan-files.php
+  treatPhpDocTypesAsCertain: false
+  dynamicConstantNames:
+  	- DB_HOST
+  	- DB_NAME
+  	- DB_USER
+  	- DB_PASSWORD
+  	- DB_CHARSET
+  	- DB_COLLATE
+  ignoreErrors:
+    - identifier: missingType.iterableValue
+    - identifier: missingType.parameter
+    - identifier: missingType.return

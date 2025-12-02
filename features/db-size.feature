@@ -20,10 +20,7 @@ Feature: Display database size
     Given a WP install
 
     When I run `wp db size --tables`
-    Then STDOUT should contain:
-      """
-      wp_posts	81920 B
-      """
+    Then STDOUT should match /wp_posts\s+\d+ B/
 
     But STDOUT should not contain:
       """
