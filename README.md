@@ -429,7 +429,7 @@ To confirm the ID for the site you want to query, you can use the `wp site list`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--add-drop-table] [--defaults]
+wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--exclude_tables_data=<tables>] [--include-tablespaces] [--porcelain] [--add-drop-table] [--defaults]
 ~~~
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
@@ -455,6 +455,9 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
 	[--exclude_tables=<tables>]
 		The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
+
+	[--exclude_tables_data=<tables>]
+		The comma separated list of specific tables for which only the structure will be exported. Excluding this parameter will export data for all tables in the export.
 
 	[--include-tablespaces]
 		Skips adding the default --no-tablespaces option to mysqldump.
@@ -504,6 +507,10 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
     # Skip all tables matching prefix from the exported database
     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
+    Success: Exported to 'wordpress_dbase-db72bb5.sql'.
+
+    # Skip data of certain tables from the exported database
+    $ wp db export --exclude_tables_data=wp_actionscheduler_logs
     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Export database to STDOUT.
