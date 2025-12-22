@@ -23,16 +23,10 @@ Feature: Export a WordPress database
   Scenario: Exclude tables when exporting the database
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql --exclude_tables=wp_users --porcelain`
+    When I try `wp db export wp_cli_test.sql --exclude_tables=wp_users --porcelain`
     Then the wp_cli_test.sql file should exist
-    And the wp_cli_test.sql file should not contain:
-      """
-      wp_users
-      """
-    And the wp_cli_test.sql file should contain:
-      """
-      wp_options
-      """
+    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_users["`]?/
+    And the contents of the wp_cli_test.sql file should match /CREATE TABLE ["`]?wp_options["`]?/
 
   Scenario: Export database to STDOUT
     Given a WP install
@@ -61,6 +55,7 @@ Feature: Export a WordPress database
       -- Dump completed on
       """
 
+  @require-mysql-or-mariadb
   Scenario: Export database with passed-in options
     Given a WP install
 
@@ -78,6 +73,25 @@ Feature: Export a WordPress database
       """
     And STDOUT should be empty
 
+  @require-sqlite
+  Scenario: Export database with passed-in options
+    Given a WP install
+
+    When I run `wp db export - --skip-comments`
+    Then STDOUT should not contain:
+      """
+      -- Table structure
+      """
+
+    # dbpass has no effect on SQLite
+    When I try `wp db export - --dbpass=no_such_pass`
+    Then the return code should be 0
+    And STDERR should not contain:
+      """
+      Access denied
+      """
+
+  @require-mysql-or-mariadb
   Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 
