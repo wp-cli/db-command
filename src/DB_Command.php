@@ -827,7 +827,7 @@ class DB_Command extends WP_CLI_Command {
 			$first_line = fgets( $fp );
 			fclose( $fp );
 
-			if ( false !== $first_line && 0 === strpos( $first_line, '/*!999999\- enable the sandbox mode */' ) ) {
+			if ( false !== $first_line && strpos( $first_line, '999999' ) !== false && strpos( $first_line, 'sandbox mode' ) !== false ) {
 				WP_CLI::log( 'MariaDB sandbox mode directive detected. Skipping it by piping the file content.' );
 				$preamble = $this->get_sql_mode_query( $assoc_args ) . "\n";
 				if ( ! Utils\get_flag_value( $assoc_args, 'skip-optimization' ) ) {
@@ -846,16 +846,16 @@ class DB_Command extends WP_CLI_Command {
 					escapeshellarg( $postamble )
 				);
 
-				// Ensure we don't pass 'execute' which would conflict with STDIN.
-				unset( $mysql_args['execute'] );
+					// Ensure we don't pass 'execute' which would conflict with STDIN.
+					unset( $mysql_args['execute'] );
 
-				$result = self::run( $command, $mysql_args );
+					$result = self::run( $command, $mysql_args );
 
-				self::run( $command, $mysql_args );
+					self::run( $command, $mysql_args );
 
-				WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
+					WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
 
-				return;
+					return;
 			}
 
 			$query = Utils\get_flag_value( $assoc_args, 'skip-optimization' )
