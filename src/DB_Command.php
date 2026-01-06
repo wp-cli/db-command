@@ -827,9 +827,8 @@ class DB_Command extends WP_CLI_Command {
 			$first_line = fgets( $fp );
 			fclose( $fp );
 
-			if ( 0 === strpos( $first_line, '/*!999999\- enable the sandbox mode */' ) ) {
+			if ( false !== $first_line && 0 === strpos( $first_line, '/*!999999\- enable the sandbox mode */' ) ) {
 				WP_CLI::log( 'MariaDB sandbox mode directive detected. Skipping it by piping the file content.' );
-
 				$preamble = $this->get_sql_mode_query( $assoc_args ) . "\n";
 				if ( ! Utils\get_flag_value( $assoc_args, 'skip-optimization' ) ) {
 					$preamble .= "SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0;\n";
@@ -852,11 +851,9 @@ class DB_Command extends WP_CLI_Command {
 
 				$result = self::run( $command, $mysql_args );
 
-				if ( 0 === $result['exit_code'] ) {
-					WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
-				} else {
-					WP_CLI::error( sprintf( "Failed to import from '%s'.", $result_file ) );
-				}
+				self::run( $command, $mysql_args );
+
+				WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
 
 				return;
 			}
