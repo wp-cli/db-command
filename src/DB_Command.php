@@ -816,6 +816,51 @@ class DB_Command extends WP_CLI_Command {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
 			}
 
+			// Check for MariaDB sandbox mode directive in the first line.
+			// This directive can interfere with standard imports by enabling a sandbox mode
+			// that restricts certain operations. We skip it by piping the file content
+			// and skipping the first line.
+			$fp = fopen( $result_file, 'r' );
+			if ( ! $fp ) {
+				WP_CLI::error( sprintf( 'Unable to read import file: %s', $result_file ) );
+			}
+			$first_line = fgets( $fp );
+			fclose( $fp );
+
+			if ( 0 === strpos( $first_line, '/*!999999\- enable the sandbox mode */' ) ) {
+				WP_CLI::log( 'MariaDB sandbox mode directive detected. Skipping it by piping the file content.' );
+
+				$preamble = $this->get_sql_mode_query( $assoc_args ) . "\n";
+				if ( ! Utils\get_flag_value( $assoc_args, 'skip-optimization' ) ) {
+					$preamble .= "SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0;\n";
+				}
+
+				$postamble = Utils\get_flag_value( $assoc_args, 'skip-optimization' ) ? '' : "\nCOMMIT;\n";
+
+				// Use a shell pipeline to skip the first line and wrap the rest in transaction/optimizations.
+				$command = sprintf(
+					'sh -c \'p="$1"; f="$2"; s="$3"; shift 3; ( printf "%%s" "$p"; tail -n +2 "$f"; printf "%%s" "$s" ) | %s %s --no-auto-rehash "$@"\' sh %s %s %s',
+					$this->get_mysql_command(),
+					$this->get_defaults_flag_string( $assoc_args ),
+					escapeshellarg( $preamble ),
+					escapeshellarg( $result_file ),
+					escapeshellarg( $postamble )
+				);
+
+				// Ensure we don't pass 'execute' which would conflict with STDIN.
+				unset( $mysql_args['execute'] );
+
+				$result = self::run( $command, $mysql_args );
+
+				if ( 0 === $result['exit_code'] ) {
+					WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
+				} else {
+					WP_CLI::error( sprintf( "Failed to import from '%s'.", $result_file ) );
+				}
+
+				return;
+			}
+
 			$query = Utils\get_flag_value( $assoc_args, 'skip-optimization' )
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
