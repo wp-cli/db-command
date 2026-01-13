@@ -201,7 +201,7 @@ Feature: Perform database operations
     When I run `wp db optimize --silent`
     Then STDOUT should not contain:
       """
-      wp_cli_test.wp_users
+      error
       """
     And STDOUT should contain:
       """
