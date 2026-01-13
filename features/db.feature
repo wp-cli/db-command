@@ -185,6 +185,51 @@ Feature: Perform database operations
       """
     And STDOUT should not be empty
 
+  Scenario: db optimize with --quiet flag should only show errors
+    Given a WP install
+
+    When I run `wp db optimize --quiet`
+    Then STDOUT should not contain:
+      """
+      error
+      """
+
+
+  Scenario: db optimize can explicitly pass --silent to mysqlcheck
+    Given a WP install
+
+    When I run `wp db optimize --silent`
+    Then STDOUT should not contain:
+      """
+      wp_cli_test.wp_users
+      """
+    And STDOUT should contain:
+      """
+      Success: Database optimized.
+      """
+
+  Scenario: db repair with --quiet flag should only show errors
+    Given a WP install
+
+    When I run `wp db repair --quiet`
+    Then STDOUT should not contain:
+      """
+      error
+      """
+
+  Scenario: db repair can explicitly pass --silent to mysqlcheck
+    Given a WP install
+
+    When I run `wp db repair --silent`
+    Then STDOUT should not contain:
+      """
+      error
+      """
+    And STDOUT should contain:
+      """
+      Success: Database repaired.
+      """
+
   Scenario: DB Query
     Given a WP install
 
@@ -334,7 +379,7 @@ Feature: Perform database operations
       """
       Query succeeded. Rows affected: 1
       """
-    
+
     When I run `wp db query "SELECT * FROM wp_users WHERE ID = 1"`
     Then STDOUT should not contain:
       """
