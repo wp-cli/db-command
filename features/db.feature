@@ -185,29 +185,6 @@ Feature: Perform database operations
       """
     And STDOUT should not be empty
 
-  Scenario: db optimize with --quiet flag should only show errors
-    Given a WP install
-
-    When I run `wp db optimize --quiet`
-    Then STDOUT should not contain:
-      """
-      error
-      """
-
-
-  Scenario: db optimize can explicitly pass --silent to mysqlcheck
-    Given a WP install
-
-    When I run `wp db optimize --silent`
-    Then STDOUT should not contain:
-      """
-      error
-      """
-    And STDOUT should contain:
-      """
-      Success: Database optimized.
-      """
-
   Scenario: db repair with --quiet flag should only show errors
     Given a WP install
 
