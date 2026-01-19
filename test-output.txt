@@ -1,0 +1,45 @@
+WP_CLI_TEST_DBTYPE is set to 'sqlite', skipping database check.
+.F-------.F------.F-----.F-----
+
+--- Failed steps:
+
+001 Scenario: Create database user without privileges # features/db-users.feature:3
+      And WP files                                    # features/db-users.feature:5
+        $ curl -sSfL 'https://downloads.wordpress.org/plugin/sqlite-database-integration.zip' > '/tmp/wp-cli-test-sqlite-integration-cache/sqlite-database-integration.zip'
+        
+        curl: (6) Could not resolve host: downloads.wordpress.org
+        cwd: 
+        run time: 0.0067920684814453
+        exit status: 6 (RuntimeException)
+
+002 Scenario: Create database user with privileges # features/db-users.feature:26
+      And WP files                                 # features/db-users.feature:28
+        $ cp -r '/tmp/wp-cli-test-core-download-cache'/* '/tmp/wp-cli-test-run--696e307f102bc5.10488262/'
+        
+        cp: cannot stat '/tmp/wp-cli-test-core-download-cache/*': No such file or directory
+        cwd: 
+        run time: 0.0016000270843506
+        exit status: 1 (RuntimeException)
+
+003 Scenario: Create database user with custom host # features/db-users.feature:47
+      And WP files                                  # features/db-users.feature:49
+        $ cp -r '/tmp/wp-cli-test-core-download-cache'/* '/tmp/wp-cli-test-run--696e307f10e798.58842661/'
+        
+        cp: cannot stat '/tmp/wp-cli-test-core-download-cache/*': No such file or directory
+        cwd: 
+        run time: 0.001478910446167
+        exit status: 1 (RuntimeException)
+
+004 Scenario: Create database user with no password # features/db-users.feature:64
+      And WP files                                  # features/db-users.feature:66
+        $ cp -r '/tmp/wp-cli-test-core-download-cache'/* '/tmp/wp-cli-test-run--696e307f118931.57377979/'
+        
+        cp: cannot stat '/tmp/wp-cli-test-core-download-cache/*': No such file or directory
+        cwd: 
+        run time: 0.0014328956604004
+        exit status: 1 (RuntimeException)
+
+4 scenarios (4 failed)
+31 steps (4 passed, 4 failed, 23 skipped)
+0m0.21s (12.58Mb)
+Script run-behat-tests handling the behat event returned with error code 1
