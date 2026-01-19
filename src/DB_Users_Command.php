@@ -66,8 +66,8 @@ class DB_Users_Command extends DB_Command {
 		// Escape identifiers for SQL
 		$username_escaped = self::esc_sql_ident( $username );
 		$host_escaped     = self::esc_sql_ident( $host );
-		assert( is_string( $username_escaped ) );
-		assert( is_string( $host_escaped ) );
+		/** @var string $username_escaped */
+		/** @var string $host_escaped */
 		$user_identifier = "{$username_escaped}@{$host_escaped}";
 
 		// Create user
@@ -84,7 +84,7 @@ class DB_Users_Command extends DB_Command {
 		if ( $grant_privileges ) {
 			$database         = DB_NAME;
 			$database_escaped = self::esc_sql_ident( $database );
-			assert( is_string( $database_escaped ) );
+			/** @var string $database_escaped */
 			$grant_query = "GRANT ALL PRIVILEGES ON {$database_escaped}.* TO {$user_identifier};";
 			parent::run_query( $grant_query, $assoc_args );
 
@@ -100,13 +100,19 @@ class DB_Users_Command extends DB_Command {
 	/**
 	 * Escapes a string for use in a SQL query.
 	 *
+	 * Follows MySQL's documented string literal escaping rules.
+	 * See https://dev.mysql.com/doc/refman/en/string-literals.html
+	 *
 	 * @param string $value String to escape.
-	 * @return string Escaped string.
+	 * @return string Escaped string, wrapped in single quotes.
 	 */
 	private function esc_sql_string( $value ) {
-		// Escape backslashes first, then single quotes.
-		$value = str_replace( '\\', '\\\\', $value );
-		$value = str_replace( "'", "''", $value );
+		// Escape special characters according to MySQL string literal rules.
+		$value = str_replace(
+			[ '\\', "\x00", "\n", "\r", "'", '"', "\x1a" ],
+			[ '\\\\', "\\0", "\\n", "\\r", "\\'", '\\"', '\\Z' ],
+			$value
+		);
 		return "'" . $value . "'";
 	}
 }
