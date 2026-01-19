@@ -396,6 +396,10 @@ Feature: Perform database operations
   @require-sqlite
   Scenario: SQLite DB export/import
     Given a WP install
+    And a session_yes file:
+      """
+      y
+      """
 
     When I run `wp post list --format=count`
     Then STDOUT should contain:
