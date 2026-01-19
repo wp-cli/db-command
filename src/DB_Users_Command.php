@@ -64,9 +64,11 @@ class DB_Users_Command extends DB_Command {
 		$grant_privileges = Utils\get_flag_value( $assoc_args, 'grant-privileges', false );
 
 		// Escape identifiers for SQL
-		$username_escaped = $this->esc_sql_ident( $username );
-		$host_escaped     = $this->esc_sql_ident( $host );
-		$user_identifier  = "{$username_escaped}@{$host_escaped}";
+		$username_escaped = self::esc_sql_ident( $username );
+		$host_escaped     = self::esc_sql_ident( $host );
+		assert( is_string( $username_escaped ) );
+		assert( is_string( $host_escaped ) );
+		$user_identifier = "{$username_escaped}@{$host_escaped}";
 
 		// Create user
 		$create_query = "CREATE USER {$user_identifier}";
@@ -81,8 +83,9 @@ class DB_Users_Command extends DB_Command {
 		// Grant privileges if requested
 		if ( $grant_privileges ) {
 			$database         = DB_NAME;
-			$database_escaped = $this->esc_sql_ident( $database );
-			$grant_query      = "GRANT ALL PRIVILEGES ON {$database_escaped}.* TO {$user_identifier};";
+			$database_escaped = self::esc_sql_ident( $database );
+			assert( is_string( $database_escaped ) );
+			$grant_query = "GRANT ALL PRIVILEGES ON {$database_escaped}.* TO {$user_identifier};";
 			parent::run_query( $grant_query, $assoc_args );
 
 			// Flush privileges
@@ -105,19 +108,5 @@ class DB_Users_Command extends DB_Command {
 		$value = str_replace( '\\', '\\\\', $value );
 		$value = str_replace( "'", "''", $value );
 		return "'" . $value . "'";
-	}
-
-	/**
-	 * Escapes (backticks) MySQL identifiers (aka schema object names).
-	 *
-	 * Note: This duplicates functionality from parent DB_Command::esc_sql_ident()
-	 * which is private static and cannot be accessed from child classes.
-	 *
-	 * @param string $ident A single identifier.
-	 * @return string An escaped string.
-	 */
-	private function esc_sql_ident( $ident ) {
-		// Escape any backticks in the identifier by doubling.
-		return '`' . str_replace( '`', '``', $ident ) . '`';
 	}
 }
