@@ -274,7 +274,7 @@ Feature: Perform database operations
     Given an empty directory
     And WP files
 
-    When I run `wp core config {CORE_CONFIG_SETTINGS} --dbcharset=""`
+    When I run `wp config create {CORE_CONFIG_SETTINGS} --dbcharset="" --skip-check`
     Then STDOUT should not be empty
 
     When I run `cat wp-config.php`
@@ -296,7 +296,7 @@ Feature: Perform database operations
     Given an empty directory
     And WP files
 
-    When I run `wp core config {CORE_CONFIG_SETTINGS} --dbcharset=latin1 --dbcollate=latin1_spanish_ci`
+    When I run `wp config create {CORE_CONFIG_SETTINGS} --dbcharset=latin1 --dbcollate=latin1_spanish_ci --skip-check`
     Then STDOUT should not be empty
 
     When I run `wp db create`
