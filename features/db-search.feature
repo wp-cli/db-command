@@ -24,11 +24,14 @@ Feature: Search through the database
       4:example.com example.com
       """
 
+    When I run `wp db query "SELECT option_id FROM wp_options WHERE option_name = 'siteurl';" --skip-column-names | cat`
+    Then save STDOUT as {SITEURL_ID}
+
     When I run `wp db search example.com`
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should not contain:
       """
@@ -44,7 +47,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should not contain:
       """
@@ -60,7 +63,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:example.com
+      {SITEURL_ID}:example.com
       """
     And STDOUT should not contain:
       """
@@ -79,7 +82,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:example.com
+      {SITEURL_ID}:example.com
       """
     And STDOUT should contain:
       """
@@ -105,7 +108,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:example.com
+      {SITEURL_ID}:example.com
       """
     And STDOUT should not contain:
       """
@@ -121,7 +124,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:example.com
+      {SITEURL_ID}:example.com
       """
     And STDOUT should not contain:
       """
@@ -148,7 +151,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:example.com
+      {SITEURL_ID}:example.com
       """
     And STDOUT should contain:
       """
@@ -174,7 +177,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:example.com
+      {SITEURL_ID}:example.com
       """
     And STDOUT should contain:
       """
@@ -262,8 +265,7 @@ Feature: Search through the database
 
     When I run `wp db query "CREATE TABLE no_key ( awesome_stuff TEXT );"`
     And I run `wp db query "CREATE TABLE no_text ( id int(11) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id) );"`
-
-    When I try `wp db search example.com no_key --all-tables`
+    And I try `wp db search example.com no_key --all-tables`
     Then STDOUT should be empty
     And STDERR should be:
       """
@@ -290,6 +292,9 @@ Feature: Search through the database
     And I run `wp db query "CREATE TABLE pw_options ( id int(11) unsigned NOT NULL AUTO_INCREMENT, awesome_stuff TEXT, PRIMARY KEY (id) );"`
     And I run `wp db query "INSERT INTO pw_options (awesome_stuff) VALUES ('example.com'), ('e_ample.c%m');"`
 
+    When I run `wp db query "SELECT option_id FROM wp_options WHERE option_name = 'siteurl';" --skip-column-names | cat`
+    Then save STDOUT as {SITEURL_ID}
+
     When I run `wp db query "SELECT CONCAT( id, ':', awesome_stuff) FROM wp_not ORDER BY id;" --skip-column-names`
     Then STDOUT should be:
       """
@@ -313,7 +318,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should not contain:
       """
@@ -337,7 +342,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should not contain:
       """
@@ -385,12 +390,12 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should contain:
       """
       wp_2_options:option_value
-      1:https://example.com/foo
+      {SITEURL_ID}:https://example.com/foo
       """
     And STDOUT should not contain:
       """
@@ -410,7 +415,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should not contain:
       """
@@ -434,7 +439,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should contain:
       """
@@ -461,7 +466,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should not contain:
       """
@@ -510,7 +515,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should contain:
       """
@@ -538,7 +543,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should contain:
       """
@@ -705,6 +710,9 @@ Feature: Search through the database
 
   Scenario: Search with regular expressions
     Given a WP install
+    When I run `wp db query "SELECT option_id FROM wp_options WHERE option_name = 'siteurl';" --skip-column-names | cat`
+    Then save STDOUT as {SITEURL_ID}
+
     And I run `wp option update regextst '12345é789あhttps://regextst.com1234567890123456789éhttps://regextst.com12345678901234567890regextst.com34567890t.com67890'`
     # Note ö is o with combining umlaut.
     And I run `wp option update regextst_combining 'lllllムnöppppp'`
@@ -713,7 +721,7 @@ Feature: Search through the database
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       """
     And STDOUT should not contain:
       """
@@ -865,35 +873,41 @@ Feature: Search through the database
   Scenario: Search with output options
     Given a WP install
 
+    When I run `wp db query "SELECT option_id FROM wp_options WHERE option_name = 'siteurl';" --skip-column-names | cat`
+    Then save STDOUT as {SITEURL_ID}
+
+    When I run `wp db query "SELECT option_id FROM wp_options WHERE option_name = 'home';" --skip-column-names | cat`
+    Then save STDOUT as {HOMEURL_ID}
+
     When I run `wp db search example.com`
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
+      {SITEURL_ID}:https://example.com
       wp_options:option_value
-      2:https://example.com
+      {HOMEURL_ID}:https://example.com
       """
 
     When I run `wp db search example.com --table_column_once`
     Then STDOUT should contain:
       """
       wp_options:option_value
-      1:https://example.com
-      2:https://example.com
+      {SITEURL_ID}:https://example.com
+      {HOMEURL_ID}:https://example.com
       """
 
     When I run `wp db search example.com --one_line`
     Then STDOUT should contain:
       """
-      wp_options:option_value:1:https://example.com
-      wp_options:option_value:2:https://example.com
+      wp_options:option_value:{SITEURL_ID}:https://example.com
+      wp_options:option_value:{HOMEURL_ID}:https://example.com
       """
 
     When I run `wp db search example.com --table_column_once --one_line`
     Then STDOUT should contain:
       """
-      wp_options:option_value:1:https://example.com
-      wp_options:option_value:2:https://example.com
+      wp_options:option_value:{SITEURL_ID}:https://example.com
+      wp_options:option_value:{HOMEURL_ID}:https://example.com
       """
 
     When I run `wp db search example.com --all-tables --before_context=0 --after_context=0 --matches_only`
@@ -917,46 +931,49 @@ Feature: Search through the database
   Scenario: Search with custom colors
     Given a WP install
 
+    When I run `wp db query "SELECT option_id FROM wp_options WHERE option_name = 'siteurl';" --skip-column-names | cat`
+    Then save STDOUT as {SITEURL_ID}
+
     When I run `SHELL_PIPE=0 wp db search example.com`
     Then STDOUT should strictly contain:
       """
       [32;1mwp_options:option_value[0m
-      [33;1m1[0m:https://[43m[30mexample.com[0m
+      [33;1m{SITEURL_ID}[0m:https://[43m[30mexample.com[0m
       """
 
     When I run `SHELL_PIPE=0 wp db search example.com --table_column_color=%r --id_color=%g --match_color=%b`
     Then STDOUT should strictly contain:
       """
       [31mwp_options:option_value[0m
-      [32m1[0m:https://[34mexample.com[0m
+      [32m{SITEURL_ID}[0m:https://[34mexample.com[0m
       """
 
     When I run `SHELL_PIPE=0 wp db search example.com --table_column_color=%r`
     Then STDOUT should strictly contain:
       """
       [31mwp_options:option_value[0m
-      [33;1m1[0m:https://[43m[30mexample.com[0m
+      [33;1m{SITEURL_ID}[0m:https://[43m[30mexample.com[0m
       """
 
     When I run `SHELL_PIPE=0 wp db search example.com --id_color=%g`
     Then STDOUT should strictly contain:
       """
       [32;1mwp_options:option_value[0m
-      [32m1[0m:https://[43m[30mexample.com[0m
+      [32m{SITEURL_ID}[0m:https://[43m[30mexample.com[0m
       """
 
     When I run `SHELL_PIPE=0 wp db search example.com --match_color=%b`
     Then STDOUT should strictly contain:
       """
       [32;1mwp_options:option_value[0m
-      [33;1m1[0m:https://[34mexample.com[0m
+      [33;1m{SITEURL_ID}[0m:https://[34mexample.com[0m
       """
 
     When I run `SHELL_PIPE=0 wp db search example.com --before_context=0 --after_context=0`
     Then STDOUT should strictly contain:
       """
       [32;1mwp_options:option_value[0m
-      [33;1m1[0m:example.com
+      [33;1m{SITEURL_ID}[0m:example.com
       """
 
     When I try `wp db search example.com --match_color=%x`
@@ -1066,3 +1083,31 @@ Feature: Search through the database
       :aöXYXYX
       """
     And STDERR should be empty
+
+  Scenario: Search for a string and output the format as a table
+    Given a WP install
+
+    When I run `wp db search mail.example.com --format=csv`
+    Then STDOUT should contain:
+      """
+      wp_options,option_value,mail.example.com,option_id
+      """
+
+    When I try `wp db search example.com --format=ids`
+    Then STDERR should be:
+      """
+      Error: The "ids" format can only be used for a single table.
+      """
+    And STDOUT should be empty
+    And the return code should be 1
+
+    When I try `wp db search example.com --format=count`
+    Then STDERR should be:
+      """
+      Error: The "count" format can only be used for a single table.
+      """
+    And STDOUT should be empty
+    And the return code should be 1
+
+    When I run `wp db search mail.example.com wp_options --format=ids`
+    Then STDOUT should not be empty

@@ -429,7 +429,7 @@ To confirm the ID for the site you want to query, you can use the `wp site list`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--defaults]
+wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--add-drop-table] [--defaults]
 ~~~
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
@@ -461,6 +461,9 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
 	[--porcelain]
 		Output filename for the exported database.
+
+	[--add-drop-table]
+		Include a `DROP TABLE IF EXISTS` statement before each `CREATE TABLE` statement.
 
 	[--defaults]
 		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
@@ -560,7 +563,7 @@ defined in the SQL.
 Finds a string in the database.
 
 ~~~
-wp db search <search> [<tables>...] [--network] [--all-tables-with-prefix] [--all-tables] [--before_context=<num>] [--after_context=<num>] [--regex] [--regex-flags=<regex-flags>] [--regex-delimiter=<regex-delimiter>] [--table_column_once] [--one_line] [--matches_only] [--stats] [--table_column_color=<color_code>] [--id_color=<color_code>] [--match_color=<color_code>]
+wp db search <search> [<tables>...] [--network] [--all-tables-with-prefix] [--all-tables] [--before_context=<num>] [--after_context=<num>] [--regex] [--regex-flags=<regex-flags>] [--regex-delimiter=<regex-delimiter>] [--table_column_once] [--one_line] [--matches_only] [--stats] [--table_column_color=<color_code>] [--id_color=<color_code>] [--match_color=<color_code>] [--fields=<fields>] [--format=<format>]
 ~~~
 
 Searches through all of the text columns in a selection of database tables for a given string, Outputs colorized references to the string.
@@ -626,6 +629,21 @@ Defaults to searching through all tables registered to $wpdb. On multisite, this
 	[--match_color=<color_code>]
 		Percent color code to use for the match (unless both before and after context are 0, when no color code is used). For a list of available percent color codes, see below. Default '%3%k' (black on a mustard background).
 
+	[--fields=<fields>]
+		Get a specific subset of the fields.
+
+	[--format=<format>]
+		Render output in a particular format.
+		---
+		options:
+		  - table
+		  - csv
+		  - json
+		  - yaml
+		  - ids
+		  - count
+		---
+
 The percent color codes available are:
 
 | Code | Color
@@ -660,6 +678,16 @@ The percent color codes available are:
 
 They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background `%3%k` can be made black on a bright yellow background with `%Y%0%8`.
 
+**AVAILABLE FIELDS**
+
+These fields will be displayed by default for each result:
+
+* table
+* column
+* match
+* primary_key_name
+* primary_key_value
+
 **EXAMPLES**
 
     # Search through the database for the 'wordpress-develop' string
@@ -693,6 +721,21 @@ They can be concatenated. For instance, the default match color of black on a mu
 
     # SQL search and delete records from database table 'wp_options' where 'option_name' match 'foo'
     wp db query "DELETE from wp_options where option_id in ($(wp db query "SELECT GROUP_CONCAT(option_id SEPARATOR ',') from wp_options where option_name like '%foo%';" --silent --skip-column-names))"
+
+    # Search for a string and print the result as a table
+    $ wp db search https://localhost:8889 --format=table --fields=table,column,match
+    +------------+--------------+-----------------------------+
+    | table      | column       | match                       |
+    +------------+--------------+-----------------------------+
+    | wp_options | option_value | https://localhost:8889      |
+    | wp_options | option_value | https://localhost:8889      |
+    | wp_posts   | guid         | https://localhost:8889/?p=1 |
+    | wp_users   | user_url     | https://localhost:8889      |
+    +------------+--------------+-----------------------------+
+
+    # Search for a string and get only the IDs (only works for a single table)
+    $ wp db search https://localhost:8889 wp_options --format=ids
+    1 2
 
 
 
