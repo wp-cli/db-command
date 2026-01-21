@@ -247,8 +247,10 @@ Feature: Display database size
   @require-mysql
   Scenario: Display table size with right alignment
     Given a WP install
+    And I run `wp site empty --yes`
+    And I run `wp post generate --post_type=page --post_status=draft --count=100`
 
-    When I run `SHELL_PIPE=0 wp db size --tables --all-tables --orderby=size --order=desc --size_format=mb`
+    When I run `SHELL_PIPE=0 wp db size --tables --all-tables --orderby=size --order=desc --size_format=kb`
     Then STDOUT should strictly be:
       """
       +-------------------------+------+
