@@ -2176,7 +2176,10 @@ class DB_Command extends WP_CLI_Command {
 		static $modes = null;
 
 		// Make sure the provided arguments don't interfere with the expected
-		// output here. We need to preserve all valid MySQL arguments for connection.
+		// output here, while preserving all valid MySQL connection arguments
+		// (including --defaults, --host, --port, --ssl-* options) so that SQL
+		// mode discovery connects to the database with the same configuration
+		// as the main query.
 		$args = self::get_mysql_args( $assoc_args );
 
 		if ( null === $modes ) {
