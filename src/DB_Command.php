@@ -1218,7 +1218,6 @@ class DB_Command extends WP_CLI_Command {
 				);
 			}
 
-			die('ddd');
 			// Display the rows.
 			$args = [
 				'format'     => $format,
