@@ -243,3 +243,30 @@ Feature: Display database size
       """
       wp_posts
       """
+
+  @require-mysql
+  Scenario: Display table size with right alignment
+    Given a WP install
+
+    When I run `SHELL_PIPE=0 wp db size --tables --all-tables --orderby=size --order=desc --size_format=mb`
+    Then STDOUT should strictly be:
+      """
+      +-------------------------+------+
+      | Name                    | Size |
+      +-------------------------+------+
+      | _mysql_data_types_cache | 0 MB |
+      | wp_users                | 0 MB |
+      | sqlite_sequence         | 0 MB |
+      | wp_usermeta             | 0 MB |
+      | wp_termmeta             | 0 MB |
+      | wp_terms                | 0 MB |
+      | wp_term_taxonomy        | 0 MB |
+      | wp_term_relationships   | 0 MB |
+      | wp_commentmeta          | 0 MB |
+      | wp_comments             | 0 MB |
+      | wp_links                | 0 MB |
+      | wp_options              | 0 MB |
+      | wp_postmeta             | 0 MB |
+      | wp_posts                | 0 MB |
+      +-------------------------+------+
+      """
