@@ -1218,6 +1218,7 @@ class DB_Command extends WP_CLI_Command {
 				);
 			}
 
+			die('ddd');
 			// Display the rows.
 			$args = [
 				'format'     => $format,
@@ -1817,7 +1818,7 @@ class DB_Command extends WP_CLI_Command {
 			$required['default-character-set'] = constant( 'DB_CHARSET' );
 		}
 
-		// Using 'dbuser' as option name to workaround clash with WP-CLI's global WP 'user' parameter, with 'dbpass' also available for tidyness.
+		// Using 'dbuser' as option name to workaround clash with WP-CLI's global WP 'user' parameter, with 'dbpass' also available for tidiness.
 		if ( isset( $assoc_args['dbuser'] ) ) {
 			$required['user'] = $assoc_args['dbuser'];
 			unset( $assoc_args['dbuser'] );
