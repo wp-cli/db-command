@@ -98,7 +98,7 @@ Feature: Query the database with WordPress' MySQL config
     Given a WP install
 
     When I try `wp db query "SELECT 1;" --host=testhost --port=3307 --debug`
-    Then STDERR should match #Final MySQL command: .* --host=testhost.*--port=3307#
+    Then STDERR should match #Running shell command: .* --host=testhost.*--port=3307#
 
   Scenario: SQL modes do not include any of the modes incompatible with WordPress
     Given a WP install
