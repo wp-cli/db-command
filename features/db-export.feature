@@ -34,6 +34,8 @@ Feature: Export a WordPress database
       wp_options
       """
 
+  # Only MariaDB currently supports this feature.
+  @require-mariadb
   Scenario: Exclude data of certain tables when exporting the database
     Given a WP install
 

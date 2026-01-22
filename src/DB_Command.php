@@ -569,6 +569,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--exclude_tables_data=<tables>]
 	 * : The comma separated list of specific tables for which only the structure will be exported. Excluding this parameter will export data for all tables in the export.
+	 *   Note: currently only supported by MariaDB.
 	 *
 	 * [--include-tablespaces]
 	 * : Skips adding the default --no-tablespaces option to mysqldump.
