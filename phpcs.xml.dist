@@ -54,6 +54,7 @@
 	<!-- Exclude existing classes from the prefix rule as it would break BC to prefix them now. -->
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound">
 		<exclude-pattern>*/src/DB_Command\.php$</exclude-pattern>
+		<exclude-pattern>*/src/DB_Users_Command\.php$</exclude-pattern>
 	</rule>
 
 	<exclude-pattern>/tests/phpstan/scan-files</exclude-pattern>
