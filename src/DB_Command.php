@@ -259,6 +259,12 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['check'] = true;
+
+		// Pass --silent to mysqlcheck when in quiet mode.
+		if ( WP_CLI::get_config( 'quiet' ) ) {
+			$assoc_args['silent'] = true;
+		}
+
 		self::run(
 			Utils\esc_cmd( $command, DB_NAME ),
 			$assoc_args
@@ -307,6 +313,12 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['optimize'] = true;
+
+		// Pass --silent to mysqlcheck when in quiet mode.
+		if ( WP_CLI::get_config( 'quiet' ) ) {
+			$assoc_args['silent'] = true;
+		}
+
 		self::run(
 			Utils\esc_cmd( $command, DB_NAME ),
 			$assoc_args
@@ -355,6 +367,12 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['repair'] = true;
+
+		// Pass --silent to mysqlcheck when in quiet mode.
+		if ( WP_CLI::get_config( 'quiet' ) ) {
+			$assoc_args['silent'] = true;
+		}
+
 		self::run(
 			Utils\esc_cmd( $command, DB_NAME ),
 			$assoc_args

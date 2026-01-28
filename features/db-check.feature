@@ -13,6 +13,25 @@ Feature: Check the database
       Success: Database checked.
       """
 
+  Scenario: db check with --quiet flag should only show errors
+    Given a WP install
+
+    When I run `wp db check --quiet`
+    Then STDOUT should be empty
+
+  Scenario: db check can explicitly pass --silent to mysqlcheck
+    Given a WP install
+
+    When I run `wp db check --silent`
+    Then STDOUT should not contain:
+      """
+      wp_cli_test.wp_users
+      """
+    And STDOUT should contain:
+      """
+      Success: Database checked.
+      """
+
   Scenario: Run db check with MySQL defaults to check the database
     Given a WP install
 
