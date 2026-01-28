@@ -2,6 +2,7 @@
 
 use WP_CLI\Formatter;
 use WP_CLI\Utils;
+use cli\table\Column;
 
 /**
  * Performs basic database operations using credentials stored in wp-config.php.
@@ -1199,7 +1200,6 @@ class DB_Command extends WP_CLI_Command {
 		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
 			WP_CLI::line( str_replace( " {$size_format_display}", '', $rows[0]['Size'] ) );
 		} else {
-
 			// Sort the rows by user input
 			if ( $orderby ) {
 				usort(
@@ -1220,7 +1220,8 @@ class DB_Command extends WP_CLI_Command {
 
 			// Display the rows.
 			$args = [
-				'format' => $format,
+				'format'     => $format,
+				'alignments' => [ 'Size' => Column::ALIGN_RIGHT ],
 			];
 
 			$formatter = new Formatter( $args, $fields );
@@ -1816,7 +1817,7 @@ class DB_Command extends WP_CLI_Command {
 			$required['default-character-set'] = constant( 'DB_CHARSET' );
 		}
 
-		// Using 'dbuser' as option name to workaround clash with WP-CLI's global WP 'user' parameter, with 'dbpass' also available for tidyness.
+		// Using 'dbuser' as option name to workaround clash with WP-CLI's global WP 'user' parameter, with 'dbpass' also available for tidiness.
 		if ( isset( $assoc_args['dbuser'] ) ) {
 			$required['user'] = $assoc_args['dbuser'];
 			unset( $assoc_args['dbuser'] );
