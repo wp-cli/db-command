@@ -1287,11 +1287,15 @@ class DB_Command extends WP_CLI_Command {
 		);
 
 		// Format size to human-readable.
-		$size_key    = floor( log( (float) $db_size_bytes ) / log( 1000 ) );
-		$sizes       = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
-		$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
-		$divisor     = pow( 1000, $size_key );
-		$db_size     = round( (int) $db_size_bytes / $divisor, 2 ) . ' ' . $size_format;
+		if ( empty( $db_size_bytes ) || $db_size_bytes <= 0 ) {
+			$db_size = '0 B';
+		} else {
+			$size_key    = floor( log( (float) $db_size_bytes ) / log( 1000 ) );
+			$sizes       = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+			$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
+			$divisor     = pow( 1000, $size_key );
+			$db_size     = round( (int) $db_size_bytes / $divisor, 2 ) . ' ' . $size_format;
+		}
 
 		// Get prefix.
 		$prefix = $wpdb->prefix;
