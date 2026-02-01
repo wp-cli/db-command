@@ -1248,6 +1248,101 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
+	 * Displays a quick database status overview.
+	 *
+	 * Shows key database information including name, table count, size,
+	 * prefix, engine, charset, collation, and health check status. This
+	 * command is useful for getting a quick snapshot of database health
+	 * without needing to run multiple separate commands.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp db status
+	 *     Database Name:     wp_cli_test
+	 *     Tables:            54
+	 *     Total Size:        312 KB
+	 *     Prefix:            wp_
+	 *     Engine:            InnoDB
+	 *     Charset:           utf8mb4
+	 *     Collation:         utf8mb4_unicode_ci
+	 *     Check Status:      OK
+	 *
+	 * @when after_wp_load
+	 */
+	public function status() {
+		global $wpdb;
+
+		// Get database name.
+		$db_name = DB_NAME;
+
+		// Get table count.
+		$table_count = count( Utils\wp_get_table_names( [], [ 'scope' => 'all' ] ) );
+
+		// Get total database size.
+		$db_size_bytes = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
+				DB_NAME
+			)
+		);
+
+		// Format size to human-readable.
+		$size_key    = floor( log( (float) $db_size_bytes ) / log( 1000 ) );
+		$sizes       = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+		$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
+		$divisor     = pow( 1000, $size_key );
+		$db_size     = round( (int) $db_size_bytes / $divisor, 2 ) . ' ' . $size_format;
+
+		// Get prefix.
+		$prefix = $wpdb->prefix;
+
+		// Get engine, charset, and collation from information_schema (using a common table).
+		$table_info = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT ENGINE as engine, CCSA.character_set_name as charset, TABLE_COLLATION as collation '
+				. 'FROM information_schema.TABLES T '
+				. 'LEFT JOIN information_schema.COLLATION_CHARACTER_SET_APPLICABILITY CCSA '
+				. 'ON CCSA.collation_name = T.table_collation '
+				. 'WHERE T.table_schema = %s '
+				. 'AND T.table_name LIKE %s '
+				. 'LIMIT 1',
+				DB_NAME,
+				$wpdb->esc_like( $prefix ) . '%'
+			)
+		);
+
+		$engine    = $table_info && isset( $table_info->engine ) ? $table_info->engine : 'N/A';
+		$charset   = $table_info && isset( $table_info->charset ) ? $table_info->charset : 'N/A';
+		$collation = $table_info && isset( $table_info->collation ) ? $table_info->collation : 'N/A';
+
+		// Run database check silently to get status.
+		$check_args                          = [];
+		$command                             = sprintf(
+			'/usr/bin/env %s%s %s',
+			Utils\get_sql_check_command(),
+			$this->get_defaults_flag_string( $check_args ),
+			'%s'
+		);
+		list( $stdout, $stderr, $exit_code ) = self::run(
+			Utils\esc_cmd( $command, DB_NAME ),
+			[ 'check' => true ],
+			false
+		);
+
+		$check_status = ( 0 === $exit_code ) ? 'OK' : 'Error';
+
+		// Output formatted status.
+		WP_CLI::log( sprintf( '%-18s %s', 'Database Name:', $db_name ) );
+		WP_CLI::log( sprintf( '%-18s %d', 'Tables:', $table_count ) );
+		WP_CLI::log( sprintf( '%-18s %s', 'Total Size:', $db_size ) );
+		WP_CLI::log( sprintf( '%-18s %s', 'Prefix:', $prefix ) );
+		WP_CLI::log( sprintf( '%-18s %s', 'Engine:', $engine ) );
+		WP_CLI::log( sprintf( '%-18s %s', 'Charset:', $charset ) );
+		WP_CLI::log( sprintf( '%-18s %s', 'Collation:', $collation ) );
+		WP_CLI::log( sprintf( '%-18s %s', 'Check Status:', $check_status ) );
+	}
+
+	/**
 	 * Finds a string in the database.
 	 *
 	 * Searches through all of the text columns in a selection of database tables for a given string, Outputs colorized references to the string.
