@@ -1832,7 +1832,7 @@ class DB_Command extends WP_CLI_Command {
 		$required = array_filter(
 			$required,
 			static function ( $value ) {
-				return '' !== $value;
+				return null !== $value && '' !== $value;
 			}
 		);
 

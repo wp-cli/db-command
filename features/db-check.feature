@@ -152,7 +152,15 @@ Feature: Check the database
       """
 
     When I run `wp db check --debug`
-    Then STDERR should not contain:
+    Then STDERR should contain:
+      """
+      Debug (db): Final MySQL command:
+      """
+    And STDERR should not contain:
+      """
+      --default-character-set=''
+      """
+    And STDERR should not contain:
       """
       --default-character-set=
       """
