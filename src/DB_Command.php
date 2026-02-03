@@ -1354,21 +1354,24 @@ class DB_Command extends WP_CLI_Command {
 			$collation = 'N/A';
 		}
 		// Run database check silently to get status.
-		$check_args                          = [];
-		$command                             = sprintf(
-			'/usr/bin/env %s%s %s',
-			Utils\get_sql_check_command(),
-			$this->get_defaults_flag_string( $check_args ),
-			'%s'
-		);
-		list( $stdout, $stderr, $exit_code ) = self::run(
-			Utils\esc_cmd( $command, DB_NAME ),
-			[ 'check' => true ],
-			false
-		);
-
-		$check_status = ( 0 === $exit_code ) ? 'OK' : 'Error';
-
+		if ( $table_count > 0 ) {
+			$check_args                          = [];
+			$command                             = sprintf(
+				'/usr/bin/env %s%s %s',
+				Utils\get_sql_check_command(),
+				$this->get_defaults_flag_string( $check_args ),
+				'%s'
+			);
+			list( $stdout, $stderr, $exit_code ) = self::run(
+				Utils\esc_cmd( $command, DB_NAME ),
+				[ 'check' => true ],
+				false
+			);
+			$check_status                        = ( 0 === $exit_code ) ? 'OK' : 'Error';
+		} else {
+			// No tables to check; mark status as not applicable.
+			$check_status = 'N/A';
+		}
 		// Output formatted status.
 		WP_CLI::log( sprintf( '%-18s %s', 'Database Name:', $db_name ) );
 		WP_CLI::log( sprintf( '%-18s %d', 'Tables:', $table_count ) );
