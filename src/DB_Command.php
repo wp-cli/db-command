@@ -1300,25 +1300,59 @@ class DB_Command extends WP_CLI_Command {
 		// Get prefix.
 		$prefix = $wpdb->prefix;
 
-		// Get engine, charset, and collation from information_schema (using a common table).
+		// Get engine, charset, and collation from information_schema across all tables with the prefix.
 		$table_info = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT ENGINE as engine, CCSA.character_set_name as charset, TABLE_COLLATION as collation '
+				'SELECT '
+				. 'COUNT(DISTINCT ENGINE) AS engine_count, '
+				. 'MIN(ENGINE) AS engine, '
+				. 'COUNT(DISTINCT CCSA.character_set_name) AS charset_count, '
+				. 'MIN(CCSA.character_set_name) AS charset, '
+				. 'COUNT(DISTINCT TABLE_COLLATION) AS collation_count, '
+				. 'MIN(TABLE_COLLATION) AS collation '
 				. 'FROM information_schema.TABLES T '
 				. 'LEFT JOIN information_schema.COLLATION_CHARACTER_SET_APPLICABILITY CCSA '
 				. 'ON CCSA.collation_name = T.table_collation '
 				. 'WHERE T.table_schema = %s '
-				. 'AND T.table_name LIKE %s '
-				. 'LIMIT 1',
+				. 'AND T.table_name LIKE %s',
 				DB_NAME,
 				$wpdb->esc_like( $prefix ) . '%'
 			)
 		);
 
-		$engine    = $table_info && isset( $table_info->engine ) ? $table_info->engine : 'N/A';
-		$charset   = $table_info && isset( $table_info->charset ) ? $table_info->charset : 'N/A';
-		$collation = $table_info && isset( $table_info->collation ) ? $table_info->collation : 'N/A';
+		if ( $table_info ) {
+			$engine_count    = isset( $table_info->engine_count ) ? (int) $table_info->engine_count : 0;
+			$charset_count   = isset( $table_info->charset_count ) ? (int) $table_info->charset_count : 0;
+			$collation_count = isset( $table_info->collation_count ) ? (int) $table_info->collation_count : 0;
 
+			if ( $engine_count > 1 ) {
+				$engine = 'Mixed';
+			} elseif ( isset( $table_info->engine ) && '' !== $table_info->engine ) {
+				$engine = $table_info->engine;
+			} else {
+				$engine = 'N/A';
+			}
+
+			if ( $charset_count > 1 ) {
+				$charset = 'Mixed';
+			} elseif ( isset( $table_info->charset ) && '' !== $table_info->charset ) {
+				$charset = $table_info->charset;
+			} else {
+				$charset = 'N/A';
+			}
+
+			if ( $collation_count > 1 ) {
+				$collation = 'Mixed';
+			} elseif ( isset( $table_info->collation ) && '' !== $table_info->collation ) {
+				$collation = $table_info->collation;
+			} else {
+				$collation = 'N/A';
+			}
+		} else {
+			$engine    = 'N/A';
+			$charset   = 'N/A';
+			$collation = 'N/A';
+		}
 		// Run database check silently to get status.
 		$check_args                          = [];
 		$command                             = sprintf(
