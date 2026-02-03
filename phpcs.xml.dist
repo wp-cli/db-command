@@ -38,7 +38,7 @@
 
 	<!-- For help understanding the `testVersion` configuration setting:
 		 https://github.com/PHPCompatibility/PHPCompatibility#sniffing-your-code-for-compatibility-with-specific-php-versions -->
-	<config name="testVersion" value="5.6-"/>
+	<config name="testVersion" value="7.2-"/>
 
 	<!-- Verify that everything in the global namespace is either namespaced or prefixed.
 		 See: https://github.com/WordPress-Coding-Standards/WordPress-Coding-Standards/wiki/Customizable-sniff-properties#naming-conventions-prefix-everything-in-the-global-namespace -->
@@ -50,9 +50,11 @@
 			</property>
 		</properties>
 	</rule>
-	
+
 	<!-- Exclude existing classes from the prefix rule as it would break BC to prefix them now. -->
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound">
 		<exclude-pattern>*/src/DB_Command\.php$</exclude-pattern>
 	</rule>
+
+	<exclude-pattern>/tests/phpstan/scan-files</exclude-pattern>
 </ruleset>
