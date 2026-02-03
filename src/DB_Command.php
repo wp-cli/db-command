@@ -1255,6 +1255,17 @@ class DB_Command extends WP_CLI_Command {
 	 * command is useful for getting a quick snapshot of database health
 	 * without needing to run multiple separate commands.
 	 *
+	 * ## OPTIONS
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysql. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
+	 *
+	 * [--defaults]
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     $ wp db status
@@ -1267,9 +1278,9 @@ class DB_Command extends WP_CLI_Command {
 	 *     Collation:         utf8mb4_unicode_ci
 	 *     Check Status:      OK
 	 *
-	 * @when after_wp_load
+	 * @when before_wp_load
 	 */
-	public function status() {
+	public function status( $_, $assoc_args ) {
 		global $wpdb;
 
 		// Get database name.
@@ -1355,16 +1366,15 @@ class DB_Command extends WP_CLI_Command {
 		}
 		// Run database check silently to get status.
 		if ( $table_count > 0 ) {
-			$check_args                          = [];
 			$command                             = sprintf(
 				'/usr/bin/env %s%s %s',
 				Utils\get_sql_check_command(),
-				$this->get_defaults_flag_string( $check_args ),
+				$this->get_defaults_flag_string( $assoc_args ),
 				'%s'
 			);
 			list( $stdout, $stderr, $exit_code ) = self::run(
 				Utils\esc_cmd( $command, DB_NAME ),
-				[ 'check' => true ],
+				array_merge( [ 'check' => true ], $assoc_args ),
 				false
 			);
 			$check_status                        = ( 0 === $exit_code ) ? 'OK' : 'Error';
