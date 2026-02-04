@@ -1827,16 +1827,16 @@ class DB_Command extends WP_CLI_Command {
 			unset( $assoc_args['dbpass'], $assoc_args['password'] );
 		}
 
+		$final_args = array_merge( $required, $assoc_args );
+
 		// Filter out empty string values to avoid passing empty parameters to MySQL commands
 		// which can cause errors like "Character set '' is not a compiled character set"
-		$required = array_filter(
-			$required,
+		$final_args = array_filter(
+			$final_args,
 			static function ( $value ) {
 				return null !== $value && '' !== $value;
 			}
 		);
-
-		$final_args = array_merge( $required, $assoc_args );
 
 		// Adapt ordering of arguments.
 		uksort(

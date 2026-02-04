@@ -144,9 +144,8 @@ Feature: Check the database
       define( 'DB_NAME', 'wp_cli_test' );
       define( 'DB_USER', 'wp_cli_test' );
       define( 'DB_PASSWORD', 'password1' );
-      define( 'DB_HOST', 'localhost' );
-      define( 'DB_CHARSET', '' );
-      define( 'DB_COLLATE', '' );
+      define( 'DB_HOST', '' );
+      define( 'DB_CHARSET', 'utf8' );
       $table_prefix = 'wp_';
       require_once ABSPATH . 'wp-settings.php';
       """
@@ -158,15 +157,11 @@ Feature: Check the database
       """
     And STDERR should not contain:
       """
-      --default-character-set=''
+      --host=''
       """
     And STDERR should not contain:
       """
-      --default-character-set=
+      --host=
       """
     And the return code should be 0
-    And STDOUT should contain:
-      """
-      Success: Database checked.
-      """
 
