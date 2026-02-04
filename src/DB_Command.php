@@ -1278,18 +1278,13 @@ class DB_Command extends WP_CLI_Command {
 	 *     Collation:         utf8mb4_unicode_ci
 	 *     Check Status:      OK
 	 *
-	 * @when before_wp_load
+	 * @when after_wp_load
 	 */
 	public function status( $_, $assoc_args ) {
 		global $wpdb;
 
-		// Get database name.
-		$db_name = DB_NAME;
-
-		// Get table count.
 		$table_count = count( Utils\wp_get_table_names( [], [ 'scope' => 'all' ] ) );
 
-		// Get total database size.
 		$db_size_bytes = $wpdb->get_var(
 			$wpdb->prepare(
 				'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
@@ -1297,7 +1292,6 @@ class DB_Command extends WP_CLI_Command {
 			)
 		);
 
-		// Format size to human-readable.
 		if ( empty( $db_size_bytes ) || $db_size_bytes <= 0 ) {
 			$db_size = '0 B';
 		} else {
@@ -1308,10 +1302,8 @@ class DB_Command extends WP_CLI_Command {
 			$db_size     = round( $db_size_bytes / $divisor, 2 ) . ' ' . $size_format;
 		}
 
-		// Get prefix.
 		$prefix = $wpdb->prefix;
 
-		// Get engine, charset, and collation from information_schema across all tables with the prefix.
 		$table_info = $wpdb->get_row(
 			$wpdb->prepare(
 				'SELECT '
@@ -1382,8 +1374,8 @@ class DB_Command extends WP_CLI_Command {
 			// No tables to check; mark status as not applicable.
 			$check_status = 'N/A';
 		}
-		// Output formatted status.
-		WP_CLI::log( sprintf( '%-18s %s', 'Database Name:', $db_name ) );
+
+		WP_CLI::log( sprintf( '%-18s %s', 'Database Name:', DB_NAME ) );
 		WP_CLI::log( sprintf( '%-18s %d', 'Tables:', $table_count ) );
 		WP_CLI::log( sprintf( '%-18s %s', 'Total Size:', $db_size ) );
 		WP_CLI::log( sprintf( '%-18s %s', 'Prefix:', $prefix ) );
