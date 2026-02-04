@@ -1292,14 +1292,14 @@ class DB_Command extends WP_CLI_Command {
 			)
 		);
 
-		if ( empty( $db_size_bytes ) || $db_size_bytes <= 0 ) {
-			$db_size = '0 B';
-		} else {
-			$size_key    = floor( log( $db_size_bytes ) / log( 1000 ) );
+		if ( ! empty( $db_size_bytes ) && $db_size_bytes > 0 ) {
+			$size_key    = floor( log( (float) $db_size_bytes ) / log( 1000 ) );
 			$sizes       = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
-			$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
+			$size_format = $sizes[ $size_key ] ?? $sizes[0];
 			$divisor     = pow( 1000, $size_key );
-			$db_size     = round( $db_size_bytes / $divisor, 2 ) . ' ' . $size_format;
+			$db_size     = round( (int) $db_size_bytes / $divisor, 2 ) . ' ' . $size_format;
+		} else {
+			$db_size = '0 B';
 		}
 
 		$prefix = $wpdb->prefix;
@@ -1375,14 +1375,20 @@ class DB_Command extends WP_CLI_Command {
 			$check_status = 'N/A';
 		}
 
-		WP_CLI::log( sprintf( '%-18s %s', 'Database Name:', DB_NAME ) );
-		WP_CLI::log( sprintf( '%-18s %d', 'Tables:', $table_count ) );
-		WP_CLI::log( sprintf( '%-18s %s', 'Total Size:', $db_size ) );
-		WP_CLI::log( sprintf( '%-18s %s', 'Prefix:', $prefix ) );
-		WP_CLI::log( sprintf( '%-18s %s', 'Engine:', $engine ) );
-		WP_CLI::log( sprintf( '%-18s %s', 'Charset:', $charset ) );
-		WP_CLI::log( sprintf( '%-18s %s', 'Collation:', $collation ) );
-		WP_CLI::log( sprintf( '%-18s %s', 'Check Status:', $check_status ) );
+		$status_items = [
+			'Database Name' => DB_NAME,
+			'Tables'        => $table_count,
+			'Total Size'    => $db_size,
+			'Prefix'        => $prefix,
+			'Engine'        => $engine,
+			'Charset'       => $charset,
+			'Collation'     => $collation,
+			'Check Status'  => $check_status,
+		];
+
+		foreach ( $status_items as $label => $value ) {
+			WP_CLI::log( sprintf( '%-18s %s', $label . ':', $value ) );
+		}
 	}
 
 	/**
