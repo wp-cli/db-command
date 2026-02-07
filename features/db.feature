@@ -191,6 +191,28 @@ Feature: Perform database operations
     And STDOUT should not be empty
 
   @require-mysql-or-mariadb
+  Scenario: db repair with --quiet flag should only show errors
+    Given a WP install
+
+    When I run `wp db repair --quiet`
+    Then STDOUT should not contain:
+      """
+      error
+      """
+
+  Scenario: db repair can explicitly pass --silent to mysqlcheck
+    Given a WP install
+
+    When I run `wp db repair --silent`
+    Then STDOUT should not contain:
+      """
+      error
+      """
+    And STDOUT should contain:
+      """
+      Success: Database repaired.
+      """
+
   Scenario: DB Query
     Given a WP install
 

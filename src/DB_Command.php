@@ -2,6 +2,7 @@
 
 use WP_CLI\Formatter;
 use WP_CLI\Utils;
+use cli\table\Column;
 
 require_once __DIR__ . '/DB_Command_SQLite.php';
 
@@ -293,6 +294,12 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['check'] = true;
+
+		// Pass --silent to mysqlcheck when in quiet mode.
+		if ( WP_CLI::get_config( 'quiet' ) ) {
+			$assoc_args['silent'] = true;
+		}
+
 		self::run(
 			Utils\esc_cmd( $command, DB_NAME ),
 			$assoc_args
@@ -348,6 +355,12 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['optimize'] = true;
+
+		// Pass --silent to mysqlcheck when in quiet mode.
+		if ( WP_CLI::get_config( 'quiet' ) ) {
+			$assoc_args['silent'] = true;
+		}
+
 		self::run(
 			Utils\esc_cmd( $command, DB_NAME ),
 			$assoc_args
@@ -403,6 +416,12 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['repair'] = true;
+
+		// Pass --silent to mysqlcheck when in quiet mode.
+		if ( WP_CLI::get_config( 'quiet' ) ) {
+			$assoc_args['silent'] = true;
+		}
+
 		self::run(
 			Utils\esc_cmd( $command, DB_NAME ),
 			$assoc_args
@@ -1308,7 +1327,6 @@ class DB_Command extends WP_CLI_Command {
 		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
 			WP_CLI::line( str_replace( " {$size_format_display}", '', $rows[0]['Size'] ) );
 		} else {
-
 			// Sort the rows by user input
 			if ( $orderby ) {
 				usort(
@@ -1329,7 +1347,8 @@ class DB_Command extends WP_CLI_Command {
 
 			// Display the rows.
 			$args = [
-				'format' => $format,
+				'format'     => $format,
+				'alignments' => [ 'Size' => Column::ALIGN_RIGHT ],
 			];
 
 			$formatter = new Formatter( $args, $fields );
@@ -1930,7 +1949,7 @@ class DB_Command extends WP_CLI_Command {
 			$required['default-character-set'] = constant( 'DB_CHARSET' );
 		}
 
-		// Using 'dbuser' as option name to workaround clash with WP-CLI's global WP 'user' parameter, with 'dbpass' also available for tidyness.
+		// Using 'dbuser' as option name to workaround clash with WP-CLI's global WP 'user' parameter, with 'dbpass' also available for tidiness.
 		if ( isset( $assoc_args['dbuser'] ) ) {
 			$required['user'] = $assoc_args['dbuser'];
 			unset( $assoc_args['dbuser'] );
