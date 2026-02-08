@@ -57,6 +57,8 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  # SQLite doesn't support the --dbuser flag.
+  @require-mysql-or-mariadb
   Scenario: Import from database name path by default with passed-in dbuser/dbpass
     Given a WP install
 
@@ -77,6 +79,8 @@ Feature: Import a WordPress database
       """
     And STDOUT should be empty
 
+  # SQLite doesn't support the --force flag.
+  @require-mysql-or-mariadb
   Scenario: Import database with passed-in options
     Given a WP install
     And a debug.sql file:
@@ -90,6 +94,9 @@ Feature: Import a WordPress database
       Success: Imported from 'debug.sql'.
       """
 
+  # For SQLite this would fail at the `wp db create` step
+  # because of the missing plugin/drop-in.
+  @require-mysql-or-mariadb
   Scenario: Help runs properly at various points of a functional WP install
     Given an empty directory
 
@@ -109,8 +116,7 @@ Feature: Import a WordPress database
       wp db import
       """
 
-    # Skipping connection check for SQLite.
-    When I run `wp core config --skip-check {CORE_CONFIG_SETTINGS}`
+    When I run `wp core config {CORE_CONFIG_SETTINGS}`
     Then STDOUT should not be empty
     And the wp-config.php file should exist
 
