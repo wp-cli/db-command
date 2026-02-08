@@ -109,7 +109,8 @@ Feature: Import a WordPress database
       wp db import
       """
 
-    When I run `wp core config {CORE_CONFIG_SETTINGS}`
+    # Skipping connection check for SQLite.
+    When I run `wp core config --skip-check {CORE_CONFIG_SETTINGS}`
     Then STDOUT should not be empty
     And the wp-config.php file should exist
 

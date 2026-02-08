@@ -14,6 +14,7 @@ Feature: Query the database with WordPress' MySQL config
       Error: Plugin loaded.
       """
 
+    # TODO: When using SQLite the output format should be the same
     When I run `wp db query "SELECT COUNT(ID) FROM wp_users;"`
     Then STDOUT should be:
       """
@@ -21,6 +22,8 @@ Feature: Query the database with WordPress' MySQL config
       1
       """
 
+  # SQLite doesn't support the --html option nor different dbuser.
+  @require-mysql-or-mariadb
   Scenario: Database querying with passed-in options
     Given a WP install
 
@@ -38,6 +41,8 @@ Feature: Query the database with WordPress' MySQL config
       """
     And STDOUT should be empty
 
+  # SQLite doesn't support the --html option nor different dbuser.
+  @require-mysql-or-mariadb
   Scenario: Database querying with MySQL defaults and passed-in options
     Given a WP install
 

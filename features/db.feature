@@ -200,6 +200,7 @@ Feature: Perform database operations
       error
       """
 
+  @require-mysql-or-mariadb
   Scenario: db repair can explicitly pass --silent to mysqlcheck
     Given a WP install
 
@@ -231,6 +232,11 @@ Feature: Perform database operations
       """
       total
       """
+
+  # SQLite doesn't support this flag.
+  @require-mysql-or-mariadb
+  Scenario: DB Query with --skip-column-names
+    Given a WP install
 
     When I run `wp db query 'SELECT * FROM wp_options WHERE option_name="home"' --skip-column-names`
     Then STDOUT should not contain:
@@ -314,6 +320,7 @@ Feature: Perform database operations
       Success: Exported
       """
 
+  @require-mysql-or-mariadb
   Scenario: Persist DB charset and collation
     Given an empty directory
     And WP files

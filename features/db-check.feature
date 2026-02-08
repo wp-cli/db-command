@@ -21,6 +21,7 @@ Feature: Check the database
     When I run `wp db check --quiet`
     Then STDOUT should be empty
 
+  @require-mysql-or-mariadb
   Scenario: db check can explicitly pass --silent to mysqlcheck
     Given a WP install
 
@@ -34,6 +35,7 @@ Feature: Check the database
       Success: Database checked.
       """
 
+  @require-mysql-or-mariadb
   Scenario: Run db check with MySQL defaults to check the database
     Given a WP install
 
