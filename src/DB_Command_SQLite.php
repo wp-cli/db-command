@@ -303,7 +303,8 @@ trait DB_Command_SQLite {
 			}
 		} else {
 			// Use the Formatter class to display results as a table.
-			$formatter = new Formatter( [], $headers );
+			$assoc_args = [];
+			$formatter = new Formatter( $assoc_args, $headers );
 			$formatter->display_items( $rows );
 		}
 	}
