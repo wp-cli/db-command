@@ -1,5 +1,6 @@
 <?php
 
+use WP_CLI\Formatter;
 use WP_CLI\Utils;
 
 /**
@@ -201,10 +202,13 @@ trait DB_Command_SQLite {
 	/**
 	 * Execute a query against the SQLite database.
 	 *
-	 * @param string $query SQL query to execute.
+	 * @param string $query      SQL query to execute.
+	 * @param array  $assoc_args Associative arguments.
 	 */
-	protected function sqlite_query( $query ) {
+	protected function sqlite_query( $query, $assoc_args = [] ) {
 		global $wpdb;
+
+		$skip_column_names = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
 
 		// Use $wpdb if the SQLite drop-in is loaded.
 		if ( isset( $wpdb ) && $wpdb instanceof \WP_SQLite_DB ) {
@@ -233,9 +237,9 @@ trait DB_Command_SQLite {
 						return;
 					}
 
-					// Display as a table similar to MySQL output.
+					// Display results using the Formatter class.
 					$headers = array_keys( $results[0] );
-					$this->display_table( $headers, $results );
+					$this->display_query_results( $headers, $results, $skip_column_names );
 				}
 			} catch ( Exception $e ) {
 				WP_CLI::error( 'Query failed: ' . $e->getMessage() );
@@ -275,9 +279,9 @@ trait DB_Command_SQLite {
 					return;
 				}
 
-				// Display as a table similar to MySQL output.
+				// Display results using the Formatter class.
 				$headers = array_keys( $results[0] );
-				$this->display_table( $headers, $results );
+				$this->display_query_results( $headers, $results, $skip_column_names );
 			}
 		} catch ( PDOException $e ) {
 			WP_CLI::error( 'Query failed: ' . $e->getMessage() );
@@ -285,47 +289,23 @@ trait DB_Command_SQLite {
 	}
 
 	/**
-	 * Display results as a table similar to MySQL output.
+	 * Display query results using the Formatter class.
 	 *
-	 * @param array $headers Column headers.
-	 * @param array $rows    Data rows.
+	 * @param array $headers          Column headers.
+	 * @param array $rows             Data rows.
+	 * @param bool  $skip_column_names Whether to skip displaying column names.
 	 */
-	protected function display_table( $headers, $rows ) {
-		// Calculate column widths.
-		$widths = [];
-		foreach ( $headers as $header ) {
-			$widths[ $header ] = strlen( $header );
-		}
-
-		foreach ( $rows as $row ) {
-			foreach ( $row as $key => $value ) {
-				$widths[ $key ] = max( $widths[ $key ], strlen( (string) $value ) );
+	protected function display_query_results( $headers, $rows, $skip_column_names = false ) {
+		if ( $skip_column_names ) {
+			// Display rows without headers - just the values.
+			foreach ( $rows as $row ) {
+				WP_CLI::line( implode( "\t", array_values( $row ) ) );
 			}
+		} else {
+			// Use the Formatter class to display results as a table.
+			$formatter = new Formatter( [], $headers );
+			$formatter->display_items( $rows );
 		}
-
-		// Display header.
-		$separator   = '+';
-		$header_line = '|';
-		foreach ( $headers as $header ) {
-			$separator   .= str_repeat( '-', $widths[ $header ] + 2 ) . '+';
-			$header_line .= ' ' . str_pad( $header, $widths[ $header ] ) . ' |';
-		}
-
-		WP_CLI::line( $separator );
-		WP_CLI::line( $header_line );
-		WP_CLI::line( $separator );
-
-		// Display rows.
-		foreach ( $rows as $row ) {
-			$row_line = '|';
-			foreach ( $headers as $header ) {
-				$value     = isset( $row[ $header ] ) ? $row[ $header ] : '';
-				$row_line .= ' ' . str_pad( (string) $value, $widths[ $header ] ) . ' |';
-			}
-			WP_CLI::line( $row_line );
-		}
-
-		WP_CLI::line( $separator );
 	}
 
 	/**

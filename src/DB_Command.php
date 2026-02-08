@@ -587,7 +587,7 @@ class DB_Command extends WP_CLI_Command {
 				WP_CLI::error( 'No query specified.' );
 			}
 
-			$this->sqlite_query( $query );
+			$this->sqlite_query( $query, $assoc_args );
 			return;
 		}
 
