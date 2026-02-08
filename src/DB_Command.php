@@ -1270,6 +1270,8 @@ class DB_Command extends WP_CLI_Command {
 						$size_key = 0;
 					}
 
+					$size_key = (int) $size_key;
+
 					$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
 				}
 
