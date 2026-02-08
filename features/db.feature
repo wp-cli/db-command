@@ -233,8 +233,6 @@ Feature: Perform database operations
       total
       """
 
-  # SQLite doesn't support this flag.
-  @require-mysql-or-mariadb
   Scenario: DB Query with --skip-column-names
     Given a WP install
 
