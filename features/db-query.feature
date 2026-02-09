@@ -60,6 +60,8 @@ Feature: Query the database with WordPress' MySQL config
       """
     And STDOUT should be empty
 
+  # SQLite doesn't support the --html option nor different dbuser.
+  @require-mysql-or-mariadb
   Scenario: Database querying with --nodefaults and passed-in options
     Given a WP install
 

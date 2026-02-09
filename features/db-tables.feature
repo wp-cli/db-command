@@ -235,6 +235,8 @@ Feature: List database tables
       wp_posts
       """
 
+  # AUTO_INCREMENT doesn't work with SQLite.
+  @require-mysql-or-mariadb
   Scenario: Listing a site's tables should only list that site's tables
     Given a WP multisite install
 
