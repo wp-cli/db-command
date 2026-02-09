@@ -264,7 +264,6 @@ Feature: Search through the database
     And the return code should be 1
 
     When I run `wp db query "CREATE TABLE no_key ( awesome_stuff TEXT );"`
-    And I run `wp db query "CREATE TABLE no_text ( id int(11) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id) );"`
     And I try `wp db search example.com no_key --all-tables`
     Then STDOUT should be empty
     And STDERR should be:
@@ -273,6 +272,10 @@ Feature: Search through the database
       """
     And the return code should be 0
 
+  @require-mysql-or-mariadb
+  Scenario: Search on a single site install - No text columns for table
+    Given a WP install
+    And I run `wp db query "CREATE TABLE no_text ( id int(11) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id) );"`
     When I try `wp db search example.com no_text --all-tables`
     Then STDOUT should be empty
     And STDERR should be:
@@ -999,8 +1002,9 @@ Feature: Search through the database
       INSERT INTO `TABLE` (`VALUES`, `back``tick`, `single'double"quote`) VALUES ('v"v`v\'v\\v_v1', 'v"v`v\'v\\v_v1', 'v"v`v\'v\\v_v1' );
       INSERT INTO `TABLE` (`VALUES`, `back``tick`, `single'double"quote`) VALUES ('v"v`v\'v\\v_v2', 'v"v`v\'v\\v_v2', 'v"v`v\'v\\v_v2' );
       """
-
-    When I run `wp db query "SOURCE esc_sql_ident.sql;"`
+    And save the {RUN_DIR}/esc_sql_ident.sql file as {QUERY}
+    When I run `wp db query 'CREATE TABLE `TABLE` (`KEY` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, `VALUES` TEXT, `back``tick` TEXT, `single\'double"quote` TEXT, PRIMARY KEY (`KEY`) );'`
+    And I run `wp db query 'INSERT INTO `TABLE` (`VALUES`, `back``tick`, `single\'double"quote`) VALUES (\'v"v`v\\'v\\v_v1', \'v"v`v\\'v\\v_v1\', \'v"v`v\\'v\\v_v1\' );'`
     Then STDERR should be empty
 
     When I run `wp db search 'v_v' TABLE --all-tables`
