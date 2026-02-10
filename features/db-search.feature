@@ -872,7 +872,6 @@ Feature: Search through the database
     When I run `wp db search 'https://' --regex`
     Then the return code should be 0
 
-  @require-wp-4.7
   Scenario: Search with output options
     Given a WP install
 
@@ -1002,9 +1001,8 @@ Feature: Search through the database
       INSERT INTO `TABLE` (`VALUES`, `back``tick`, `single'double"quote`) VALUES ('v"v`v\'v\\v_v1', 'v"v`v\'v\\v_v1', 'v"v`v\'v\\v_v1' );
       INSERT INTO `TABLE` (`VALUES`, `back``tick`, `single'double"quote`) VALUES ('v"v`v\'v\\v_v2', 'v"v`v\'v\\v_v2', 'v"v`v\'v\\v_v2' );
       """
-    And save the {RUN_DIR}/esc_sql_ident.sql file as {QUERY}
-    When I run `wp db query 'CREATE TABLE `TABLE` (`KEY` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, `VALUES` TEXT, `back``tick` TEXT, `single\'double"quote` TEXT, PRIMARY KEY (`KEY`) );'`
-    And I run `wp db query 'INSERT INTO `TABLE` (`VALUES`, `back``tick`, `single\'double"quote`) VALUES (\'v"v`v\\'v\\v_v1', \'v"v`v\\'v\\v_v1\', \'v"v`v\\'v\\v_v1\' );'`
+
+    When I run `wp db query "SOURCE esc_sql_ident.sql;"`
     Then STDERR should be empty
 
     When I run `wp db search 'v_v' TABLE --all-tables`

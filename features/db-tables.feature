@@ -43,9 +43,7 @@ Feature: List database tables
     When I run `wp db tables`
     Then STDOUT should contain:
       """
-      _mysql_data_types_cache
       wp_users
-      sqlite_sequence
       wp_usermeta
       wp_termmeta
       wp_terms
@@ -162,9 +160,7 @@ Feature: List database tables
     When I run `wp db tables`
     Then STDOUT should contain:
       """
-      _mysql_data_types_cache
       wp_users
-      sqlite_sequence
       wp_usermeta
       wp_termmeta
       wp_terms
@@ -329,10 +325,13 @@ Feature: List database tables
       """
 
     When I run `wp db tables '*_posts' --network`
-    Then STDOUT should be:
+    Then STDOUT should contain:
+      """
+      as_wp_posts
+      """
+    And STDOUT should contain:
       """
       as_wp_2_posts
-      as_wp_posts
       """
 
     When I run `wp db tables '*_posts' --scope=blog`

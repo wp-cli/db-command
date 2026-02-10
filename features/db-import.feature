@@ -151,7 +151,7 @@ Feature: Import a WordPress database
     When I try `wp db import --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysql|mariadb) --no-defaults --no-auto-rehash#
 
-  @require-wp-4.2 @require-mysql-or-mariadb
+  @require-mysql-or-mariadb
   Scenario: Import db that has emoji in post
     Given a WP install
 
@@ -188,7 +188,7 @@ Feature: Import a WordPress database
       🍣
       """
 
-  @require-wp-4.2 @require-sqlite
+  @require-sqlite
   Scenario: Import db that has emoji in post
     Given a WP install
 

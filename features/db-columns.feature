@@ -1,7 +1,7 @@
 Feature: Display information about a given table.
 
   # This requires conditional tags to target different DB versions, as bigint(20) is only bigint on MySQL 8.
-  @require-wp-4.2 @broken
+  @broken
   Scenario: Display information about the wp_posts table
     Given a WP install
 
