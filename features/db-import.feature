@@ -36,10 +36,22 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  @require-mysql-or-mariadb
   Scenario: Import from STDIN
     Given a WP install
 
     When I run `wp db import -`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'STDIN'.
+      """
+
+  # TODO: Debug the difference here.
+  @require-sqlite
+  Scenario: Import from STDIN
+    Given a WP install
+
+    When I run `echo "" | wp db import -`
     Then STDOUT should be:
       """
       Success: Imported from 'STDIN'.

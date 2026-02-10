@@ -14,7 +14,6 @@ Feature: Query the database with WordPress' MySQL config
       Error: Plugin loaded.
       """
 
-    # TODO: When using SQLite the output format should be the same
     When I run `wp db query "SELECT COUNT(ID) FROM wp_users;"`
     Then STDOUT should be:
       """

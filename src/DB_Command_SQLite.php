@@ -82,28 +82,6 @@ trait DB_Command_SQLite {
 	}
 
 	/**
-	 * Get a PDO connection to the SQLite database.
-	 *
-	 * @return PDO|false PDO connection or false on failure.
-	 */
-	protected function get_sqlite_pdo() {
-		$db_path = $this->get_sqlite_db_path();
-
-		if ( ! $db_path ) {
-			return false;
-		}
-
-		try {
-			$pdo = new PDO( 'sqlite:' . $db_path );
-			$pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
-			return $pdo;
-		} catch ( PDOException $e ) {
-			WP_CLI::debug( 'SQLite PDO connection failed: ' . $e->getMessage(), 'db' );
-			return false;
-		}
-	}
-
-	/**
 	 * Create SQLite database.
 	 */
 	protected function sqlite_create() {
@@ -125,15 +103,14 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Database already exists.' );
 		}
 
-		// Create the SQLite database file.
-		try {
-			$pdo = new PDO( 'sqlite:' . $db_path );
-			$pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
-			// Execute a simple query to initialize the database.
-			$pdo->exec( 'CREATE TABLE IF NOT EXISTS _wpcli_test (id INTEGER)' );
-			$pdo->exec( 'DROP TABLE _wpcli_test' );
-		} catch ( PDOException $e ) {
-			WP_CLI::error( 'Could not create SQLite database: ' . $e->getMessage() );
+		$command = "sqlite3 $db_path \"\"";
+
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+
+		$result = \WP_CLI\Process::create( $command, null, null )->run();
+
+		if ( 0 !== $result->return_code ) {
+			WP_CLI::error( 'Could not create database' );
 		}
 
 		WP_CLI::success( 'Database created.' );
@@ -185,15 +162,14 @@ trait DB_Command_SQLite {
 			}
 		}
 
-		// Recreate the SQLite database file.
-		try {
-			$pdo = new PDO( 'sqlite:' . $db_path );
-			$pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
-			// Execute a simple query to initialize the database.
-			$pdo->exec( 'CREATE TABLE IF NOT EXISTS _wpcli_test (id INTEGER)' );
-			$pdo->exec( 'DROP TABLE _wpcli_test' );
-		} catch ( PDOException $e ) {
-			WP_CLI::error( 'Could not create SQLite database: ' . $e->getMessage() );
+		$command = "sqlite3 $db_path \"\"";
+
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+
+		$result = \WP_CLI\Process::create( $command, null, null )->run();
+
+		if ( 0 !== $result->return_code ) {
+			WP_CLI::error( 'Could not create database' );
 		}
 
 		WP_CLI::success( 'Database reset.' );
@@ -208,71 +184,31 @@ trait DB_Command_SQLite {
 	protected function sqlite_query( $query, $assoc_args = [] ) {
 		global $wpdb;
 
+		if ( ! isset( $wpdb ) || ! $wpdb instanceof \WP_SQLite_DB ) {
+			WP_CLI::error( 'SQLite database not available.' );
+		}
+
 		$skip_column_names = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
-
-		// Use $wpdb if the SQLite drop-in is loaded.
-		if ( isset( $wpdb ) && $wpdb instanceof \WP_SQLite_DB ) {
-			try {
-				$is_row_modifying_query = preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE)\b/i', $query );
-
-				if ( $is_row_modifying_query ) {
-					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-					$affected_rows = $wpdb->query( $query );
-					if ( false === $affected_rows ) {
-						// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
-						WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
-					}
-					WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
-				} else {
-					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-					$results = $wpdb->get_results( $query, ARRAY_A );
-
-					if ( $wpdb->last_error ) {
-						// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
-						WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
-					}
-
-					if ( empty( $results ) ) {
-						// No results to display.
-						return;
-					}
-
-					// Display results using the Formatter class.
-					$headers = array_keys( $results[0] );
-					$this->display_query_results( $headers, $results, $skip_column_names );
-				}
-			} catch ( Exception $e ) {
-				WP_CLI::error( 'Query failed: ' . $e->getMessage() );
-			}
-			return;
-		}
-
-		// Fallback to PDO if the drop-in is not loaded.
-		$pdo = $this->get_sqlite_pdo();
-
-		if ( ! $pdo ) {
-			WP_CLI::error( 'Could not connect to SQLite database.' );
-		}
 
 		try {
 			$is_row_modifying_query = preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE)\b/i', $query );
 
 			if ( $is_row_modifying_query ) {
-				$stmt = $pdo->prepare( $query );
-				$stmt->execute();
-				$affected_rows = $stmt->rowCount();
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				$affected_rows = $wpdb->query( $query );
+				if ( false === $affected_rows ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+					WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
+				}
 				WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
 			} else {
-				$stmt = $pdo->query( $query );
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				$results = $wpdb->get_results( $query, ARRAY_A );
 
-				if ( ! $stmt ) {
-					// There was an error.
-					$error_info = $pdo->errorInfo();
-					WP_CLI::error( 'Query failed: ' . $error_info[2] );
+				if ( $wpdb->last_error ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+					WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
 				}
-
-				// Fetch and display results.
-				$results = $stmt->fetchAll( PDO::FETCH_ASSOC );
 
 				if ( empty( $results ) ) {
 					// No results to display.
@@ -283,7 +219,7 @@ trait DB_Command_SQLite {
 				$headers = array_keys( $results[0] );
 				$this->display_query_results( $headers, $results, $skip_column_names );
 			}
-		} catch ( PDOException $e ) {
+		} catch ( Exception $e ) {
 			WP_CLI::error( 'Query failed: ' . $e->getMessage() );
 		}
 	}
@@ -304,7 +240,7 @@ trait DB_Command_SQLite {
 		} else {
 			// Use the Formatter class to display results as a table.
 			$assoc_args = [];
-			$formatter = new Formatter( $assoc_args, $headers );
+			$formatter  = new Formatter( $assoc_args, $headers );
 			$formatter->display_items( $rows );
 		}
 	}
@@ -326,90 +262,52 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Database does not exist.' );
 		}
 
-		$pdo = $this->get_sqlite_pdo();
-		if ( ! $pdo ) {
-			WP_CLI::error( 'Could not connect to SQLite database.' );
+		$temp_db   = tempnam( sys_get_temp_dir(), 'temp.db' );
+		$export_db = tempnam( sys_get_temp_dir(), 'export.db' );
+
+		copy( $db_path, $temp_db );
+
+		$drop_tables = '';
+
+		$exclude_tables = [];
+		if ( isset( $assoc_args['exclude_tables'] ) ) {
+			$exclude_tables = explode( ',', trim( $assoc_args['exclude_tables'], ',' ) );
+			unset( $assoc_args['exclude_tables'] );
+		}
+		$exclude_tables[] = '_mysql_data_types_cache';
+		foreach ( $exclude_tables as $table ) {
+			$drop_tables .= sprintf( '"DROP TABLE %s;"', $table );
+		}
+
+		$command = "sqlite3 $temp_db $drop_tables";
+
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+
+		$result = \WP_CLI\Process::create( $command, null, null )->run();
+
+		if ( 0 !== $result->return_code ) {
+			WP_CLI::error( 'Could not export database' );
+		}
+
+		$command = "sqlite3 $temp_db .dump > $export_db";
+
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+
+		$result = \WP_CLI\Process::create( $command, null, null )->run();
+
+		if ( 0 !== $result->return_code ) {
+			WP_CLI::error( 'Could not export database' );
 		}
 
 		$stdout = ( '-' === $file );
 
 		if ( $stdout ) {
-			$output = fopen( 'php://stdout', 'w' );
+			readfile( $export_db );
+			unlink( $export_db );
 		} else {
-			$output = fopen( $file, 'w' );
+			rename( $export_db, $file );
 		}
-
-		if ( ! $output ) {
-			WP_CLI::error( "Could not open file for writing: {$file}" );
-		}
-
-		$exclude_tables = Utils\get_flag_value( $assoc_args, 'exclude_tables', '' );
-		$exclude_tables = explode( ',', trim( $exclude_tables, ',' ) );
-		$exclude_tables = array_map( 'strtolower', $exclude_tables );
-
-		try {
-			// Export schema and data as SQL.
-			fwrite( $output, "-- SQLite database dump\n" );
-			fwrite( $output, '-- Database: ' . basename( $db_path ) . "\n\n" );
-
-			// Get all tables.
-			$stmt = $pdo->query( "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name" );
-			if ( ! $stmt ) {
-				// There was an error.
-				$error_info = $pdo->errorInfo();
-				WP_CLI::error( 'Could not retrieve table list: ' . $error_info[2] );
-			}
-			$tables = $stmt->fetchAll( PDO::FETCH_COLUMN );
-
-			foreach ( $tables as $table ) {
-				if ( in_array( $table, $exclude_tables, true ) ) {
-					continue;
-				}
-
-				// Escape table name for identifiers.
-				$escaped_table = '"' . str_replace( '"', '""', $table ) . '"';
-
-				// Get CREATE TABLE statement.
-				$stmt = $pdo->query( "SELECT sql FROM sqlite_master WHERE type='table' AND name=" . $pdo->quote( $table ) );
-				if ( ! $stmt ) {
-					// There was an error.
-					$error_info = $pdo->errorInfo();
-					WP_CLI::error( "Could not retrieve CREATE TABLE statement for table {$escaped_table}: " . $error_info[2] );
-				}
-				$create_stmt = $stmt->fetchColumn();
-
-				if ( isset( $assoc_args['add-drop-table'] ) ) {
-					fwrite( $output, "DROP TABLE IF EXISTS {$escaped_table};\n" );
-				}
-
-				fwrite( $output, $create_stmt . ";\n\n" );
-
-				// Export data.
-				$stmt = $pdo->query( "SELECT * FROM {$escaped_table}" );
-				if ( ! $stmt ) {
-					// There was an error.
-					$error_info = $pdo->errorInfo();
-					WP_CLI::error( "Could not retrieve data for table {$escaped_table}: " . $error_info[2] );
-				}
-				$rows = $stmt->fetchAll( PDO::FETCH_ASSOC );
-
-				foreach ( $rows as $row ) {
-					$columns = array_keys( $row );
-					$values  = array_map( [ $pdo, 'quote' ], array_values( $row ) );
-
-					fwrite( $output, "INSERT INTO {$escaped_table} (" . implode( ', ', $columns ) . ') VALUES (' . implode( ', ', $values ) . ");\n" );
-				}
-
-				fwrite( $output, "\n" );
-			}
-
-			fwrite( $output, '-- Dump completed on ' . gmdate( 'Y-m-d H:i:s' ) . "\n\n" );
-		} catch ( PDOException $e ) {
-			fclose( $output );
-			WP_CLI::error( 'Export failed: ' . $e->getMessage() );
-		}
-
-		fclose( $output );
+		unlink( $temp_db );
 
 		if ( ! $stdout ) {
 			if ( isset( $assoc_args['porcelain'] ) ) {
@@ -426,56 +324,49 @@ trait DB_Command_SQLite {
 	 * @param string $file Input file path.
 	 */
 	protected function sqlite_import( $file ) {
-		$pdo = $this->get_sqlite_pdo();
+		$db_path = $this->get_sqlite_db_path();
 
-		if ( ! $pdo ) {
-			WP_CLI::error( 'Could not connect to SQLite database.' );
+		if ( ! $db_path ) {
+			WP_CLI::error( 'Could not determine the database path.' );
 		}
+
+		if ( ! file_exists( $db_path ) ) {
+			WP_CLI::error( 'Database does not exist.' );
+		}
+
+		$import_file = $file;
 
 		if ( '-' === $file ) {
-			$sql  = stream_get_contents( STDIN );
+			$sql = file_get_contents( 'php://stdin' );
+			if ( false === $sql ) {
+				WP_CLI::error( 'Failed to read from stdin.' );
+			}
+
+			$import_file = tempnam( sys_get_temp_dir(), 'temp.db' );
+			file_put_contents( $import_file, $sql );
 			$file = 'STDIN';
-		} else {
-			if ( ! is_readable( $file ) ) {
+		} elseif ( ! is_readable( $file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $file ) );
-			}
-			$sql = file_get_contents( $file );
 		}
 
-		if ( false === $sql ) {
-			WP_CLI::error( 'Could not read import file.' );
+		// Ignore errors about unique constraints and existing indexes.
+		$contents = file_get_contents( $import_file );
+		$contents = str_replace( 'INSERT INTO', 'INSERT OR IGNORE INTO', $contents );
+		$contents = str_replace( 'CREATE INDEX "', 'CREATE INDEX IF NOT EXISTS "', $contents );
+		$contents = str_replace( 'CREATE UNIQUE INDEX "', 'CREATE UNIQUE INDEX IF NOT EXISTS "', $contents );
+		file_put_contents( $import_file, $contents );
+
+		$command = "sqlite3 $db_path < $import_file";
+
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+
+		$result = \WP_CLI\Process::create( $command, null, null )->run();
+
+		if ( 0 !== $result->return_code ) {
+			WP_CLI::error( 'Could not import database.' );
 		}
 
-		try {
-			// Split SQL into individual statements.
-			$lines = preg_split( '/;[\r\n]+/', $sql );
-			if ( ! is_array( $lines ) ) {
-				$lines = [];
-			}
-			$statements = array_filter(
-				array_map(
-					'trim',
-					$lines
-				)
-			);
-
-			$pdo->beginTransaction();
-
-			foreach ( $statements as $statement ) {
-				if ( empty( $statement ) || 0 === strpos( $statement, '--' ) ) {
-					continue;
-				}
-
-				$pdo->exec( $statement );
-			}
-
-			$pdo->commit();
-
-			WP_CLI::success( sprintf( "Imported from '%s'.", $file ) );
-		} catch ( PDOException $e ) {
-			$pdo->rollBack();
-			WP_CLI::error( 'Import failed: ' . $e->getMessage() );
-		}
+		WP_CLI::success( sprintf( "Imported from '%s'.", $file ) );
 	}
 
 	/**
