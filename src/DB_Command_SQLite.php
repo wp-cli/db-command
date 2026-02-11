@@ -443,7 +443,7 @@ trait DB_Command_SQLite {
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
-		$result = \WP_CLI\Process::create( $command, null, null )->run( file_get_contents( $import_file ) );
+		$result = \WP_CLI\Process::create( $command, null, null )->run();
 
 		unlink( $import_file );
 
