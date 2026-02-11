@@ -107,24 +107,20 @@ trait DB_Command_SQLite {
 		}
 		$db_dir = dirname( $db_path );
 
-		// Create directory if it doesn't exist.
 		if ( ! is_dir( $db_dir ) ) {
 			if ( ! mkdir( $db_dir, 0755, true ) ) {
 				WP_CLI::error( "Could not create directory: {$db_dir}" );
 			}
 		}
 
-		// Check if database already exists.
 		if ( file_exists( $db_path ) ) {
 			WP_CLI::error( 'Database already exists.' );
 		}
 
-		// Check if sqlite3 binary is available.
 		if ( ! $this->is_sqlite3_available() ) {
 			WP_CLI::error( 'The sqlite3 CLI binary is required but not found. Please install SQLite3.' );
 		}
 
-		// Use Utils\esc_cmd to properly escape the command and arguments.
 		$command = Utils\esc_cmd( 'sqlite3 %s %s', $db_path, '' );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -184,12 +180,10 @@ trait DB_Command_SQLite {
 			}
 		}
 
-		// Check if sqlite3 binary is available.
 		if ( ! $this->is_sqlite3_available() ) {
 			WP_CLI::error( 'The sqlite3 CLI binary is required but not found. Please install SQLite3.' );
 		}
 
-		// Use Utils\esc_cmd to properly escape the command and arguments.
 		$command = Utils\esc_cmd( 'sqlite3 %s %s', $db_path, '' );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -334,13 +328,11 @@ trait DB_Command_SQLite {
 		// Build DROP TABLE statements with safely-escaped identifiers.
 		$drop_statements = array();
 		foreach ( $exclude_tables as $table ) {
-			// Escape double quotes within the table name and wrap it in double quotes.
 			$escaped_identifier = '"' . str_replace( '"', '""', $table ) . '"';
 			$drop_statements[]  = sprintf( 'DROP TABLE %s;', $escaped_identifier );
 		}
 
 		if ( ! empty( $drop_statements ) ) {
-			// Build the sqlite3 command with properly escaped shell arguments.
 			$args         = array_merge( array( 'sqlite3', $temp_db ), $drop_statements );
 			$placeholders = array_fill( 0, count( $args ), '%s' );
 			$command      = Utils\esc_cmd( implode( ' ', $placeholders ), ...$args );
@@ -354,7 +346,6 @@ trait DB_Command_SQLite {
 			}
 		}
 
-		// Dump the database to the export file.
 		$command = Utils\esc_cmd( 'sqlite3 %s .dump > %s', $temp_db, $export_db );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -408,8 +399,6 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Database does not exist.' );
 		}
 
-		$contents = (string) file_get_contents( $file );
-
 		if ( '-' === $file ) {
 			$contents = file_get_contents( 'php://stdin' );
 			if ( false === $contents ) {
@@ -419,12 +408,17 @@ trait DB_Command_SQLite {
 			$file = 'STDIN';
 		} elseif ( ! is_readable( $file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $file ) );
+		} else {
+			$contents = (string) file_get_contents( $file );
 		}
 
 		// Ignore errors about unique constraints and existing indexes.
 		$contents = str_replace( 'INSERT INTO', 'INSERT OR IGNORE INTO', $contents );
 		$contents = str_replace( 'CREATE INDEX "', 'CREATE INDEX IF NOT EXISTS "', $contents );
 		$contents = str_replace( 'CREATE UNIQUE INDEX "', 'CREATE UNIQUE INDEX IF NOT EXISTS "', $contents );
+
+		$import_file = tempnam( sys_get_temp_dir(), 'temp.db' );
+		file_put_contents( $import_file, $contents );
 
 		// Build sqlite3 command as an argument array to avoid shell injection.
 		$command = array( 'sqlite3' );
@@ -440,15 +434,14 @@ trait DB_Command_SQLite {
 			$command[] = 'PRAGMA journal_mode=MEMORY;';
 		}
 
-		// Add database path as final argument.
-		$command[] = $db_path;
+		$command  = implode( ' ', array_map( 'escapeshellarg', $command ) );
+		$command .= ' ' . escapeshellarg( $db_path ) . ' < ' . escapeshellarg( $import_file );
 
-		// For debugging, show a safely escaped shell-like representation.
-		$debug_command = implode( ' ', array_map( 'escapeshellarg', $command ) );
-		WP_CLI::debug( "Running shell command: {$debug_command}", 'db' );
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
-		// Pass the SQL contents via stdin instead of using shell redirection.
-		$result = \WP_CLI\Process::create( $command, null, null, null, array( 'stdin' => $contents ) )->run();
+		$result = \WP_CLI\Process::create( $command, null, null )->run();
+
+		unlink( $import_file );
 
 		if ( 0 !== $result->return_code ) {
 			WP_CLI::error( 'Could not import database.' );
