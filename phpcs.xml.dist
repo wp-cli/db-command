@@ -59,9 +59,5 @@
 		<exclude-pattern>*/src/DB_Command_SQLite\.php$</exclude-pattern>
 	</rule>
 
-	<rule ref="WordPress.DB.RestrictedClasses.mysql__PDO">
-		<exclude-pattern>*/src/DB_Command_SQLite\.php$</exclude-pattern>
-	</rule>
-
 	<exclude-pattern>/tests/phpstan/scan-files</exclude-pattern>
 </ruleset>
