@@ -303,22 +303,31 @@ trait DB_Command_SQLite {
 
 		$exclude_tables = array_unique( array_filter( $exclude_tables ) );
 
-		$command = "sqlite3 $temp_db ";
+		// Build DROP TABLE statements with safely-escaped identifiers.
+		$drop_statements = array();
 		foreach ( $exclude_tables as $table ) {
-			$command .= sprintf( '"DROP TABLE %s;" ', $table );
+			// Escape double quotes within the table name and wrap it in double quotes.
+			$escaped_identifier = '"' . str_replace( '"', '""', $table ) . '"';
+			$drop_statements[] = sprintf( 'DROP TABLE %s;', $escaped_identifier );
 		}
 
-		$command = trim( $command );
+		if ( ! empty( $drop_statements ) ) {
+			// Build the sqlite3 command with properly escaped shell arguments.
+			$args         = array_merge( array( 'sqlite3', $temp_db ), $drop_statements );
+			$placeholders = array_fill( 0, count( $args ), '%s' );
+			$command      = Utils\esc_cmd( implode( ' ', $placeholders ), ...$args );
 
-		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+			WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
-		$result = \WP_CLI\Process::create( $command, null, null )->run();
+			$result = \WP_CLI\Process::create( $command, null, null )->run();
 
-		if ( 0 !== $result->return_code ) {
-			WP_CLI::error( 'Could not export database' );
+			if ( 0 !== $result->return_code ) {
+				WP_CLI::error( 'Could not export database' );
+			}
 		}
 
-		$command = "sqlite3 $temp_db .dump > $export_db";
+		// Dump the database to the export file.
+		$command = Utils\esc_cmd( 'sqlite3 %s .dump > %s', $temp_db, $export_db );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
