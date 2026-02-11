@@ -382,32 +382,23 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Database does not exist.' );
 		}
 
-		$import_file = $file;
+		$contents = (string) file_get_contents( $file );
 
 		if ( '-' === $file ) {
-			$sql = file_get_contents( 'php://stdin' );
-			if ( false === $sql ) {
+			$contents = file_get_contents( 'php://stdin' );
+			if ( false === $contents ) {
 				WP_CLI::error( 'Failed to read from stdin.' );
 			}
 
-			$import_file = tempnam( sys_get_temp_dir(), 'temp.db' );
-
-			if ( false === $import_file ) {
-				WP_CLI::error( 'Failed to read from stdin.' );
-			}
-
-			file_put_contents( $import_file, $sql );
 			$file = 'STDIN';
 		} elseif ( ! is_readable( $file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $file ) );
 		}
 
 		// Ignore errors about unique constraints and existing indexes.
-		$contents = (string) file_get_contents( $import_file );
 		$contents = str_replace( 'INSERT INTO', 'INSERT OR IGNORE INTO', $contents );
 		$contents = str_replace( 'CREATE INDEX "', 'CREATE INDEX IF NOT EXISTS "', $contents );
 		$contents = str_replace( 'CREATE UNIQUE INDEX "', 'CREATE UNIQUE INDEX IF NOT EXISTS "', $contents );
-		file_put_contents( $import_file, $contents );
 
 		// Build sqlite3 command as an argument array to avoid shell injection.
 		$command = array( 'sqlite3' );
