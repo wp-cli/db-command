@@ -343,7 +343,16 @@ trait DB_Command_SQLite {
 			readfile( $export_db );
 			unlink( $export_db );
 		} else {
-			rename( $export_db, $file );
+			if ( ! @rename( $export_db, $file ) ) {
+				// Clean up temporary files and surface a clear error if the export cannot be moved.
+				if ( file_exists( $export_db ) ) {
+					unlink( $export_db );
+				}
+				if ( file_exists( $temp_db ) ) {
+					unlink( $temp_db );
+				}
+				WP_CLI::error( "Could not move exported database to '{$file}'. Please check that the path is writable and on the same filesystem." );
+			}
 		}
 		unlink( $temp_db );
 
