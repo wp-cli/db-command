@@ -68,8 +68,10 @@ trait DB_Command_SQLite {
 			return FQDB;
 		}
 
+		$wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content';
+
 		// Check for FQDBDIR and construct path.
-		$db_dir  = defined( 'FQDBDIR' ) ? FQDBDIR : ( defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content' ) . '/database';
+		$db_dir  = defined( 'FQDBDIR' ) ? FQDBDIR : $wp_content_dir . '/database';
 		$db_file = defined( 'DB_FILE' ) ? DB_FILE : '.ht.sqlite';
 
 		$db_path = rtrim( $db_dir, '/' ) . '/' . ltrim( $db_file, '/' );
@@ -80,8 +82,7 @@ trait DB_Command_SQLite {
 		}
 
 		// Try alternative common locations.
-		$wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content';
-		$alt_paths      = [
+		$alt_paths = [
 			$wp_content_dir . '/database/.ht.sqlite',
 			$wp_content_dir . '/.ht.sqlite',
 			ABSPATH . '.ht.sqlite',
