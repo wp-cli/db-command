@@ -336,7 +336,7 @@ trait DB_Command_SQLite {
 		foreach ( $exclude_tables as $table ) {
 			// Escape double quotes within the table name and wrap it in double quotes.
 			$escaped_identifier = '"' . str_replace( '"', '""', $table ) . '"';
-			$drop_statements[] = sprintf( 'DROP TABLE %s;', $escaped_identifier );
+			$drop_statements[]  = sprintf( 'DROP TABLE %s;', $escaped_identifier );
 		}
 
 		if ( ! empty( $drop_statements ) ) {
@@ -370,17 +370,15 @@ trait DB_Command_SQLite {
 		if ( $stdout ) {
 			readfile( $export_db );
 			unlink( $export_db );
-		} else {
-			if ( ! @rename( $export_db, $file ) ) {
+		} elseif ( ! @rename( $export_db, $file ) ) {
 				// Clean up temporary files and surface a clear error if the export cannot be moved.
-				if ( file_exists( $export_db ) ) {
-					unlink( $export_db );
-				}
-				if ( file_exists( $temp_db ) ) {
-					unlink( $temp_db );
-				}
-				WP_CLI::error( "Could not move exported database to '{$file}'. Please check that the path is writable and on the same filesystem." );
+			if ( file_exists( $export_db ) ) {
+				unlink( $export_db );
 			}
+			if ( file_exists( $temp_db ) ) {
+				unlink( $temp_db );
+			}
+				WP_CLI::error( "Could not move exported database to '{$file}'. Please check that the path is writable and on the same filesystem." );
 		}
 		unlink( $temp_db );
 
