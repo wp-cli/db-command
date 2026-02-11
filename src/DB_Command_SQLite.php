@@ -400,17 +400,29 @@ trait DB_Command_SQLite {
 		$contents = str_replace( 'CREATE UNIQUE INDEX "', 'CREATE UNIQUE INDEX IF NOT EXISTS "', $contents );
 		file_put_contents( $import_file, $contents );
 
-		$command = 'sqlite3 ';
+		// Build sqlite3 command as an argument array to avoid shell injection.
+		$command = array( 'sqlite3' );
 
 		if ( ! Utils\get_flag_value( $assoc_args, 'skip-optimization' ) ) {
-			$command .= '-cmd "PRAGMA foreign_keys=OFF;" -cmd "PRAGMA ignore_check_constraints=ON;" -cmd "PRAGMA synchronous=OFF;" -cmd "PRAGMA journal_mode=MEMORY;" ';
+			$command[] = '-cmd';
+			$command[] = 'PRAGMA foreign_keys=OFF;';
+			$command[] = '-cmd';
+			$command[] = 'PRAGMA ignore_check_constraints=ON;';
+			$command[] = '-cmd';
+			$command[] = 'PRAGMA synchronous=OFF;';
+			$command[] = '-cmd';
+			$command[] = 'PRAGMA journal_mode=MEMORY;';
 		}
 
-		$command .= "$db_path < $import_file";
+		// Add database path as final argument.
+		$command[] = $db_path;
 
-		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+		// For debugging, show a safely escaped shell-like representation.
+		$debug_command = implode( ' ', array_map( 'escapeshellarg', $command ) );
+		WP_CLI::debug( "Running shell command: {$debug_command}", 'db' );
 
-		$result = \WP_CLI\Process::create( $command, null, null )->run();
+		// Pass the SQL contents via stdin instead of using shell redirection.
+		$result = \WP_CLI\Process::create( $command, null, null, null, array( 'stdin' => $contents ) )->run();
 
 		if ( 0 !== $result->return_code ) {
 			WP_CLI::error( 'Could not import database.' );
