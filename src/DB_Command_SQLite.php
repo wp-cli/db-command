@@ -12,6 +12,22 @@ use WP_CLI\Utils;
 trait DB_Command_SQLite {
 
 	/**
+	 * Check if sqlite3 CLI binary is available.
+	 *
+	 * @return bool True if sqlite3 is available, false otherwise.
+	 */
+	protected function is_sqlite3_available() {
+		static $available = null;
+
+		if ( null === $available ) {
+			$result    = \WP_CLI\Process::create( 'which sqlite3', null, null )->run();
+			$available = 0 === $result->return_code;
+		}
+
+		return $available;
+	}
+
+	/**
 	 * Check if SQLite is being used.
 	 *
 	 * @return bool True if SQLite is detected, false otherwise.
@@ -103,7 +119,13 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Database already exists.' );
 		}
 
-		$command = "sqlite3 $db_path \"\"";
+		// Check if sqlite3 binary is available.
+		if ( ! $this->is_sqlite3_available() ) {
+			WP_CLI::error( 'The sqlite3 CLI binary is required but not found. Please install SQLite3.' );
+		}
+
+		// Use Utils\esc_cmd to properly escape the command and arguments.
+		$command = Utils\esc_cmd( 'sqlite3 %s %s', $db_path, '' );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
@@ -162,7 +184,13 @@ trait DB_Command_SQLite {
 			}
 		}
 
-		$command = "sqlite3 $db_path \"\"";
+		// Check if sqlite3 binary is available.
+		if ( ! $this->is_sqlite3_available() ) {
+			WP_CLI::error( 'The sqlite3 CLI binary is required but not found. Please install SQLite3.' );
+		}
+
+		// Use Utils\esc_cmd to properly escape the command and arguments.
+		$command = Utils\esc_cmd( 'sqlite3 %s %s', $db_path, '' );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
