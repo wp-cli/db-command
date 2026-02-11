@@ -906,7 +906,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		if ( $this->is_sqlite() ) {
-			$this->sqlite_import( $result_file );
+			$this->sqlite_import( $result_file, $assoc_args );
 			return;
 		}
 

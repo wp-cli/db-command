@@ -267,19 +267,48 @@ trait DB_Command_SQLite {
 
 		copy( $db_path, $temp_db );
 
-		$drop_tables = '';
-
 		$exclude_tables = [];
+
+		// When passing --tables, exclude everything *except* the tables requested.
+		if ( isset( $assoc_args['tables'] ) ) {
+			$include_tables = explode( ',', trim( $assoc_args['tables'], ',' ) );
+			unset( $assoc_args['tables'] );
+
+			// Use the sqlite3 binary to fetch all table names
+			$query = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';";
+
+			// Build the command safely
+			$command = 'sqlite3 ' . escapeshellarg( $temp_db ) . ' ' . escapeshellarg( $query );
+
+			WP_CLI::debug( "Running shell command: {$command}", 'db' );
+
+			$result = \WP_CLI\Process::create( $command, null, null )->run();
+
+			if ( 0 !== $result->return_code ) {
+				WP_CLI::error( 'Could not export database' );
+			}
+
+			$all_tables = explode( "\n", $result->stdout );
+
+			$exclude_tables = array_diff( $all_tables, $include_tables );
+		}
+
 		if ( isset( $assoc_args['exclude_tables'] ) ) {
 			$exclude_tables = explode( ',', trim( $assoc_args['exclude_tables'], ',' ) );
 			unset( $assoc_args['exclude_tables'] );
 		}
+
+		// Always exclude this one created by the drop-in.
 		$exclude_tables[] = '_mysql_data_types_cache';
+
+		$exclude_tables = array_unique( array_filter( $exclude_tables ) );
+
+		$command = "sqlite3 $temp_db ";
 		foreach ( $exclude_tables as $table ) {
-			$drop_tables .= sprintf( '"DROP TABLE %s;"', $table );
+			$command .= sprintf( '"DROP TABLE %s;" ', $table );
 		}
 
-		$command = "sqlite3 $temp_db $drop_tables";
+		$command = trim( $command );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
@@ -321,9 +350,10 @@ trait DB_Command_SQLite {
 	/**
 	 * Import SQL into SQLite database.
 	 *
-	 * @param string $file Input file path.
+	 * @param string $file       Input file path.
+	 * @param array  $assoc_args Associative arguments.
 	 */
-	protected function sqlite_import( $file ) {
+	protected function sqlite_import( $file, $assoc_args ) {
 		$db_path = $this->get_sqlite_db_path();
 
 		if ( ! $db_path ) {
@@ -343,6 +373,11 @@ trait DB_Command_SQLite {
 			}
 
 			$import_file = tempnam( sys_get_temp_dir(), 'temp.db' );
+
+			if ( false === $import_file ) {
+				WP_CLI::error( 'Failed to read from stdin.' );
+			}
+
 			file_put_contents( $import_file, $sql );
 			$file = 'STDIN';
 		} elseif ( ! is_readable( $file ) ) {
@@ -350,13 +385,19 @@ trait DB_Command_SQLite {
 		}
 
 		// Ignore errors about unique constraints and existing indexes.
-		$contents = file_get_contents( $import_file );
+		$contents = (string) file_get_contents( $import_file );
 		$contents = str_replace( 'INSERT INTO', 'INSERT OR IGNORE INTO', $contents );
 		$contents = str_replace( 'CREATE INDEX "', 'CREATE INDEX IF NOT EXISTS "', $contents );
 		$contents = str_replace( 'CREATE UNIQUE INDEX "', 'CREATE UNIQUE INDEX IF NOT EXISTS "', $contents );
 		file_put_contents( $import_file, $contents );
 
-		$command = "sqlite3 $db_path < $import_file";
+		$command = 'sqlite3 ';
+
+		if ( ! Utils\get_flag_value( $assoc_args, 'skip-optimization' ) ) {
+			$command .= '-cmd "PRAGMA foreign_keys=OFF;" -cmd "PRAGMA ignore_check_constraints=ON;" -cmd "PRAGMA synchronous=OFF;" -cmd "PRAGMA journal_mode=MEMORY;" ';
+		}
+
+		$command .= "$db_path < $import_file";
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 

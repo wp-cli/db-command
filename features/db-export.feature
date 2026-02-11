@@ -20,6 +20,7 @@ Feature: Export a WordPress database
       """
     And the wp_cli_test.sql file should exist
 
+  @require-mysql-or-mariadb
   Scenario: Exclude tables when exporting the database
     Given a WP install
 
@@ -28,6 +29,48 @@ Feature: Export a WordPress database
     And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_users["`]?/
     And the contents of the wp_cli_test.sql file should match /CREATE TABLE ["`]?wp_options["`]?/
 
+  @require-mysql-or-mariadb
+  Scenario: Include only specific tables when exporting the database
+    Given a WP install
+
+    When I try `wp db export wp_cli_test.sql --tables=wp_users --porcelain`
+    Then the wp_cli_test.sql file should exist
+    And the contents of the wp_cli_test.sql file should match /CREATE TABLE ["`]?wp_users["`]?/
+    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_posts["`]?/
+    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_options["`]?/
+
+  @require-sqlite
+  Scenario: Exclude tables when exporting the database
+    Given a WP install
+
+    When I try `wp db export wp_cli_test.sql --exclude_tables=wp_users --porcelain`
+    Then the wp_cli_test.sql file should exist
+    And the contents of the wp_cli_test.sql file should not match /_mysql_data_types_cache/
+    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE IF NOT EXISTS ["`]?wp_users["`]?/
+    And the contents of the wp_cli_test.sql file should match /CREATE TABLE IF NOT EXISTS ["`]?wp_options["`]?/
+
+  @require-sqlite
+  Scenario: Include only specific tables when exporting the database
+    Given a WP install
+
+    When I try `wp db export wp_cli_test.sql --tables=wp_users --porcelain`
+    Then the wp_cli_test.sql file should exist
+    And the contents of the wp_cli_test.sql file should not match /_mysql_data_types_cache/
+    And the contents of the wp_cli_test.sql file should match /CREATE TABLE IF NOT EXISTS ["`]?wp_users["`]?/
+    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE IF NOT EXISTS ["`]?wp_posts["`]?/
+    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE IF NOT EXISTS ["`]?wp_options["`]?/
+
+  @require-sqlite
+  Scenario: Export database to STDOUT
+    Given a WP install
+
+    When I run `wp db export -`
+    Then STDOUT should contain:
+      """
+      PRAGMA foreign_keys=OFF
+      """
+
+  @require-mysql-or-mariadb
   Scenario: Export database to STDOUT
     Given a WP install
 
@@ -36,7 +79,7 @@ Feature: Export a WordPress database
       """
       -- Dump completed on
       """
-
+  @require-mysql-or-mariadb
   Scenario: Export database with mysql defaults to STDOUT
     Given a WP install
 
@@ -46,6 +89,7 @@ Feature: Export a WordPress database
       -- Dump completed on
       """
 
+  @require-mysql-or-mariadb
   Scenario: Export database with mysql --no-defaults to STDOUT
     Given a WP install
 

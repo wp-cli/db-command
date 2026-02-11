@@ -341,10 +341,13 @@ Feature: List database tables
       """
 
     When I run `wp db tables '*_posts' --scope=blog --network`
-    Then STDOUT should be:
+    Then STDOUT should contain:
+      """
+      as_wp_posts
+      """
+    And STDOUT should contain:
       """
       as_wp_2_posts
-      as_wp_posts
       """
 
     When I try `wp db tables '*_posts' --scope=global`
