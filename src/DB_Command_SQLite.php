@@ -347,7 +347,7 @@ trait DB_Command_SQLite {
 			}
 		}
 
-		$command = Utils\esc_cmd( 'sqlite3 %s .dump > %s', $temp_db, $export_db );
+		$command = Utils\esc_cmd( 'sqlite3 %s .dump', $temp_db );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
@@ -360,18 +360,15 @@ trait DB_Command_SQLite {
 		$stdout = ( '-' === $file );
 
 		if ( $stdout ) {
-			readfile( $export_db );
-			unlink( $export_db );
-		} elseif ( ! @rename( $export_db, $file ) ) {
-				// Clean up temporary files and surface a clear error if the export cannot be moved.
-			if ( file_exists( $export_db ) ) {
-				unlink( $export_db );
-			}
+			WP_CLI::line( $result->stdout );
+		} elseif ( false === file_put_contents( $file, $result->stdout ) ) {
+				// Clean up temporary file and surface a clear error if the export cannot be written.
 			if ( file_exists( $temp_db ) ) {
 				unlink( $temp_db );
 			}
-				WP_CLI::error( "Could not move exported database to '{$file}'. Please check that the path is writable and on the same filesystem." );
+				WP_CLI::error( "Could not write exported database to '{$file}'. Please check that the path is writable." );
 		}
+
 		unlink( $temp_db );
 
 		if ( ! $stdout ) {
@@ -421,26 +418,32 @@ trait DB_Command_SQLite {
 		$import_file = tempnam( sys_get_temp_dir(), 'temp.db' );
 		file_put_contents( $import_file, $contents );
 
-		// Build sqlite3 command as an argument array to avoid shell injection.
-		$command = array( 'sqlite3' );
+		// Build sqlite3 command.
+		$command_parts = [ 'sqlite3' ];
 
 		if ( ! Utils\get_flag_value( $assoc_args, 'skip-optimization' ) ) {
-			$command[] = '-cmd';
-			$command[] = 'PRAGMA foreign_keys=OFF;';
-			$command[] = '-cmd';
-			$command[] = 'PRAGMA ignore_check_constraints=ON;';
-			$command[] = '-cmd';
-			$command[] = 'PRAGMA synchronous=OFF;';
-			$command[] = '-cmd';
-			$command[] = 'PRAGMA journal_mode=MEMORY;';
+			$command_parts[] = '-cmd';
+			$command_parts[] = 'PRAGMA foreign_keys=OFF;';
+			$command_parts[] = '-cmd';
+			$command_parts[] = 'PRAGMA ignore_check_constraints=ON;';
+			$command_parts[] = '-cmd';
+			$command_parts[] = 'PRAGMA synchronous=OFF;';
+			$command_parts[] = '-cmd';
+			$command_parts[] = 'PRAGMA journal_mode=MEMORY;';
 		}
 
-		$command  = implode( ' ', array_map( 'escapeshellarg', $command ) );
-		$command .= ' ' . escapeshellarg( $db_path ) . ' < ' . escapeshellarg( $import_file );
+		$command_parts[] = $db_path;
+
+		$command = Utils\esc_cmd(
+			implode( ' ', array_fill( 0, count( $command_parts ), '%s' ) ),
+			...$command_parts
+		);
+
+		$command .= ' < ' . escapeshellarg( $import_file );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
-		$result = \WP_CLI\Process::create( $command, null, null )->run();
+		$result = \WP_CLI\Process::create( $command, null, null )->run( file_get_contents( $import_file ) );
 
 		unlink( $import_file );
 
