@@ -1,5 +1,6 @@
 Feature: Perform database operations
 
+  @require-mysql-or-mariadb
   Scenario: DB CRUD
     Given an empty directory
     And WP files
@@ -52,6 +53,7 @@ Feature: Perform database operations
       Are you sure you want to reset the 'wp_cli_test' database? [y/n] Success: Database reset.
       """
 
+  @require-mysql-or-mariadb
   Scenario: DB CRUD with passed-in dbuser/dbpass
     Given an empty directory
     And WP files
@@ -107,6 +109,7 @@ Feature: Perform database operations
       """
     And STDOUT should be empty
 
+  @require-mysql-or-mariadb
   Scenario: Clean up a WordPress install without dropping its database entirely but tables with prefix.
     Given a WP install
 
@@ -138,6 +141,7 @@ Feature: Perform database operations
       """
     And the return code should be 0
 
+  @require-mysql-or-mariadb
   Scenario: DB Operations
     Given a WP install
 
@@ -147,6 +151,7 @@ Feature: Perform database operations
     When I run `wp db repair`
     Then STDOUT should not be empty
 
+  @require-mysql-or-mariadb
   Scenario: DB Operations with passed-in options
     Given a WP install
 
@@ -185,6 +190,7 @@ Feature: Perform database operations
       """
     And STDOUT should not be empty
 
+  @require-mysql-or-mariadb
   Scenario: db repair with --quiet flag should only show errors
     Given a WP install
 
@@ -194,6 +200,7 @@ Feature: Perform database operations
       error
       """
 
+  @require-mysql-or-mariadb
   Scenario: db repair can explicitly pass --silent to mysqlcheck
     Given a WP install
 
@@ -226,6 +233,9 @@ Feature: Perform database operations
       total
       """
 
+  Scenario: DB Query with --skip-column-names
+    Given a WP install
+
     When I run `wp db query 'SELECT * FROM wp_options WHERE option_name="home"' --skip-column-names`
     Then STDOUT should not contain:
       """
@@ -236,6 +246,7 @@ Feature: Perform database operations
       home
       """
 
+  @require-mysql-or-mariadb
   Scenario: DB export/import
     Given a WP install
 
@@ -284,11 +295,12 @@ Feature: Perform database operations
       1
       """
 
+  @require-mysql-or-mariadb
   Scenario: DB export no charset
     Given an empty directory
     And WP files
 
-    When I run `wp core config {CORE_CONFIG_SETTINGS} --dbcharset=""`
+    When I run `wp config create {CORE_CONFIG_SETTINGS} --dbcharset="" --skip-check`
     Then STDOUT should not be empty
 
     When I run `cat wp-config.php`
@@ -306,11 +318,12 @@ Feature: Perform database operations
       Success: Exported
       """
 
+  @require-mysql-or-mariadb
   Scenario: Persist DB charset and collation
     Given an empty directory
     And WP files
 
-    When I run `wp core config {CORE_CONFIG_SETTINGS} --dbcharset=latin1 --dbcollate=latin1_spanish_ci`
+    When I run `wp config create {CORE_CONFIG_SETTINGS} --dbcharset=latin1 --dbcollate=latin1_spanish_ci --skip-check`
     Then STDOUT should not be empty
 
     When I run `wp db create`
@@ -349,6 +362,7 @@ Feature: Perform database operations
       latin1_spanish_ci
       """
 
+  @require-mysql-or-mariadb
   Scenario: Row modifying queries should return the number of affected rows
     Given a WP install
     When I run `wp db query "UPDATE wp_users SET user_status = 1 WHERE ID = 1"`
@@ -367,4 +381,79 @@ Feature: Perform database operations
     Then STDOUT should contain:
       """
       Query succeeded. Rows affected: 1
+      """
+
+  @require-sqlite
+  Scenario: SQLite DB CRUD operations
+    Given a WP install
+    And a session_yes file:
+      """
+      y
+      """
+
+    When I try `wp db create`
+    Then the return code should be 1
+    And STDERR should contain:
+      """
+      Database already exists
+      """
+
+    When I run `wp db drop < session_yes`
+    Then STDOUT should contain:
+      """
+      Success: Database dropped.
+      """
+
+    When I run `wp db reset < session_yes`
+    Then STDOUT should contain:
+      """
+      Success: Database reset
+      """
+
+  @require-sqlite
+  Scenario: SQLite DB query
+    Given a WP install
+
+    When I run `wp db query 'SELECT COUNT(*) as total FROM wp_posts'`
+    Then STDOUT should contain:
+      """
+      total
+      """
+
+  @require-sqlite
+  Scenario: SQLite DB export/import
+    Given a WP install
+    And a session_yes file:
+      """
+      y
+      """
+
+    When I run `wp post list --format=count`
+    Then STDOUT should contain:
+      """
+      1
+      """
+
+    When I run `wp db export /tmp/wp-cli-sqlite-behat.sql`
+    Then STDOUT should contain:
+      """
+      Success: Exported
+      """
+
+    When I run `wp db reset < session_yes`
+    Then STDOUT should contain:
+      """
+      Success: Database reset
+      """
+
+    When I run `wp db import /tmp/wp-cli-sqlite-behat.sql`
+    Then STDOUT should contain:
+      """
+      Success: Imported
+      """
+
+    When I run `wp post list --format=count`
+    Then STDOUT should contain:
+      """
+      1
       """
