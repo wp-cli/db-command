@@ -1272,6 +1272,150 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
+	 * Displays a quick database status overview.
+	 *
+	 * Shows key database information including name, table count, size,
+	 * prefix, engine, charset, collation, and health check status. This
+	 * command is useful for getting a quick snapshot of database health
+	 * without needing to run multiple separate commands.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dbuser=<value>]
+	 * : Username to pass to mysql. Defaults to DB_USER.
+	 *
+	 * [--dbpass=<value>]
+	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
+	 *
+	 * [--defaults]
+	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     $ wp db status
+	 *     Database Name:     wp_cli_test
+	 *     Tables:            54
+	 *     Total Size:        312 KB
+	 *     Prefix:            wp_
+	 *     Engine:            InnoDB
+	 *     Charset:           utf8mb4
+	 *     Collation:         utf8mb4_unicode_ci
+	 *     Check Status:      OK
+	 *
+	 * @when after_wp_load
+	 */
+	public function status( $_, $assoc_args ) {
+		global $wpdb;
+
+		$table_count = count( Utils\wp_get_table_names( [], [ 'scope' => 'all' ] ) );
+
+		$db_size_bytes = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
+				DB_NAME
+			)
+		);
+
+		if ( ! empty( $db_size_bytes ) && $db_size_bytes > 0 ) {
+			$size_key    = floor( log( (float) $db_size_bytes ) / log( 1000 ) );
+			$sizes       = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+			$size_format = $sizes[ $size_key ] ?? $sizes[0];
+			$divisor     = pow( 1000, $size_key );
+			$db_size     = round( (int) $db_size_bytes / $divisor, 2 ) . ' ' . $size_format;
+		} else {
+			$db_size = '0 B';
+		}
+
+		$prefix = $wpdb->prefix;
+
+		$table_info = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT '
+				. 'COUNT(DISTINCT ENGINE) AS engine_count, '
+				. 'MIN(ENGINE) AS engine, '
+				. 'COUNT(DISTINCT CCSA.character_set_name) AS charset_count, '
+				. 'MIN(CCSA.character_set_name) AS charset, '
+				. 'COUNT(DISTINCT TABLE_COLLATION) AS collation_count, '
+				. 'MIN(TABLE_COLLATION) AS collation '
+				. 'FROM information_schema.TABLES T '
+				. 'LEFT JOIN information_schema.COLLATION_CHARACTER_SET_APPLICABILITY CCSA '
+				. 'ON CCSA.collation_name = T.table_collation '
+				. 'WHERE T.table_schema = %s '
+				. 'AND T.table_name LIKE %s',
+				DB_NAME,
+				$wpdb->esc_like( $prefix ) . '%'
+			)
+		);
+
+		if ( $table_info ) {
+			$engine_count    = isset( $table_info->engine_count ) ? (int) $table_info->engine_count : 0;
+			$charset_count   = isset( $table_info->charset_count ) ? (int) $table_info->charset_count : 0;
+			$collation_count = isset( $table_info->collation_count ) ? (int) $table_info->collation_count : 0;
+
+			if ( $engine_count > 1 ) {
+				$engine = 'Mixed';
+			} elseif ( isset( $table_info->engine ) && '' !== $table_info->engine ) {
+				$engine = $table_info->engine;
+			} else {
+				$engine = 'N/A';
+			}
+
+			if ( $charset_count > 1 ) {
+				$charset = 'Mixed';
+			} elseif ( isset( $table_info->charset ) && '' !== $table_info->charset ) {
+				$charset = $table_info->charset;
+			} else {
+				$charset = 'N/A';
+			}
+
+			if ( $collation_count > 1 ) {
+				$collation = 'Mixed';
+			} elseif ( isset( $table_info->collation ) && '' !== $table_info->collation ) {
+				$collation = $table_info->collation;
+			} else {
+				$collation = 'N/A';
+			}
+		} else {
+			$engine    = 'N/A';
+			$charset   = 'N/A';
+			$collation = 'N/A';
+		}
+		// Run database check silently to get status.
+		if ( $table_count > 0 ) {
+			$command                             = sprintf(
+				'/usr/bin/env %s%s %s',
+				Utils\get_sql_check_command(),
+				$this->get_defaults_flag_string( $assoc_args ),
+				'%s'
+			);
+			list( $stdout, $stderr, $exit_code ) = self::run(
+				Utils\esc_cmd( $command, DB_NAME ),
+				array_merge( [ 'check' => true ], $assoc_args ),
+				false
+			);
+			$check_status                        = ( 0 === $exit_code ) ? 'OK' : 'Error';
+		} else {
+			// No tables to check; mark status as not applicable.
+			$check_status = 'N/A';
+		}
+
+		$status_items = [
+			'Database Name' => DB_NAME,
+			'Tables'        => $table_count,
+			'Total Size'    => $db_size,
+			'Prefix'        => $prefix,
+			'Engine'        => $engine,
+			'Charset'       => $charset,
+			'Collation'     => $collation,
+			'Check Status'  => $check_status,
+		];
+
+		foreach ( $status_items as $label => $value ) {
+			WP_CLI::log( sprintf( '%-18s %s', $label . ':', $value ) );
+		}
+	}
+
+	/**
 	 * Finds a string in the database.
 	 *
 	 * Searches through all of the text columns in a selection of database tables for a given string, Outputs colorized references to the string.
