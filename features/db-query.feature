@@ -84,31 +84,4 @@ Feature: Query the database with WordPress' MySQL config
     When I try `wp db query --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysql|mariadb) --no-defaults --no-auto-rehash#
 
-  Scenario: SQL modes do not include any of the modes incompatible with WordPress
-    Given a WP install
 
-    When I try `wp db query 'SELECT @@SESSION.sql_mode;' --debug`
-    Then STDOUT should not contain:
-      """
-      NO_ZERO_DATE
-      """
-    And STDOUT should not contain:
-      """
-      ONLY_FULL_GROUP_BY
-      """
-    And STDOUT should not contain:
-      """
-      STRICT_TRANS_TABLES
-      """
-    And STDOUT should not contain:
-      """
-      STRICT_ALL_TABLES
-      """
-    And STDOUT should not contain:
-      """
-      TRADITIONAL
-      """
-    And STDOUT should not contain:
-      """
-      ANSI
-      """

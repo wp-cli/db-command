@@ -533,11 +533,6 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['execute'] = $args[0];
 		}
 
-		if ( isset( $assoc_args['execute'] ) ) {
-			// Ensure that the SQL mode is compatible with WPDB.
-			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
-		}
-
 		$is_row_modifying_query = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE|LOAD DATA)\b/i', $assoc_args['execute'] );
 
 		if ( $is_row_modifying_query ) {
