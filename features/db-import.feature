@@ -178,3 +178,21 @@ Feature: Import a WordPress database
       """
       🍣
       """
+
+  Scenario: Import MariaDB sandbox dump
+    Given a WP install
+    And a sandbox.sql file:
+      """
+      /*!999999\- enable the sandbox mode */
+      INSERT INTO wp_terms (name, slug, term_group) VALUES ('Test Term', 'test-term', 0);
+      """
+
+    When I run `wp db import sandbox.sql`
+    Then STDOUT should contain:
+        """
+        MariaDB sandbox mode directive detected. Skipping it by piping the file content.
+        """
+    And STDOUT should contain:
+        """
+        Success: Imported from 'sandbox.sql'.
+        """
