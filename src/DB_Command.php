@@ -260,6 +260,12 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['check'] = true;
+
+		// Pass --silent to mysqlcheck when in quiet mode.
+		if ( WP_CLI::get_config( 'quiet' ) ) {
+			$assoc_args['silent'] = true;
+		}
+
 		self::run(
 			Utils\esc_cmd( $command, DB_NAME ),
 			$assoc_args
@@ -308,6 +314,12 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['optimize'] = true;
+
+		// Pass --silent to mysqlcheck when in quiet mode.
+		if ( WP_CLI::get_config( 'quiet' ) ) {
+			$assoc_args['silent'] = true;
+		}
+
 		self::run(
 			Utils\esc_cmd( $command, DB_NAME ),
 			$assoc_args
@@ -356,6 +368,12 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$assoc_args['repair'] = true;
+
+		// Pass --silent to mysqlcheck when in quiet mode.
+		if ( WP_CLI::get_config( 'quiet' ) ) {
+			$assoc_args['silent'] = true;
+		}
+
 		self::run(
 			Utils\esc_cmd( $command, DB_NAME ),
 			$assoc_args
@@ -1142,6 +1160,12 @@ class DB_Command extends WP_CLI_Command {
 				if ( $human_readable ) {
 					$size_key = floor( log( (float) $row['Size'] ) / log( 1000 ) );
 					$sizes    = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+
+					if ( is_infinite( $size_key ) ) {
+						$size_key = 0;
+					}
+
+					$size_key = (int) $size_key;
 
 					$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
 				}
