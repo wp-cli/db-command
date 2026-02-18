@@ -928,6 +928,29 @@ Feature: Search through the database
       """
     And STDERR should be empty
 
+  Scenario: Search with exclude revisions option
+    Given a WP install
+    And I run `wp post create --post_content="This is the original post content." --post_title="Original Post"`
+    # Create a revision
+    And I run `wp post update 1 --post_content="This is the updated post content."` 
+    
+    When I run `wp db search "updated post content"`
+    Then STDOUT should contain:
+      """
+      wp_posts:post_content
+      1:This is the updated post content.
+      wp_posts:post_content
+      5:This is the updated post content.
+      """
+  
+    When I run `wp db search "updated post content" --exclude_revisions`
+    Then STDOUT should contain:
+      """
+      wp_posts:post_content
+      1:This is the updated post content.
+      """
+    And STDERR should be empty
+
   Scenario: Search with custom colors
     Given a WP install
 
