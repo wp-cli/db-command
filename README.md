@@ -303,6 +303,8 @@ Opens a MySQL console using credentials from wp-config.php
 wp db cli [--database=<database>] [--default-character-set=<character-set>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults]
 ~~~
 
+**Alias:** `connect`
+
 **OPTIONS**
 
 	[--database=<database>]
@@ -431,6 +433,8 @@ Exports the database to a file or to STDOUT.
 ~~~
 wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--exclude_tables_data=<tables>] [--include-tablespaces] [--porcelain] [--add-drop-table] [--defaults]
 ~~~
+
+**Alias:** `dump`
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 `DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid `mysqldump` flags.
