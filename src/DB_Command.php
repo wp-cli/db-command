@@ -1841,6 +1841,11 @@ class DB_Command extends WP_CLI_Command {
 			$required['default-character-set'] = constant( 'DB_CHARSET' );
 		}
 
+		// Add --ssl-verify-server-cert for MariaDB to suppress passwordless login warning.
+		if ( 'mariadb' === Utils\get_db_type() && ! isset( $assoc_args['ssl-verify-server-cert'] ) ) {
+			$required['ssl-verify-server-cert'] = true;
+		}
+
 		// Using 'dbuser' as option name to workaround clash with WP-CLI's global WP 'user' parameter, with 'dbpass' also available for tidiness.
 		if ( isset( $assoc_args['dbuser'] ) ) {
 			$required['user'] = $assoc_args['dbuser'];
@@ -2081,6 +2086,7 @@ class DB_Command extends WP_CLI_Command {
 			'ssl-fips-mode',
 			'ssl-key',
 			'ssl-mode',
+			'ssl-verify-server-cert',
 			'syslog',
 			'table',
 			'tee',
