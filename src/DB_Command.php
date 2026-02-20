@@ -4,6 +4,8 @@ use WP_CLI\Formatter;
 use WP_CLI\Utils;
 use cli\table\Column;
 
+require_once __DIR__ . '/DB_Command_SQLite.php';
+
 /**
  * Performs basic database operations using credentials stored in wp-config.php.
  *
@@ -27,6 +29,8 @@ use cli\table\Column;
  * @when after_wp_config_load
  */
 class DB_Command extends WP_CLI_Command {
+
+	use DB_Command_SQLite;
 
 	/**
 	 * Legacy UTF-8 encoding for MySQL.
@@ -83,6 +87,12 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database created.
 	 */
 	public function create( $_, $assoc_args ) {
+		$this->maybe_load_sqlite_dropin();
+
+		if ( $this->is_sqlite() ) {
+			$this->sqlite_create();
+			return;
+		}
 
 		$this->run_query( self::get_create_query(), $assoc_args );
 
@@ -116,6 +126,15 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database dropped.
 	 */
 	public function drop( $_, $assoc_args ) {
+		$this->maybe_load_sqlite_dropin();
+
+		if ( $this->is_sqlite() ) {
+			$db_path = $this->get_sqlite_db_path();
+			WP_CLI::confirm( "Are you sure you want to drop the SQLite database at '{$db_path}'?", $assoc_args );
+			$this->sqlite_drop();
+			return;
+		}
+
 		WP_CLI::confirm( "Are you sure you want to drop the '" . DB_NAME . "' database?", $assoc_args );
 
 		$this->run_query( sprintf( 'DROP DATABASE `%s`', DB_NAME ), $assoc_args );
@@ -150,6 +169,15 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database reset.
 	 */
 	public function reset( $_, $assoc_args ) {
+		$this->maybe_load_sqlite_dropin();
+
+		if ( $this->is_sqlite() ) {
+			$db_path = $this->get_sqlite_db_path();
+			WP_CLI::confirm( "Are you sure you want to reset the SQLite database at '{$db_path}'?", $assoc_args );
+			$this->sqlite_reset();
+			return;
+		}
+
 		WP_CLI::confirm( "Are you sure you want to reset the '" . DB_NAME . "' database?", $assoc_args );
 
 		$this->run_query( sprintf( 'DROP DATABASE IF EXISTS `%s`', DB_NAME ), $assoc_args );
@@ -250,6 +278,12 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database checked.
 	 */
 	public function check( $_, $assoc_args ) {
+		$this->maybe_load_sqlite_dropin();
+
+		if ( $this->is_sqlite() ) {
+			WP_CLI::warning( 'Database check is not supported for SQLite databases.' );
+			return;
+		}
 
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
@@ -305,6 +339,13 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database optimized.
 	 */
 	public function optimize( $_, $assoc_args ) {
+		$this->maybe_load_sqlite_dropin();
+
+		if ( $this->is_sqlite() ) {
+			WP_CLI::warning( 'Database optimization is not supported for SQLite databases. SQLite automatically optimizes on VACUUM.' );
+			return;
+		}
+
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
 			Utils\get_sql_check_command(),
@@ -359,6 +400,13 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Database repaired.
 	 */
 	public function repair( $_, $assoc_args ) {
+		$this->maybe_load_sqlite_dropin();
+
+		if ( $this->is_sqlite() ) {
+			WP_CLI::warning( 'Database repair is not supported for SQLite databases.' );
+			return;
+		}
+
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
 			Utils\get_sql_check_command(),
@@ -415,6 +463,12 @@ class DB_Command extends WP_CLI_Command {
 	 * @alias connect
 	 */
 	public function cli( $_, $assoc_args ) {
+		$this->maybe_load_sqlite_dropin();
+
+		if ( $this->is_sqlite() ) {
+			WP_CLI::warning( 'Interactive console (cli) is not supported for SQLite databases. Use `wp db query` instead.' );
+			return;
+		}
 
 		$command = sprintf(
 			'/usr/bin/env %s%s --no-auto-rehash',
@@ -518,6 +572,24 @@ class DB_Command extends WP_CLI_Command {
 	 *     +---------+-----------------------+
 	 */
 	public function query( $args, $assoc_args ) {
+		$this->maybe_load_sqlite_dropin();
+
+		if ( $this->is_sqlite() ) {
+			// Get the query from args or STDIN.
+			$query = '';
+			if ( ! empty( $args ) ) {
+				$query = $args[0];
+			} else {
+				$query = stream_get_contents( STDIN );
+			}
+
+			if ( empty( $query ) ) {
+				WP_CLI::error( 'No query specified.' );
+			}
+
+			$this->sqlite_query( $query, $assoc_args );
+			return;
+		}
 
 		$command = sprintf(
 			'/usr/bin/env %s%s --no-auto-rehash',
@@ -648,6 +720,8 @@ class DB_Command extends WP_CLI_Command {
 	 * @alias dump
 	 */
 	public function export( $args, $assoc_args ) {
+		$this->maybe_load_sqlite_dropin();
+
 		if ( ! empty( $args[0] ) ) {
 			$result_file = $args[0];
 		} else {
@@ -656,6 +730,12 @@ class DB_Command extends WP_CLI_Command {
 			$result_file = sprintf( '%s-%s-%s.sql', DB_NAME, date( 'Y-m-d' ), $hash ); // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
 
 		}
+
+		if ( $this->is_sqlite() ) {
+			$this->sqlite_export( $result_file, $assoc_args );
+			return;
+		}
+
 		$stdout    = ( '-' === $result_file );
 		$porcelain = Utils\get_flag_value( $assoc_args, 'porcelain' );
 
@@ -817,10 +897,17 @@ class DB_Command extends WP_CLI_Command {
 	 *     Success: Imported from 'wordpress_dbase.sql'.
 	 */
 	public function import( $args, $assoc_args ) {
+		$this->maybe_load_sqlite_dropin();
+
 		if ( ! empty( $args[0] ) ) {
 			$result_file = $args[0];
 		} else {
 			$result_file = sprintf( '%s.sql', DB_NAME );
+		}
+
+		if ( $this->is_sqlite() ) {
+			$this->sqlite_import( $result_file, $assoc_args );
+			return;
 		}
 
 		// Process options to MySQL.
@@ -1099,19 +1186,30 @@ class DB_Command extends WP_CLI_Command {
 
 		$default_unit = ( empty( $size_format ) && ! $human_readable ) ? ' B' : '';
 
+		$is_sqlite = $this->is_sqlite();
+
 		if ( $tables || $all_tables || $all_tables_with_prefix ) {
 
 			// Add all of the table sizes.
 			foreach ( Utils\wp_get_table_names( $args, $assoc_args ) as $table_name ) {
 
 				// Get the table size.
-				$table_bytes = $wpdb->get_var(
-					$wpdb->prepare(
-						'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s and Table_Name = %s GROUP BY Table_Name LIMIT 1',
-						DB_NAME,
-						$table_name
-					)
-				);
+				if ( $is_sqlite ) {
+					$table_bytes = $wpdb->get_var(
+						$wpdb->prepare(
+							'SELECT SUM(pgsize) as size_in_bytes FROM dbstat where name = %s LIMIT 1',
+							$table_name
+						)
+					);
+				} else {
+					$table_bytes = $wpdb->get_var(
+						$wpdb->prepare(
+							'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s and Table_Name = %s GROUP BY Table_Name LIMIT 1',
+							DB_NAME,
+							$table_name
+						)
+					);
+				}
 
 				// Add the table size to the list.
 				$rows[] = [
@@ -1123,16 +1221,23 @@ class DB_Command extends WP_CLI_Command {
 		} else {
 
 			// Get the database size.
-			$db_bytes = $wpdb->get_var(
-				$wpdb->prepare(
-					'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
-					DB_NAME
-				)
-			);
+			if ( $is_sqlite ) {
+				$db_bytes = $this->sqlite_size();
+				$db_path  = $this->get_sqlite_db_path();
+				$db_name  = $db_path ? basename( $db_path ) : '';
+			} else {
+				$db_bytes = $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
+						DB_NAME
+					)
+				);
+				$db_name  = DB_NAME;
+			}
 
 			// Add the database size to the list.
 			$rows[] = [
-				'Name'  => DB_NAME,
+				'Name'  => $db_name,
 				'Size'  => strtoupper( $db_bytes ) . $default_unit,
 				'Bytes' => strtoupper( $db_bytes ),
 			];
@@ -1536,8 +1641,8 @@ class DB_Command extends WP_CLI_Command {
 			if ( ! $text_columns ) {
 				if ( $stats ) {
 					$skipped[] = $table;
-					// Don't bother warning for term relationships (which is just 3 int columns).
-				} elseif ( ! preg_match( '/_term_relationships$/', $table ) ) {
+					// Don't bother warning for term relationships (which is just 3 int columns) or SQLite.
+				} elseif ( ! preg_match( '/_term_relationships$/', $table ) && ! $this->is_sqlite() ) {
 					WP_CLI::warning( $primary_keys ? "No text columns for table '$table' - skipped." : "No primary key or text columns for table '$table' - skipped." );
 				}
 				continue;
@@ -1759,7 +1864,12 @@ class DB_Command extends WP_CLI_Command {
 		);
 
 		$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' ];
-		$formatter_args   = [
+
+		if ( $this->is_sqlite() ) {
+			$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default' ];
+		}
+
+		$formatter_args = [
 			'format' => $format,
 		];
 

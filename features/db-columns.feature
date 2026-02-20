@@ -1,7 +1,7 @@
 Feature: Display information about a given table.
 
   # This requires conditional tags to target different DB versions, as bigint(20) is only bigint on MySQL 8.
-  @require-wp-4.2 @broken
+  @broken
   Scenario: Display information about the wp_posts table
     Given a WP install
 
@@ -41,6 +41,7 @@ Feature: Display information about a given table.
       Couldn't find any tables matching: wp_foobar
       """
 
+  @require-mysql-or-mariadb
   Scenario: Display information about a non default WordPress table
     Given a WP install
     And I run `wp db query "CREATE TABLE not_wp ( date DATE NOT NULL, awesome_stuff TEXT, PRIMARY KEY (date) );;"`
@@ -50,3 +51,14 @@ Feature: Display information about a given table.
       | Field         | Type       | Null | Key | Default | Extra |
       | date          | date       | NO   | PRI |         |       |
       | awesome_stuff | text       | YES  |     |         |       |
+
+  @require-sqlite
+  Scenario: Display information about a non default WordPress table
+    Given a WP install
+    And I run `wp db query "CREATE TABLE not_wp ( date DATE NOT NULL, awesome_stuff TEXT, PRIMARY KEY (date) );;"`
+
+    When I try `wp db columns not_wp`
+    Then STDOUT should be a table containing rows:
+      | Field         | Type       | Null | Key | Default |
+      | date          | TEXT       | NO   | PRI | ''      |
+      | awesome_stuff | TEXT       | YES  |     |         |
