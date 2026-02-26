@@ -1319,7 +1319,7 @@ class DB_Command extends WP_CLI_Command {
 		if ( ! empty( $db_size_bytes ) && $db_size_bytes > 0 ) {
 			$size_key    = floor( log( (float) $db_size_bytes ) / log( 1000 ) );
 			$sizes       = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
-			$size_format = $sizes[ $size_key ] ?? $sizes[0];
+			$size_format = $sizes[ (int) $size_key ] ?? $sizes[0];
 			$divisor     = pow( 1000, $size_key );
 			$db_size     = round( (int) $db_size_bytes / $divisor, 2 ) . ' ' . $size_format;
 		} else {
