@@ -1315,8 +1315,8 @@ class DB_Command extends WP_CLI_Command {
 		// Get table prefix from wp-config.php (available after wp-config loads).
 		$prefix = isset( $table_prefix ) ? $table_prefix : 'wp_';
 
-		// Escape prefix for use in LIKE pattern by escaping special characters.
-		$escaped_prefix = addslashes( str_replace( [ '%', '_' ], [ '\\%', '\\_' ], $prefix ) );
+		// Escape prefix for SQL: first addslashes, then escape LIKE special characters.
+		$escaped_prefix = str_replace( [ '%', '_' ], [ '\\%', '\\_' ], addslashes( $prefix ) );
 
 		// Prepare command for executing queries.
 		$command = sprintf(
