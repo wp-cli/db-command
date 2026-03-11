@@ -64,11 +64,11 @@ class DB_Users_Command extends DB_Command {
 		$grant_privileges = Utils\get_flag_value( $assoc_args, 'grant-privileges', false );
 
 		// Escape identifiers for SQL
-		$username_escaped = self::esc_sql_ident( $username );
-		$host_escaped     = self::esc_sql_ident( $host );
-		/** @var string $username_escaped */
-		/** @var string $host_escaped */
-		$user_identifier = "{$username_escaped}@{$host_escaped}";
+		// @phpstan-ignore cast.string (PHPStan doesn't infer conditional return type from parent method)
+		$username_escaped = (string) self::esc_sql_ident( $username );
+		// @phpstan-ignore cast.string (PHPStan doesn't infer conditional return type from parent method)
+		$host_escaped    = (string) self::esc_sql_ident( $host );
+		$user_identifier = $username_escaped . '@' . $host_escaped;
 
 		// Create user
 		$create_query = "CREATE USER {$user_identifier}";
@@ -83,9 +83,8 @@ class DB_Users_Command extends DB_Command {
 		// Grant privileges if requested
 		if ( $grant_privileges ) {
 			$database         = DB_NAME;
-			$database_escaped = self::esc_sql_ident( $database );
-			/** @var string $database_escaped */
-			$grant_query = "GRANT ALL PRIVILEGES ON {$database_escaped}.* TO {$user_identifier};";
+			$database_escaped = (string) self::esc_sql_ident( $database );
+			$grant_query      = 'GRANT ALL PRIVILEGES ON ' . $database_escaped . '.* TO ' . $user_identifier . ';';
 			parent::run_query( $grant_query, $assoc_args );
 
 			// Flush privileges
