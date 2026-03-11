@@ -169,7 +169,7 @@ Feature: Check the database
       require_once ABSPATH . 'wp-settings.php';
       """
 
-    When I run `wp db check --debug`
+    When I try `wp db check --debug`
     Then STDERR should contain:
       """
       Debug (db): Final MySQL command:
