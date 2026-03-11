@@ -538,7 +538,7 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
 		}
 
-		$is_row_modifying_query = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE|LOAD DATA)\b/i', $assoc_args['execute'] );
+		$is_row_modifying_query = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $assoc_args['execute'] );
 
 		if ( $is_row_modifying_query ) {
 			$assoc_args['execute'] .= '; SELECT ROW_COUNT();';
@@ -1160,6 +1160,12 @@ class DB_Command extends WP_CLI_Command {
 				if ( $human_readable ) {
 					$size_key = floor( log( (float) $row['Size'] ) / log( 1000 ) );
 					$sizes    = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+
+					if ( is_infinite( $size_key ) ) {
+						$size_key = 0;
+					}
+
+					$size_key = (int) $size_key;
 
 					$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
 				}
