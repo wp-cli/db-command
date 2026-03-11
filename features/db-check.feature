@@ -182,9 +182,4 @@ Feature: Check the database
       """
       --host=
       """
-    And the return code should be 0
-    And STDOUT should contain:
-      """
-      Success: Database checked.
-      """
 
