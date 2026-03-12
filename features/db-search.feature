@@ -932,8 +932,7 @@ Feature: Search through the database
     Given a WP install
     And I run `wp post create --post_content="This is the original post content." --post_title="Original Post"`
     # Create a revision
-    And I run `wp post update 1 --post_content="This is the updated post content."` 
-    
+    And I run `wp post update 1 --post_content="This is the updated post content."`
     When I run `wp db search "updated post content"`
     Then STDOUT should contain:
       """
