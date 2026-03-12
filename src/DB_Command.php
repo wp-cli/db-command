@@ -1948,7 +1948,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * @phpstan-return ($idents is string ? string : array)
 	 */
-	private static function esc_sql_ident( $idents ) {
+	protected static function esc_sql_ident( $idents ) {
 		$backtick = static function ( $v ) {
 			// Escape any backticks in the identifier by doubling.
 			return '`' . str_replace( '`', '``', $v ) . '`';
