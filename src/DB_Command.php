@@ -1853,6 +1853,29 @@ class DB_Command extends WP_CLI_Command {
 
 		$final_args = array_merge( $required, $assoc_args );
 
+		// Filter out empty string values to avoid passing empty parameters to MySQL commands
+		// which can cause errors like "Character set '' is not a compiled character set".
+		// However, keep empty strings for credential options like 'user' and 'pass' so that
+		// an explicitly empty value is not silently converted into an omitted parameter.
+		$final_args = array_filter(
+			$final_args,
+			static function ( $value, $key ) {
+				// Always drop null values.
+				if ( null === $value ) {
+					return false;
+				}
+
+				// Preserve explicitly empty credential arguments.
+				if ( '' === $value && in_array( $key, [ 'user', 'pass' ], true ) ) {
+					return true;
+				}
+
+				// For all other options, filter out empty strings.
+				return '' !== $value;
+			},
+			ARRAY_FILTER_USE_BOTH
+		);
+
 		// Adapt ordering of arguments.
 		uksort(
 			$final_args,
