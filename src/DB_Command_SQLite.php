@@ -20,7 +20,7 @@ trait DB_Command_SQLite {
 		static $available = null;
 
 		if ( null === $available ) {
-			$result    = \WP_CLI\Process::create( 'which sqlite3', null, null )->run();
+			$result    = \WP_CLI\Process::create( '/usr/bin/env sqlite3 --version', null, null )->run();
 			$available = 0 === $result->return_code;
 		}
 
