@@ -397,6 +397,9 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Database does not exist.' );
 		}
 
+		if ( ! $this->is_sqlite3_available() ) {
+			WP_CLI::error( 'The sqlite3 CLI binary could not be found. Please ensure it is installed and available on your PATH.' );
+		}
 		if ( '-' === $file ) {
 			$contents = file_get_contents( 'php://stdin' );
 			if ( false === $contents ) {
