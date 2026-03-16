@@ -288,22 +288,14 @@ trait DB_Command_SQLite {
 		if ( ! $this->is_sqlite3_available() ) {
 			WP_CLI::error( 'The sqlite3 binary could not be found. Please install sqlite3 to use the export command.' );
 		}
-		$temp_db   = tempnam( sys_get_temp_dir(), 'temp.db' );
+		$temp_db = tempnam( sys_get_temp_dir(), 'temp.db' );
 		if ( false === $temp_db ) {
 			WP_CLI::error( 'Could not create temporary database file for export.' );
 		}
 
-		$export_db = tempnam( sys_get_temp_dir(), 'export.db' );
-		if ( false === $export_db ) {
-			// Clean up any previously created temporary database file.
-			@unlink( $temp_db );
-			WP_CLI::error( 'Could not create temporary export file.' );
-		}
-
 		if ( ! @copy( $db_path, $temp_db ) ) {
-			// Clean up temporary files if the copy operation fails.
+			// Clean up temporary file if the copy operation fails.
 			@unlink( $temp_db );
-			@unlink( $export_db );
 			WP_CLI::error( 'Could not copy database to temporary file for export.' );
 		}
 
