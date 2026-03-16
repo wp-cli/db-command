@@ -285,10 +285,27 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Database does not exist.' );
 		}
 
+		if ( ! $this->is_sqlite3_available() ) {
+			WP_CLI::error( 'The sqlite3 binary could not be found. Please install sqlite3 to use the export command.' );
+		}
 		$temp_db   = tempnam( sys_get_temp_dir(), 'temp.db' );
-		$export_db = tempnam( sys_get_temp_dir(), 'export.db' );
+		if ( false === $temp_db ) {
+			WP_CLI::error( 'Could not create temporary database file for export.' );
+		}
 
-		copy( $db_path, $temp_db );
+		$export_db = tempnam( sys_get_temp_dir(), 'export.db' );
+		if ( false === $export_db ) {
+			// Clean up any previously created temporary database file.
+			@unlink( $temp_db );
+			WP_CLI::error( 'Could not create temporary export file.' );
+		}
+
+		if ( ! @copy( $db_path, $temp_db ) ) {
+			// Clean up temporary files if the copy operation fails.
+			@unlink( $temp_db );
+			@unlink( $export_db );
+			WP_CLI::error( 'Could not copy database to temporary file for export.' );
+		}
 
 		$exclude_tables = [];
 
@@ -436,18 +453,18 @@ trait DB_Command_SQLite {
 		}
 
 		$command_parts[] = $db_path;
+		$command_parts[] = '.read';
+		$command_parts[] = $import_file;
 
-		$command = Utils\esc_cmd(
+		// Build debug-friendly command string without using shell redirection.
+		$debug_command = Utils\esc_cmd(
 			implode( ' ', array_fill( 0, count( $command_parts ), '%s' ) ),
 			...$command_parts
 		);
 
-		$command .= ' < ' . escapeshellarg( $import_file );
+		WP_CLI::debug( "Running shell command: {$debug_command}", 'db' );
 
-		WP_CLI::debug( "Running shell command: {$command}", 'db' );
-
-		$result = \WP_CLI\Process::create( $command, null, null )->run();
-
+		$result = \WP_CLI\Process::create( $command_parts, null, null )->run();
 		unlink( $import_file );
 
 		if ( 0 !== $result->return_code ) {
