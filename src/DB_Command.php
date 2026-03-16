@@ -1630,6 +1630,7 @@ class DB_Command extends WP_CLI_Command {
 		$tables = Utils\wp_get_table_names( $args, $assoc_args );
 
 		$search_results = [];
+		$is_sqlite      = $this->is_sqlite();
 
 		$start_search_time = microtime( true );
 
@@ -1642,7 +1643,7 @@ class DB_Command extends WP_CLI_Command {
 				if ( $stats ) {
 					$skipped[] = $table;
 					// Don't bother warning for term relationships (which is just 3 int columns) or SQLite.
-				} elseif ( ! preg_match( '/_term_relationships$/', $table ) && ! $this->is_sqlite() ) {
+				} elseif ( ! preg_match( '/_term_relationships$/', $table ) && ! $is_sqlite ) {
 					WP_CLI::warning( $primary_keys ? "No text columns for table '$table' - skipped." : "No primary key or text columns for table '$table' - skipped." );
 				}
 				continue;
