@@ -424,6 +424,7 @@ trait DB_Command_SQLite {
 
 		// Ignore errors about unique constraints and existing indexes.
 		$contents = str_replace( 'INSERT INTO', 'INSERT OR IGNORE INTO', $contents );
+		$contents = preg_replace( '/\bCREATE TABLE (?!IF NOT EXISTS\b)/i', 'CREATE TABLE IF NOT EXISTS ', $contents );
 		$contents = str_replace( 'CREATE INDEX "', 'CREATE INDEX IF NOT EXISTS "', $contents );
 		$contents = str_replace( 'CREATE UNIQUE INDEX "', 'CREATE UNIQUE INDEX IF NOT EXISTS "', $contents );
 
