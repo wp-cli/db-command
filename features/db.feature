@@ -1,6 +1,6 @@
 Feature: Perform database operations
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: DB CRUD
     Given an empty directory
     And WP files
@@ -53,7 +53,7 @@ Feature: Perform database operations
       Are you sure you want to reset the 'wp_cli_test' database? [y/n] Success: Database reset.
       """
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: DB CRUD with passed-in dbuser/dbpass
     Given an empty directory
     And WP files
@@ -109,7 +109,7 @@ Feature: Perform database operations
       """
     And STDOUT should be empty
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: Clean up a WordPress install without dropping its database entirely but tables with prefix.
     Given a WP install
 
@@ -141,7 +141,7 @@ Feature: Perform database operations
       """
     And the return code should be 0
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: DB Operations
     Given a WP install
 
@@ -151,7 +151,7 @@ Feature: Perform database operations
     When I run `wp db repair`
     Then STDOUT should not be empty
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: DB Operations with passed-in options
     Given a WP install
 
@@ -190,7 +190,7 @@ Feature: Perform database operations
       """
     And STDOUT should not be empty
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: db repair with --quiet flag should only show errors
     Given a WP install
 
@@ -200,7 +200,7 @@ Feature: Perform database operations
       error
       """
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: db repair can explicitly pass --silent to mysqlcheck
     Given a WP install
 
@@ -246,7 +246,7 @@ Feature: Perform database operations
       home
       """
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: DB export/import
     Given a WP install
 
@@ -295,7 +295,7 @@ Feature: Perform database operations
       1
       """
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: DB export no charset
     Given an empty directory
     And WP files
@@ -318,7 +318,7 @@ Feature: Perform database operations
       Success: Exported
       """
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: Persist DB charset and collation
     Given an empty directory
     And WP files
@@ -362,7 +362,7 @@ Feature: Perform database operations
       latin1_spanish_ci
       """
 
-  @require-mysql-or-mariadb
+  @skip-sqlite
   Scenario: Row modifying queries should return the number of affected rows
     Given a WP install
     When I run `wp db query "UPDATE wp_users SET user_status = 1 WHERE ID = 1"`
