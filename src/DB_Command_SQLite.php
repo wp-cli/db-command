@@ -293,9 +293,9 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Could not create temporary database file for export.' );
 		}
 
-		if ( ! @copy( $db_path, $temp_db ) ) {
+		if ( ! copy( $db_path, $temp_db ) ) {
 			// Clean up temporary file if the copy operation fails.
-			@unlink( $temp_db );
+			unlink( $temp_db );
 			WP_CLI::error( 'Could not copy database to temporary file for export.' );
 		}
 
@@ -425,10 +425,10 @@ trait DB_Command_SQLite {
 		// Ignore errors about unique constraints and existing indexes.
 		$contents = str_replace( 'INSERT INTO', 'INSERT OR IGNORE INTO', $contents );
 		$contents = preg_replace( '/\bCREATE TABLE (?!IF NOT EXISTS\b)/i', 'CREATE TABLE IF NOT EXISTS ', $contents );
-		$contents = preg_replace( '/\bCREATE TRIGGER (?!IF NOT EXISTS\b)/i', 'CREATE TRIGGER IF NOT EXISTS ', $contents );
-		$contents = preg_replace( '/\bCREATE VIEW (?!IF NOT EXISTS\b)/i', 'CREATE VIEW IF NOT EXISTS ', $contents );
-		$contents = preg_replace( '/\bCREATE INDEX (?!IF NOT EXISTS\b)/i', 'CREATE INDEX IF NOT EXISTS ', $contents );
-		$contents = preg_replace( '/\bCREATE UNIQUE INDEX (?!IF NOT EXISTS\b)/i', 'CREATE UNIQUE INDEX IF NOT EXISTS ', $contents );
+		$contents = preg_replace( '/\bCREATE TRIGGER (?!IF NOT EXISTS\b)/i', 'CREATE TRIGGER IF NOT EXISTS ', (string) $contents );
+		$contents = preg_replace( '/\bCREATE VIEW (?!IF NOT EXISTS\b)/i', 'CREATE VIEW IF NOT EXISTS ', (string) $contents );
+		$contents = preg_replace( '/\bCREATE INDEX (?!IF NOT EXISTS\b)/i', 'CREATE INDEX IF NOT EXISTS ', (string) $contents );
+		$contents = preg_replace( '/\bCREATE UNIQUE INDEX (?!IF NOT EXISTS\b)/i', 'CREATE UNIQUE INDEX IF NOT EXISTS ', (string) $contents );
 
 		$import_file = tempnam( sys_get_temp_dir(), 'temp.db' );
 		file_put_contents( $import_file, $contents );
