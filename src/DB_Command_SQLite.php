@@ -445,18 +445,19 @@ trait DB_Command_SQLite {
 		}
 
 		$command_parts[] = $db_path;
-		$command_parts[] = '.read';
-		$command_parts[] = $import_file;
 
-		// Build debug-friendly command string without using shell redirection.
-		$debug_command = Utils\esc_cmd(
+		// Build a properly escaped string command. Process::create() requires a string, not an array.
+		$command = Utils\esc_cmd(
 			implode( ' ', array_fill( 0, count( $command_parts ), '%s' ) ),
 			...$command_parts
 		);
 
-		WP_CLI::debug( "Running shell command: {$debug_command}", 'db' );
+		// Pass the .read dot-command as a single quoted argument (sqlite3 reads it as SQL input).
+		$command .= ' ' . escapeshellarg( '.read ' . $import_file );
 
-		$result = \WP_CLI\Process::create( $command_parts, null, null )->run();
+		WP_CLI::debug( "Running shell command: {$command}", 'db' );
+
+		$result = \WP_CLI\Process::create( $command, null, null )->run();
 		unlink( $import_file );
 
 		if ( 0 !== $result->return_code ) {
