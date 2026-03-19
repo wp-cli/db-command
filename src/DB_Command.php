@@ -737,12 +737,22 @@ class DB_Command extends WP_CLI_Command {
 
 		$exclude_tables_data = Utils\get_flag_value( $assoc_args, 'exclude_tables_data' );
 		if ( isset( $exclude_tables_data ) ) {
-			$tables = explode( ',', trim( $assoc_args['exclude_tables_data'], ',' ) );
 			unset( $assoc_args['exclude_tables_data'] );
-			foreach ( $tables as $table ) {
-				$command           .= ' --ignore-table-data';
-				$command           .= ' %s';
-				$command_esc_args[] = trim( DB_NAME . '.' . $table );
+			if ( is_string( $exclude_tables_data ) && '' !== trim( $exclude_tables_data ) ) {
+				if ( 'mariadb' !== Utils\get_db_type() ) {
+					WP_CLI::error( 'The --exclude_tables_data option is only supported by MariaDB.' );
+				}
+
+				$tables = explode( ',', trim( $exclude_tables_data, ',' ) );
+				foreach ( $tables as $table ) {
+					$table = trim( $table );
+					if ( '' === $table ) {
+						continue;
+					}
+					$command           .= ' --ignore-table-data';
+					$command           .= ' %s';
+					$command_esc_args[] = DB_NAME . '.' . $table;
+				}
 			}
 		}
 
