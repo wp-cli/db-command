@@ -1,5 +1,6 @@
 Feature: Check the database
 
+  @require-mysql-or-mariadb
   Scenario: Run db check to check the database
     Given a WP install
 
@@ -13,12 +14,14 @@ Feature: Check the database
       Success: Database checked.
       """
 
+  @require-mysql-or-mariadb
   Scenario: db check with --quiet flag should only show errors
     Given a WP install
 
     When I run `wp db check --quiet`
     Then STDOUT should be empty
 
+  @require-mysql-or-mariadb
   Scenario: db check can explicitly pass --silent to mysqlcheck
     Given a WP install
 
@@ -32,6 +35,7 @@ Feature: Check the database
       Success: Database checked.
       """
 
+  @require-mysql-or-mariadb
   Scenario: Run db check with MySQL defaults to check the database
     Given a WP install
 
@@ -45,6 +49,7 @@ Feature: Check the database
       Success: Database checked.
       """
 
+  @require-mysql-or-mariadb
   Scenario: Run db check with --no-defaults to check the database
     Given a WP install
 
@@ -58,6 +63,7 @@ Feature: Check the database
       Success: Database checked.
       """
 
+  @require-mysql-or-mariadb
   Scenario: Run db check with passed-in options
     Given a WP install
 
@@ -143,6 +149,7 @@ Feature: Check the database
       """
     And STDOUT should be empty
 
+  @require-mysql-or-mariadb
   Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 
@@ -155,3 +162,12 @@ Feature: Check the database
     When I try `wp db check --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysqlcheck|mariadb-check) --no-defaults %s#
 
+  @require-sqlite
+  Scenario: SQLite commands that show warnings
+    Given a WP install
+
+    When I try `wp db check`
+    Then STDERR should contain:
+      """
+      Warning: Database check is not supported for SQLite databases
+      """
