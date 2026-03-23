@@ -264,7 +264,6 @@ Feature: Search through the database
     And the return code should be 1
 
     When I run `wp db query "CREATE TABLE no_key ( awesome_stuff TEXT );"`
-    And I run `wp db query "CREATE TABLE no_text ( id int(11) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id) );"`
     And I try `wp db search example.com no_key --all-tables`
     Then STDOUT should be empty
     And STDERR should be:
@@ -273,6 +272,10 @@ Feature: Search through the database
       """
     And the return code should be 0
 
+  @require-mysql-or-mariadb
+  Scenario: Search on a single site install - No text columns for table
+    Given a WP install
+    And I run `wp db query "CREATE TABLE no_text ( id int(11) unsigned NOT NULL AUTO_INCREMENT, PRIMARY KEY (id) );"`
     When I try `wp db search example.com no_text --all-tables`
     Then STDOUT should be empty
     And STDERR should be:
@@ -869,7 +872,6 @@ Feature: Search through the database
     When I run `wp db search 'https://' --regex`
     Then the return code should be 0
 
-  @require-wp-4.7
   Scenario: Search with output options
     Given a WP install
 
@@ -922,10 +924,62 @@ Feature: Search through the database
       """
       Success: Found
       """
-    And STDOUT should contain:
+    And STDOUT should match /\d tables? skipped:.*wp_term_relationships/
+    And STDERR should be empty
+
+  Scenario: Search with output options
+    Given a WP install
+
+    When I run `wp db query "SELECT option_id FROM wp_options WHERE option_name = 'siteurl';" --skip-column-names | cat`
+    Then save STDOUT as {SITEURL_ID}
+
+    When I run `wp db query "SELECT option_id FROM wp_options WHERE option_name = 'home';" --skip-column-names | cat`
+    Then save STDOUT as {HOMEURL_ID}
+
+    When I run `wp db search example.com`
+    Then STDOUT should contain:
       """
-      1 table skipped: wp_term_relationships.
+      wp_options:option_value
+      {SITEURL_ID}:https://example.com
+      wp_options:option_value
+      {HOMEURL_ID}:https://example.com
       """
+
+    When I run `wp db search example.com --table_column_once`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value
+      {SITEURL_ID}:https://example.com
+      {HOMEURL_ID}:https://example.com
+      """
+
+    When I run `wp db search example.com --one_line`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value:{SITEURL_ID}:https://example.com
+      wp_options:option_value:{HOMEURL_ID}:https://example.com
+      """
+
+    When I run `wp db search example.com --table_column_once --one_line`
+    Then STDOUT should contain:
+      """
+      wp_options:option_value:{SITEURL_ID}:https://example.com
+      wp_options:option_value:{HOMEURL_ID}:https://example.com
+      """
+
+    When I run `wp db search example.com --all-tables --before_context=0 --after_context=0 --matches_only`
+    Then STDOUT should not contain:
+      """
+      :
+      """
+    And STDERR should be empty
+
+    When I run `wp db search example.com --all-tables --before_context=0 --after_context=0 --stats`
+    Then STDOUT should contain:
+      """
+      Success: Found
+      """
+    And STDOUT should match /\d tables? skipped:.*wp_term_relationships/
     And STDERR should be empty
 
   Scenario: Search with custom colors
@@ -991,6 +1045,9 @@ Feature: Search through the database
       """
     And the return code should be 0
 
+  # SQLite doesn't support SOURCE statement.
+  # TODO: Add similar test for SQLite.
+  @require-mysql-or-mariadb
   Scenario: Search should cater for field/table names that use reserved words or unusual characters
     Given a WP install
     And a esc_sql_ident.sql file:
