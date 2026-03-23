@@ -36,10 +36,22 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  @require-mysql-or-mariadb
   Scenario: Import from STDIN
     Given a WP install
 
     When I run `wp db import -`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'STDIN'.
+      """
+
+  # TODO: Debug the difference here.
+  @require-sqlite
+  Scenario: Import from STDIN
+    Given a WP install
+
+    When I run `echo "" | wp db import -`
     Then STDOUT should be:
       """
       Success: Imported from 'STDIN'.
@@ -57,6 +69,8 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  # SQLite doesn't support the --dbuser flag.
+  @require-mysql-or-mariadb
   Scenario: Import from database name path by default with passed-in dbuser/dbpass
     Given a WP install
 
@@ -77,6 +91,8 @@ Feature: Import a WordPress database
       """
     And STDOUT should be empty
 
+  # SQLite doesn't support the --force flag.
+  @require-mysql-or-mariadb
   Scenario: Import database with passed-in options
     Given a WP install
     And a debug.sql file:
@@ -90,6 +106,9 @@ Feature: Import a WordPress database
       Success: Imported from 'debug.sql'.
       """
 
+  # For SQLite this would fail at the `wp db create` step
+  # because of the missing plugin/drop-in.
+  @require-mysql-or-mariadb
   Scenario: Help runs properly at various points of a functional WP install
     Given an empty directory
 
@@ -127,6 +146,8 @@ Feature: Import a WordPress database
       """
       wp db import
       """
+
+  @require-mysql-or-mariadb
   Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 
@@ -142,7 +163,7 @@ Feature: Import a WordPress database
     When I try `wp db import --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysql|mariadb) --no-defaults --no-auto-rehash#
 
-  @require-wp-4.2
+  @require-mysql-or-mariadb
   Scenario: Import db that has emoji in post
     Given a WP install
 
@@ -165,6 +186,35 @@ Feature: Import a WordPress database
       """
       Setting missing default character set to utf8mb4
       """
+
+    When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'wp_cli_test.sql'.
+      """
+
+    When I run `wp post list`
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      🍣
+      """
+
+  @require-sqlite
+  Scenario: Import db that has emoji in post
+    Given a WP install
+
+    When I run `wp post create --post_title="🍣"`
+    And I run `wp post list`
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      🍣
+      """
+
+    When I try `wp db export wp_cli_test.sql --debug`
+    Then the return code should be 0
+    And the wp_cli_test.sql file should exist
 
     When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
     Then STDOUT should be:
