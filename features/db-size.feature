@@ -218,7 +218,7 @@ Feature: Display database size
     But STDOUT should not be a number
 
     When I run `wp db size --size_format=b --format=json`
-    Then STDOUT should match /\{"Name":"\.ht\.sqlite(\.php)?","Size":"/
+    Then STDOUT should match /^\[\{"Name":"\.ht\.sqlite(\.php)?","Size":"/
 
     But STDOUT should not be a number
 
