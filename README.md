@@ -3,7 +3,7 @@ wp-cli/db-command
 
 Performs basic database operations using credentials stored in wp-config.php.
 
-[![Testing](https://github.com/wp-cli/db-command/actions/workflows/testing.yml/badge.svg)](https://github.com/wp-cli/db-command/actions/workflows/testing.yml)
+[![Testing](https://github.com/wp-cli/db-command/actions/workflows/testing.yml/badge.svg)](https://github.com/wp-cli/db-command/actions/workflows/testing.yml) [![Code Coverage](https://codecov.io/gh/wp-cli/db-command/branch/main/graph/badge.svg)](https://codecov.io/gh/wp-cli/db-command/tree/main)
 
 Quick links: [Using](#using) | [Installing](#installing) | [Contributing](#contributing) | [Support](#support)
 
