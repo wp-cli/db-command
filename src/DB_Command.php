@@ -591,6 +591,25 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		if ( ! $this->is_mysql_binary_available() ) {
+			// Get the query from args or STDIN.
+			$query = '';
+			if ( ! empty( $args ) ) {
+				$query = $args[0];
+			} else {
+				$query = stream_get_contents( STDIN );
+			}
+
+			if ( empty( $query ) ) {
+				WP_CLI::error( 'No query specified.' );
+			}
+
+			WP_CLI::debug( 'MySQL/MariaDB binary not available, falling back to wpdb.', 'db' );
+			$this->maybe_load_wpdb();
+			$this->wpdb_query( $query, $assoc_args );
+			return;
+		}
+
 		$command = sprintf(
 			'/usr/bin/env %s%s --no-auto-rehash',
 			$this->get_mysql_command(),
@@ -2347,5 +2366,119 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	private function get_mysql_command() {
 		return 'mariadb' === Utils\get_db_type() ? 'mariadb' : 'mysql';
+	}
+
+	/**
+	 * Check if the mysql or mariadb binary is available.
+	 *
+	 * @return bool True if the binary is available, false otherwise.
+	 */
+	protected function is_mysql_binary_available() {
+		static $available = null;
+
+		if ( null === $available ) {
+			$binary    = $this->get_mysql_command();
+			$result    = \WP_CLI\Process::create( "/usr/bin/env {$binary} --version", null, null )->run();
+			$available = 0 === $result->return_code;
+		}
+
+		return $available;
+	}
+
+	/**
+	 * Load WordPress's wpdb if not already available.
+	 *
+	 * Loads the minimal required WordPress files to make $wpdb available,
+	 * including any db.php drop-in (e.g., HyperDB or other custom drivers).
+	 */
+	protected function maybe_load_wpdb() {
+		global $wpdb;
+
+		if ( isset( $wpdb ) ) {
+			return;
+		}
+
+		if ( ! defined( 'WPINC' ) ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
+			define( 'WPINC', 'wp-includes' );
+		}
+
+		if ( ! defined( 'WP_CONTENT_DIR' ) ) {
+			define( 'WP_CONTENT_DIR', ABSPATH . 'wp-content' );
+		}
+
+		// Load required WordPress files if not already loaded.
+		if ( ! function_exists( 'add_action' ) ) {
+			$required_files = [
+				ABSPATH . WPINC . '/compat.php',
+				ABSPATH . WPINC . '/plugin.php',
+				// Defines `wp_debug_backtrace_summary()` as used by wpdb.
+				ABSPATH . WPINC . '/functions.php',
+				ABSPATH . WPINC . '/class-wpdb.php',
+			];
+
+			foreach ( $required_files as $required_file ) {
+				if ( file_exists( $required_file ) ) {
+					require_once $required_file;
+				}
+			}
+		}
+
+		// Load db.php drop-in if it exists (e.g., HyperDB or other custom drivers).
+		$db_dropin_path = WP_CONTENT_DIR . '/db.php';
+		if ( file_exists( $db_dropin_path ) && ! $this->is_sqlite() ) {
+			require_once $db_dropin_path;
+		}
+
+		// If $wpdb is still not set (e.g. no drop-in), create a new instance using the DB credentials from wp-config.php.
+		if ( ! isset( $GLOBALS['wpdb'] ) && class_exists( 'wpdb' ) ) {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			$wpdb = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		}
+	}
+
+	/**
+	 * Execute a query against the database using wpdb.
+	 *
+	 * Used as a fallback when the mysql/mariadb binary is not available.
+	 *
+	 * @param string $query      SQL query to execute.
+	 * @param array  $assoc_args Associative arguments.
+	 */
+	protected function wpdb_query( $query, $assoc_args = [] ) {
+		global $wpdb;
+
+		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
+			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
+		$skip_column_names = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
+
+		$is_row_modifying_query = preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $query );
+
+		if ( $is_row_modifying_query ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$affected_rows = $wpdb->query( $query );
+			if ( false === $affected_rows ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
+			}
+			WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
+		} else {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$results = $wpdb->get_results( $query, ARRAY_A );
+
+			if ( $wpdb->last_error ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
+			}
+
+			if ( empty( $results ) ) {
+				return;
+			}
+
+			$headers = array_keys( $results[0] );
+			$this->display_query_results( $headers, $results, $skip_column_names );
+		}
 	}
 }
