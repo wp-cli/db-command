@@ -2378,7 +2378,7 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( null === $available ) {
 			$binary    = $this->get_mysql_command();
-			$result    = \WP_CLI\Process::create( "/usr/bin/env {$binary} --version", null, null )->run();
+			$result    = \WP_CLI\Process::create( '/usr/bin/env ' . escapeshellarg( $binary ) . ' --version', null, null )->run();
 			$available = 0 === $result->return_code;
 		}
 
@@ -2434,6 +2434,9 @@ class DB_Command extends WP_CLI_Command {
 		if ( ! isset( $GLOBALS['wpdb'] ) && class_exists( 'wpdb' ) ) {
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 			$wpdb = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+			if ( isset( $GLOBALS['table_prefix'] ) && is_string( $GLOBALS['table_prefix'] ) ) {
+				$wpdb->set_prefix( $GLOBALS['table_prefix'] );
+			}
 		}
 	}
 
