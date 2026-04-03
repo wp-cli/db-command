@@ -929,6 +929,30 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		if ( ! $this->is_mysql_binary_available() ) {
+			if ( '-' === $result_file ) {
+				$sql_content = stream_get_contents( STDIN );
+				if ( false === $sql_content ) {
+					WP_CLI::error( 'Failed to read from STDIN.' );
+				}
+				$result_file = 'STDIN';
+			} else {
+				if ( ! is_readable( $result_file ) ) {
+					WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
+				}
+				$sql_content = file_get_contents( $result_file );
+				if ( false === $sql_content ) {
+					WP_CLI::error( sprintf( 'Could not read import file: %s', $result_file ) );
+				}
+			}
+
+			WP_CLI::debug( 'MySQL/MariaDB binary not available, falling back to wpdb for import.', 'db' );
+			$this->maybe_load_wpdb();
+			$this->wpdb_import( (string) $sql_content, $assoc_args );
+			WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
+			return;
+		}
+
 		// Process options to MySQL.
 		$mysql_args = array_merge(
 			[ 'database' => DB_NAME ],
@@ -1919,6 +1943,19 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args Optional. Associative array of arguments.
 	 */
 	protected function run_query( $query, $assoc_args = [] ) {
+		if ( ! $this->is_mysql_binary_available() ) {
+			WP_CLI::debug( "Query via wpdb: {$query}", 'db' );
+			$this->maybe_load_wpdb();
+			global $wpdb;
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$result = $wpdb->query( $query );
+			if ( false === $result ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
+			}
+			return;
+		}
+
 		// Ensure that the SQL mode is compatible with WPDB.
 		$query = $this->get_sql_mode_query( $assoc_args ) . $query;
 
@@ -2410,6 +2447,7 @@ class DB_Command extends WP_CLI_Command {
 		// Load required WordPress files if not already loaded.
 		if ( ! function_exists( 'add_action' ) ) {
 			$required_files = [
+				ABSPATH . WPINC . '/load.php',
 				ABSPATH . WPINC . '/compat.php',
 				ABSPATH . WPINC . '/plugin.php',
 				// Defines `wp_debug_backtrace_summary()` as used by wpdb.
@@ -2483,5 +2521,131 @@ class DB_Command extends WP_CLI_Command {
 			$headers = array_keys( $results[0] );
 			$this->display_query_results( $headers, $results, $skip_column_names );
 		}
+	}
+
+	/**
+	 * Import SQL content into the database using wpdb.
+	 *
+	 * Used as a fallback when the mysql/mariadb binary is not available.
+	 *
+	 * @param string $sql_content SQL content to import.
+	 * @param array  $assoc_args  Associative arguments.
+	 */
+	protected function wpdb_import( $sql_content, $assoc_args = [] ) {
+		global $wpdb;
+
+		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
+			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
+		$skip_optimization = Utils\get_flag_value( $assoc_args, 'skip-optimization', false );
+
+		if ( ! $skip_optimization ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET autocommit = 0' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET unique_checks = 0' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET foreign_key_checks = 0' );
+		}
+
+		$statements = $this->split_sql_statements( $sql_content );
+
+		foreach ( $statements as $statement ) {
+			$statement = trim( $statement );
+			if ( '' === $statement ) {
+				continue;
+			}
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$result = $wpdb->query( $statement );
+			if ( false === $result ) {
+				if ( ! $skip_optimization ) {
+					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+					$wpdb->query( 'ROLLBACK' );
+				}
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Import failed: ' . strip_tags( $wpdb->last_error ) );
+			}
+		}
+
+		if ( ! $skip_optimization ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'COMMIT' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET autocommit = 1' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET unique_checks = 1' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET foreign_key_checks = 1' );
+		}
+	}
+
+	/**
+	 * Split a SQL string into individual statements.
+	 *
+	 * Handles single-quoted strings, double-quoted strings, and comments
+	 * so that semicolons inside them are not treated as statement delimiters.
+	 *
+	 * @param string $sql SQL string to split.
+	 * @return string[] Array of individual SQL statements.
+	 */
+	private function split_sql_statements( $sql ) {
+		$statements      = [];
+		$current         = '';
+		$in_single_quote = false;
+		$in_double_quote = false;
+		$in_comment      = false;
+		$in_line_comment = false;
+		$length          = strlen( $sql );
+
+		for ( $i = 0; $i < $length; $i++ ) {
+			$char = $sql[ $i ];
+			$next = ( $i + 1 < $length ) ? $sql[ $i + 1 ] : '';
+
+			if ( $in_line_comment ) {
+				if ( "\n" === $char ) {
+					$in_line_comment = false;
+				}
+				continue;
+			}
+
+			if ( $in_comment ) {
+				if ( '*' === $char && '/' === $next ) {
+					$in_comment = false;
+					++$i;
+				}
+				continue;
+			}
+
+			if ( '/' === $char && '*' === $next && ! $in_single_quote && ! $in_double_quote ) {
+				$in_comment = true;
+				++$i;
+				continue;
+			}
+
+			if ( '-' === $char && '-' === $next && ! $in_single_quote && ! $in_double_quote ) {
+				$in_line_comment = true;
+				continue;
+			}
+
+			if ( "'" === $char && ! $in_double_quote ) {
+				$in_single_quote = ! $in_single_quote;
+			} elseif ( '"' === $char && ! $in_single_quote ) {
+				$in_double_quote = ! $in_double_quote;
+			}
+
+			if ( ';' === $char && ! $in_single_quote && ! $in_double_quote ) {
+				$statements[] = $current;
+				$current      = '';
+			} else {
+				$current .= $char;
+			}
+		}
+
+		if ( '' !== trim( $current ) ) {
+			$statements[] = $current;
+		}
+
+		return $statements;
 	}
 }
