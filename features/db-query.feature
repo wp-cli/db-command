@@ -135,7 +135,7 @@ Feature: Query the database with WordPress' MySQL config
       """
 
     When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
-    And I run `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT COUNT(ID) FROM wp_users;" --debug`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT COUNT(ID) FROM wp_users;" --debug`
     Then STDOUT should be:
       """
       COUNT(ID)
