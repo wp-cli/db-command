@@ -957,7 +957,16 @@ class DB_Command extends WP_CLI_Command {
 	 * : List tables based on wildcard search, e.g. 'wp_*_options' or 'wp_post?'.
 	 *
 	 * [--scope=<scope>]
-	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
+	 * : List tables based on the scope.
+	 * ---
+	 * default: all
+	 * options:
+	 *   - all       - returns 'all' and 'global' tables. No old tables are returned.
+	 *   - blog      - returns the blog-level tables for the queried blog.
+	 *   - global    - returns the global tables for the installation, returning multisite tables only on multisite.
+	 *   - ms_global - returns the multisite global tables, regardless if current installation is multisite.
+	 *   - old       - returns tables which are deprecated.
+	 * ---
 	 *
 	 * [--network]
 	 * : List all the tables in a multisite install.
