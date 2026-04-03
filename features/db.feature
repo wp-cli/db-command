@@ -398,7 +398,7 @@ Feature: Perform database operations
       """
 
     When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
-    And I run `env PATH={RUN_DIR}/fake-bin:$PATH wp db drop --yes --debug`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db drop --yes --debug`
     Then STDOUT should contain:
       """
       Success: Database dropped.
@@ -423,7 +423,7 @@ Feature: Perform database operations
       """
 
     When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
-    And I run `env PATH={RUN_DIR}/fake-bin:$PATH wp db reset --yes --debug`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db reset --yes --debug`
     Then STDOUT should contain:
       """
       Success: Database reset.
