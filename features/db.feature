@@ -383,6 +383,56 @@ Feature: Perform database operations
       Query succeeded. Rows affected: 1
       """
 
+  @require-mysql-or-mariadb
+  Scenario: Database drop falls back to wpdb when mysql binary is unavailable
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I run `env PATH={RUN_DIR}/fake-bin:$PATH wp db drop --yes --debug`
+    Then STDOUT should contain:
+      """
+      Success: Database dropped.
+      """
+    And STDERR should contain:
+      """
+      Query via wpdb:
+      """
+
+  @require-mysql-or-mariadb
+  Scenario: Database reset falls back to wpdb when mysql binary is unavailable
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I run `env PATH={RUN_DIR}/fake-bin:$PATH wp db reset --yes --debug`
+    Then STDOUT should contain:
+      """
+      Success: Database reset.
+      """
+    And STDERR should contain:
+      """
+      Query via wpdb:
+      """
+
   @require-sqlite
   Scenario: SQLite DB CRUD operations
     Given a WP install

@@ -1947,6 +1947,11 @@ class DB_Command extends WP_CLI_Command {
 			WP_CLI::debug( "Query via wpdb: {$query}", 'db' );
 			$this->maybe_load_wpdb();
 			global $wpdb;
+
+			if ( ! isset( $wpdb ) ) {
+				WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
+			}
+
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$result = $wpdb->query( $query );
 			if ( false === $result ) {

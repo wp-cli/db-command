@@ -69,6 +69,34 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  @require-mysql-or-mariadb
+  Scenario: Database import falls back to wpdb when mysql binary is unavailable
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `wp db export wp_cli_test.sql`
+    Then the wp_cli_test.sql file should exist
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I run `env PATH={RUN_DIR}/fake-bin:$PATH wp db import wp_cli_test.sql --debug`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'wp_cli_test.sql'.
+      """
+    And STDERR should contain:
+      """
+      MySQL/MariaDB binary not available, falling back to wpdb for import.
+      """
+
   # SQLite doesn't support the --dbuser flag.
   @require-mysql-or-mariadb
   Scenario: Import from database name path by default with passed-in dbuser/dbpass
