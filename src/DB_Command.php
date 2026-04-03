@@ -958,6 +958,15 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--scope=<scope>]
 	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
+	 * ---
+	 * default: all
+	 * options:
+	 *   - all
+	 *   - global
+	 *   - ms_global
+	 *   - blog
+	 *   - old
+	 * ---
 	 *
 	 * [--network]
 	 * : List all the tables in a multisite install.
@@ -1082,6 +1091,15 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--scope=<scope>]
 	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
+	 * ---
+	 * default: all
+	 * options:
+	 *   - all
+	 *   - global
+	 *   - ms_global
+	 *   - blog
+	 *   - old
+	 * ---
 	 *
 	 * [--network]
 	 * : List all the tables in a multisite install.

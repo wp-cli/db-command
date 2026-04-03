@@ -760,6 +760,15 @@ Defaults to all tables registered to the $wpdb database handler.
 
 	[--scope=<scope>]
 		Can be all, global, ms_global, blog, or old tables. Defaults to all.
+		---
+		default: all
+		options:
+		  - all
+		  - global
+		  - ms_global
+		  - blog
+		  - old
+		---
 
 	[--network]
 		List all the tables in a multisite install.
@@ -866,6 +875,15 @@ Available size formats include:
 
 	[--scope=<scope>]
 		Can be all, global, ms_global, blog, or old tables. Defaults to all.
+		---
+		default: all
+		options:
+		  - all
+		  - global
+		  - ms_global
+		  - blog
+		  - old
+		---
 
 	[--network]
 		List all the tables in a multisite install.
