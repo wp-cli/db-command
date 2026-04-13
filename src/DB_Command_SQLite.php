@@ -302,6 +302,7 @@ trait DB_Command_SQLite {
 		if ( false === $temp_db ) {
 			WP_CLI::error( 'Could not create temporary database file for export.' );
 		}
+		$temp_db = str_replace( '\\', '/', $temp_db );
 
 		if ( ! copy( $db_path, $temp_db ) ) {
 			// Clean up temporary file if the copy operation fails.
@@ -412,6 +413,7 @@ trait DB_Command_SQLite {
 		if ( ! $db_path ) {
 			WP_CLI::error( 'Could not determine the database path.' );
 		}
+		$db_path = str_replace( '\\', '/', $db_path );
 
 		if ( ! file_exists( $db_path ) ) {
 			WP_CLI::error( 'Database does not exist.' );
