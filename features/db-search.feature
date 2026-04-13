@@ -734,7 +734,7 @@ Feature: Search through the database
     When I run `wp db search "unfindable" --regex`
     Then STDOUT should be empty
 
-    When I try `wp db search "unfindable" --regex --regex-flags='abcd'`
+    When I try `wp db search "unfindable" --regex --regex-flags="abcd"`
     Then STDERR should contain:
       """
       unfindable
