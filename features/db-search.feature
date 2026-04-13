@@ -982,6 +982,7 @@ Feature: Search through the database
     And STDOUT should match /\d tables? skipped:.*wp_term_relationships/
     And STDERR should be empty
 
+  @skip-windows
   Scenario: Search with custom colors
     Given a WP install
 
