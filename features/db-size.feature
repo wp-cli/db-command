@@ -81,6 +81,8 @@ Feature: Display database size
       KB
       """
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display only table sizes in a human readable format for a WordPress install
     Given a WP install
 

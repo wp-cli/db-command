@@ -1210,20 +1210,12 @@ class DB_Command extends WP_CLI_Command {
 
 				// Get the table size.
 				if ( $is_sqlite ) {
-					static $has_dbstat = null;
-					if ( null === $has_dbstat ) {
-						$has_dbstat = ! empty( $wpdb->get_results( "SELECT 1 FROM sqlite_master WHERE type='table' AND name='dbstat' LIMIT 1;" ) );
-					}
-
-					$table_bytes = 0;
-					if ( $has_dbstat ) {
-						$table_bytes = $wpdb->get_var(
-							$wpdb->prepare(
-								'SELECT SUM(pgsize) as size_in_bytes FROM dbstat where name = %s LIMIT 1',
-								$table_name
-							)
-						);
-					}
+					$table_bytes = $wpdb->get_var(
+						$wpdb->prepare(
+							'SELECT SUM(pgsize) as size_in_bytes FROM dbstat where name = %s LIMIT 1',
+							$table_name
+						)
+					);
 				} else {
 					$table_bytes = $wpdb->get_var(
 						$wpdb->prepare(
