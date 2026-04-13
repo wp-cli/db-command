@@ -766,17 +766,17 @@ Feature: Search through the database
       """
     And the return code should be 1
 
-    When I try `wp db search "regex error)" --regex --regex-delimiter=/`
+    When I try `wp db search "regex error)" --regex --regex-delimiter=#`
     Then STDERR should be:
       """
-      Error: The regex '/regex error)/' fails.
+      Error: The regex '#regex error)#' fails.
       """
     And the return code should be 1
 
-    When I try `wp db search "regex error)" --regex --regex-delimiter=/ --regex-flags=u`
+    When I try `wp db search "regex error)" --regex --regex-delimiter=# --regex-flags=u`
     Then STDERR should be:
       """
-      Error: The regex '/regex error)/u' fails.
+      Error: The regex '#regex error)#u' fails.
       """
     And the return code should be 1
 
