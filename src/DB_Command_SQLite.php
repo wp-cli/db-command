@@ -474,7 +474,7 @@ trait DB_Command_SQLite {
 		);
 
 		// Pass the .read dot-command as a single quoted argument (sqlite3 reads it as SQL input).
-		$command .= ' ' . escapeshellarg( '.read ' . $import_file );
+		$command .= ' ' . escapeshellarg( ".read '" . $import_file . "'" );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
