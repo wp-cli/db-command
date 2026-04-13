@@ -149,6 +149,11 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Database does not exist.' );
 		}
 
+		global $wpdb;
+		if ( $wpdb instanceof \wpdb ) {
+			$wpdb->close();
+		}
+
 		if ( ! unlink( $db_path ) ) {
 			WP_CLI::error( "Could not delete database file: {$db_path}" );
 		}
@@ -168,6 +173,11 @@ trait DB_Command_SQLite {
 
 		// Delete if exists.
 		if ( file_exists( $db_path ) ) {
+			global $wpdb;
+			if ( $wpdb instanceof \wpdb ) {
+				$wpdb->close();
+			}
+
 			if ( ! unlink( $db_path ) ) {
 				WP_CLI::error( "Could not delete database file: {$db_path}" );
 			}
