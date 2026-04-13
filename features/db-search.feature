@@ -745,7 +745,7 @@ Feature: Search through the database
       """
     And the return code should be 1
 
-    When I try `wp db search "unfindable" --regex --regex-delimiter='1'`
+    When I try `wp db search "unfindable" --regex --regex-delimiter="1"`
     Then STDERR should be:
       """
       Error: The regex '1unfindable1' fails.
