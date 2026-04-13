@@ -320,7 +320,8 @@ trait DB_Command_SQLite {
 				WP_CLI::error( 'Could not export database' );
 			}
 
-			$all_tables = explode( "\n", $result->stdout );
+			$all_tables = array_map( 'trim', explode( "\n", $result->stdout ) );
+			$all_tables = array_filter( $all_tables );
 
 			$exclude_tables = array_diff( $all_tables, $include_tables );
 		}
@@ -431,6 +432,7 @@ trait DB_Command_SQLite {
 		$contents = preg_replace( '/\bCREATE UNIQUE INDEX (?!IF NOT EXISTS\b)/i', 'CREATE UNIQUE INDEX IF NOT EXISTS ', (string) $contents );
 
 		$import_file = tempnam( sys_get_temp_dir(), 'temp.db' );
+		$import_file = str_replace( '\\', '/', $import_file );
 		file_put_contents( $import_file, $contents );
 
 		// Build sqlite3 command.
