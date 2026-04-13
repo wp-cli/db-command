@@ -32,6 +32,8 @@ Feature: Display database size
       B
       """
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display only table sizes for a WordPress install
     Given a WP install
 
@@ -224,6 +226,8 @@ Feature: Display database size
 
     But STDOUT should not be a number
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display all table sizes for a WordPress install
     Given a WP install
 
@@ -284,6 +288,8 @@ Feature: Display database size
       [{"Name":"wp_posts",
       """
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display ordered table sizes for a WordPress install
     Given a WP install
 
