@@ -467,7 +467,7 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Failed to create a temporary file for SQLite import.' );
 		}
 
-		$import_file = str_replace( '\\', '/', $import_file );
+		$import_file   = str_replace( '\\', '/', $import_file );
 		$bytes_written = file_put_contents( $import_file, $contents );
 		if ( false === $bytes_written ) {
 			if ( file_exists( $import_file ) ) {
