@@ -389,9 +389,8 @@ trait DB_Command_SQLite {
 		}
 
 		if ( ! empty( $drop_statements ) ) {
-			$args         = array_merge( array( 'sqlite3', $temp_db ), $drop_statements );
-			$placeholders = array_fill( 0, count( $args ), '%s' );
-			$command      = Utils\esc_cmd( implode( ' ', $placeholders ), ...$args );
+			$sql     = implode( ' ', $drop_statements );
+			$command = Utils\esc_cmd( 'sqlite3 %s %s', $temp_db, $sql );
 
 			WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
