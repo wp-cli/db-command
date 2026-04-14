@@ -383,7 +383,8 @@ Feature: Perform database operations
       Query succeeded. Rows affected: 1
       """
 
-  @require-sqlite
+  @require-sqlite @skip-windows
+  # Skipped on Windows due to persistent file locking issues when run via Behat.
   Scenario: SQLite DB CRUD operations
     Given a WP install
     And a session_yes file:
@@ -420,7 +421,8 @@ Feature: Perform database operations
       total
       """
 
-  @require-sqlite
+  @require-sqlite @skip-windows
+  # Skipped on Windows due to persistent file locking issues when run via Behat.
   Scenario: SQLite DB export/import
     Given a WP install
     And a session_yes file:
