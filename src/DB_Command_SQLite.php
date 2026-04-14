@@ -494,6 +494,8 @@ trait DB_Command_SQLite {
 			$command_parts[] = 'PRAGMA journal_mode=MEMORY;';
 		}
 
+		$command_parts[] = '-init';
+		$command_parts[] = $import_file;
 		$command_parts[] = $db_path;
 
 		// Build a properly escaped string command. Process::create() requires a string, not an array.
@@ -502,8 +504,8 @@ trait DB_Command_SQLite {
 			...$command_parts
 		);
 
-		// Pass the .read dot-command as a single quoted argument (sqlite3 reads it as SQL input).
-		$command .= ' ' . escapeshellarg( ".read '" . $import_file . "'" );
+		// Pass .exit to quit interactive mode after running -init.
+		$command .= ' ' . escapeshellarg( '.exit' );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
