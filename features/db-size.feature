@@ -213,19 +213,12 @@ Feature: Display database size
     Given a WP install
 
     When I run `wp db size --size_format=b --format=csv`
-    Then STDOUT should contain:
-      """
-      Name,Size
-      .ht.sqlite,"
-      """
+    Then STDOUT should match /Name,Size\n\.ht\.sqlite(\.php)?,"/
 
     But STDOUT should not be a number
 
     When I run `wp db size --size_format=b --format=json`
-    Then STDOUT should contain:
-      """
-      [{"Name":".ht.sqlite","Size":"
-      """
+    Then STDOUT should match /^\[\{"Name":"\.ht\.sqlite(\.php)?","Size":"/
 
     But STDOUT should not be a number
 
