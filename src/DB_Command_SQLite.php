@@ -359,6 +359,13 @@ trait DB_Command_SQLite {
 		}
 
 		$init_file = tempnam( sys_get_temp_dir(), 'export_init' );
+		if ( false === $init_file ) {
+			if ( file_exists( $temp_db ) ) {
+				unlink( $temp_db );
+			}
+
+			WP_CLI::error( 'Failed to create temporary SQLite init file for export.' );
+		}
 		$init_file = str_replace( '\\', '/', $init_file );
 
 		$init_contents = '';
@@ -367,14 +374,25 @@ trait DB_Command_SQLite {
 		}
 		$init_contents .= ".dump\n";
 
-		file_put_contents( $init_file, $init_contents );
+		$bytes_written = file_put_contents( $init_file, $init_contents );
+		if ( false === $bytes_written ) {
+			if ( file_exists( $init_file ) ) {
+				unlink( $init_file );
+			}
+			if ( file_exists( $temp_db ) ) {
+				unlink( $temp_db );
+			}
+			WP_CLI::error( 'Could not export database' );
+		}
 
 		$command = Utils\esc_cmd( 'sqlite3 -init %s %s .exit', $init_file, $temp_db );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$result = \WP_CLI\Process::create( $command, null, null )->run();
-		unlink( $init_file );
+		if ( file_exists( $init_file ) ) {
+			unlink( $init_file );
+		}
 
 		if ( 0 !== $result->return_code ) {
 			if ( file_exists( $temp_db ) ) {
@@ -449,8 +467,18 @@ trait DB_Command_SQLite {
 		$contents = preg_replace( '/\bCREATE UNIQUE INDEX (?!IF NOT EXISTS\b)/i', 'CREATE UNIQUE INDEX IF NOT EXISTS ', (string) $contents );
 
 		$import_file = tempnam( sys_get_temp_dir(), 'temp.db' );
+		if ( false === $import_file ) {
+			WP_CLI::error( 'Failed to create a temporary file for SQLite import.' );
+		}
+
 		$import_file = str_replace( '\\', '/', $import_file );
-		file_put_contents( $import_file, $contents );
+		$bytes_written = file_put_contents( $import_file, $contents );
+		if ( false === $bytes_written ) {
+			if ( file_exists( $import_file ) ) {
+				unlink( $import_file );
+			}
+			WP_CLI::error( sprintf( 'Failed to write SQLite import data to temporary file: %s', $import_file ) );
+		}
 
 		// Build sqlite3 command.
 		$command_parts = [ 'sqlite3' ];
