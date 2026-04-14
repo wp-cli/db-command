@@ -158,7 +158,7 @@ trait DB_Command_SQLite {
 
 		$attempts = 0;
 		$unlinked = false;
-		while ( $attempts < 10 ) {
+		while ( $attempts < 30 ) {
 			if ( ! file_exists( $db_path ) ) {
 				$unlinked = true;
 				break;
@@ -199,7 +199,7 @@ trait DB_Command_SQLite {
 
 			$attempts = 0;
 			$unlinked = false;
-			while ( $attempts < 10 ) {
+			while ( $attempts < 30 ) {
 				if ( ! file_exists( $db_path ) ) {
 					$unlinked = true;
 					break;
