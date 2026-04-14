@@ -153,8 +153,6 @@ trait DB_Command_SQLite {
 		if ( $wpdb instanceof \wpdb ) {
 			$wpdb->close();
 		}
-		unset( $wpdb );
-		gc_collect_cycles();
 
 		if ( ! @unlink( $db_path ) ) {
 			WP_CLI::error( "Could not delete database file: {$db_path}" );
@@ -179,8 +177,6 @@ trait DB_Command_SQLite {
 			if ( $wpdb instanceof \wpdb ) {
 				$wpdb->close();
 			}
-			unset( $wpdb );
-			gc_collect_cycles();
 
 			if ( ! @unlink( $db_path ) ) {
 				WP_CLI::error( "Could not delete database file: {$db_path}" );
