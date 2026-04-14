@@ -156,7 +156,22 @@ trait DB_Command_SQLite {
 		unset( $wpdb );
 		gc_collect_cycles();
 
-		if ( ! unlink( $db_path ) ) {
+		$attempts = 0;
+		$unlinked = false;
+		while ( $attempts < 10 ) {
+			if ( ! file_exists( $db_path ) ) {
+				$unlinked = true;
+				break;
+			}
+			if ( @unlink( $db_path ) ) {
+				$unlinked = true;
+				break;
+			}
+			++$attempts;
+			usleep( 100000 ); // 100ms
+		}
+
+		if ( ! $unlinked ) {
 			WP_CLI::error( "Could not delete database file: {$db_path}" );
 		}
 
@@ -182,7 +197,22 @@ trait DB_Command_SQLite {
 			unset( $wpdb );
 			gc_collect_cycles();
 
-			if ( ! unlink( $db_path ) ) {
+			$attempts = 0;
+			$unlinked = false;
+			while ( $attempts < 10 ) {
+				if ( ! file_exists( $db_path ) ) {
+					$unlinked = true;
+					break;
+				}
+				if ( @unlink( $db_path ) ) {
+					$unlinked = true;
+					break;
+				}
+				++$attempts;
+				usleep( 100000 ); // 100ms
+			}
+
+			if ( ! $unlinked ) {
 				WP_CLI::error( "Could not delete database file: {$db_path}" );
 			}
 		}
