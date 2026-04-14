@@ -388,26 +388,28 @@ trait DB_Command_SQLite {
 			$drop_statements[]  = sprintf( 'DROP TABLE %s;', $escaped_identifier );
 		}
 
+		$init_file = tempnam( sys_get_temp_dir(), 'export_init' );
+		$init_file = str_replace( '\\', '/', $init_file );
+
+		$init_contents = '';
 		if ( ! empty( $drop_statements ) ) {
-			$sql     = implode( ' ', $drop_statements );
-			$command = Utils\esc_cmd( 'sqlite3 %s %s', $temp_db, $sql );
-
-			WP_CLI::debug( "Running shell command: {$command}", 'db' );
-
-			$result = \WP_CLI\Process::create( $command, null, null )->run();
-
-			if ( 0 !== $result->return_code ) {
-				WP_CLI::error( 'Could not export database' );
-			}
+			$init_contents .= implode( "\n", $drop_statements ) . "\n";
 		}
+		$init_contents .= ".dump\n";
 
-		$command = Utils\esc_cmd( 'sqlite3 %s .dump', $temp_db );
+		file_put_contents( $init_file, $init_contents );
+
+		$command = Utils\esc_cmd( 'sqlite3 -init %s %s .exit', $init_file, $temp_db );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$result = \WP_CLI\Process::create( $command, null, null )->run();
+		unlink( $init_file );
 
 		if ( 0 !== $result->return_code ) {
+			if ( file_exists( $temp_db ) ) {
+				unlink( $temp_db );
+			}
 			WP_CLI::error( 'Could not export database' );
 		}
 
