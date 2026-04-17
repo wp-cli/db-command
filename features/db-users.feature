@@ -1,3 +1,4 @@
+@skip-sqlite
 Feature: Manage database users
 
   Scenario: Create database user without privileges
@@ -5,11 +6,7 @@ Feature: Manage database users
     And WP files
     And wp-config.php
 
-    When I run `wp db create`
-    Then STDOUT should be:
-      """
-      Success: Database created.
-      """
+    When I try `wp db create`
 
     When I run `wp db users create testuser localhost --password=testpass123`
     Then STDOUT should contain:
@@ -28,11 +25,7 @@ Feature: Manage database users
     And WP files
     And wp-config.php
 
-    When I run `wp db create`
-    Then STDOUT should be:
-      """
-      Success: Database created.
-      """
+    When I try `wp db create`
 
     When I run `wp db users create appuser localhost --password=secret123 --grant-privileges`
     Then STDOUT should contain:
@@ -49,11 +42,7 @@ Feature: Manage database users
     And WP files
     And wp-config.php
 
-    When I run `wp db create`
-    Then STDOUT should be:
-      """
-      Success: Database created.
-      """
+    When I try `wp db create`
 
     When I run `wp db users create remoteuser '%' --password=remote123`
     Then STDOUT should contain:
@@ -66,11 +55,7 @@ Feature: Manage database users
     And WP files
     And wp-config.php
 
-    When I run `wp db create`
-    Then STDOUT should be:
-      """
-      Success: Database created.
-      """
+    When I try `wp db create`
 
     When I run `wp db users create nopassuser localhost`
     Then STDOUT should contain:

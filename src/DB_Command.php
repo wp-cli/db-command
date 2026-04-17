@@ -3,8 +3,7 @@
 use WP_CLI\Formatter;
 use WP_CLI\Utils;
 use cli\table\Column;
-
-require_once __DIR__ . '/DB_Command_SQLite.php';
+use WP_CLI\Db\DB_Command_SQLite;
 
 /**
  * Performs basic database operations using credentials stored in wp-config.php.

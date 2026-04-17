@@ -1,5 +1,9 @@
 <?php
 
+namespace WP_CLI\Db;
+
+use DB_Command;
+use WP_CLI;
 use WP_CLI\Utils;
 
 /**

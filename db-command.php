@@ -9,5 +9,5 @@ if ( file_exists( $wpcli_db_autoloader ) ) {
 	require_once $wpcli_db_autoloader;
 }
 
-WP_CLI::add_command( 'db', 'DB_Command' );
-WP_CLI::add_command( 'db users', 'DB_Users_Command' );
+WP_CLI::add_command( 'db', DB_Command::class );
+WP_CLI::add_command( 'db users', \WP_CLI\Db\DB_Users_Command::class );
