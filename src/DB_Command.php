@@ -814,6 +814,8 @@ class DB_Command extends WP_CLI_Command {
 
 		$exclude_tables_data = Utils\get_flag_value( $assoc_args, 'exclude_tables_data', '' );
 		if ( ! empty( $exclude_tables_data ) ) {
+			unset( $assoc_args['exclude_tables_data'] );
+
 			if ( 'mariadb' !== Utils\get_db_type() ) {
 				WP_CLI::error( 'The --exclude_tables_data option is only supported by MariaDB.' );
 			}
