@@ -7,8 +7,7 @@ Feature: Manage database users
     And wp-config.php
 
     When I try `wp db create`
-
-    When I run `wp db users create testuser localhost --password=testpass123`
+    And I run `wp db users create testuser localhost --password=testpass123`
     Then STDOUT should contain:
       """
       Success: Database user 'testuser'@'localhost' created.
@@ -26,8 +25,7 @@ Feature: Manage database users
     And wp-config.php
 
     When I try `wp db create`
-
-    When I run `wp db users create appuser localhost --password=secret123 --grant-privileges`
+    And I run `wp db users create appuser localhost --password=secret123 --grant-privileges`
     Then STDOUT should contain:
       """
       created with privileges on database
@@ -43,8 +41,7 @@ Feature: Manage database users
     And wp-config.php
 
     When I try `wp db create`
-
-    When I run `wp db users create remoteuser '%' --password=remote123`
+    And I run `wp db users create remoteuser '%' --password=remote123`
     Then STDOUT should contain:
       """
       Success: Database user 'remoteuser'@'%' created.
@@ -56,8 +53,7 @@ Feature: Manage database users
     And wp-config.php
 
     When I try `wp db create`
-
-    When I run `wp db users create nopassuser localhost`
+    And I run `wp db users create nopassuser localhost`
     Then STDOUT should contain:
       """
       Success: Database user 'nopassuser'@'localhost' created.
