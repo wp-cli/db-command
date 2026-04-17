@@ -70,6 +70,17 @@ Feature: Export a WordPress database
       PRAGMA foreign_keys=OFF
       """
 
+  @skip-mariadb @skip-sqlite
+  Scenario: Exclude data of certain tables is not supported by MySQL
+    Given a WP install
+
+    When I try `wp db export wp_cli_test.sql --exclude_tables_data=wp_users`
+    Then the return code should be 1
+    And STDERR should contain:
+      """
+      Error: The --exclude_tables_data option is only supported by MariaDB.
+      """
+
   # Only MariaDB currently supports this feature.
   @require-mariadb
   Scenario: Exclude data of certain tables when exporting the database
