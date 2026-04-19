@@ -101,19 +101,14 @@ class DB_Users_Command extends DB_Command {
 	/**
 	 * Escapes a string for use in a SQL query.
 	 *
-	 * Follows MySQL's documented string literal escaping rules.
-	 * See https://dev.mysql.com/doc/refman/en/string-literals.html
+	 * Uses SQL-standard single-quote escaping (`'` => `''`) so the generated
+	 * literal remains valid even when MySQL is running with
+	 * `NO_BACKSLASH_ESCAPES`.
 	 *
 	 * @param string $value String to escape.
 	 * @return string Escaped string, wrapped in single quotes.
 	 */
 	private function esc_sql_string( $value ) {
-		// Escape special characters according to MySQL string literal rules.
-		$value = str_replace(
-			[ '\\', "\x00", "\n", "\r", "'", '"', "\x1a" ],
-			[ '\\\\', "\\0", "\\n", "\\r", "\\'", '\\"', '\\Z' ],
-			$value
-		);
-		return "'" . $value . "'";
+		return "'" . str_replace( "'", "''", $value ) . "'";
 	}
 }
