@@ -13,7 +13,7 @@ use WP_CLI\Utils;
  *
  *     # Create a new database user with privileges.
  *     $ wp db users create myuser myhost --password=mypass --grant-privileges
- *     Success: Database user 'myuser'@'myhost' created with privileges.
+ *     Success: Database user 'myuser'@'myhost' created with privileges on database 'wp_database'.
  *
  * @when after_wp_config_load
  */
