@@ -67,12 +67,10 @@ class DB_Users_Command extends DB_Command {
 		$password         = Utils\get_flag_value( $assoc_args, 'password', '' );
 		$grant_privileges = Utils\get_flag_value( $assoc_args, 'grant-privileges', false );
 
-		// Escape identifiers for SQL
-		// @phpstan-ignore cast.string (PHPStan doesn't infer conditional return type from parent method)
-		$username_escaped = (string) self::esc_sql_ident( $username );
-		// @phpstan-ignore cast.string (PHPStan doesn't infer conditional return type from parent method)
-		$host_escaped    = (string) self::esc_sql_ident( $host );
-		$user_identifier = $username_escaped . '@' . $host_escaped;
+		// MySQL account names in CREATE USER / GRANT ... TO use string literals, not identifiers.
+		$username_escaped = $this->esc_sql_string( $username );
+		$host_escaped     = $this->esc_sql_string( $host );
+		$user_identifier  = $username_escaped . '@' . $host_escaped;
 
 		// Create user
 		$create_query = "CREATE USER {$user_identifier}";
