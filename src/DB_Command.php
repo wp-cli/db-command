@@ -747,7 +747,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$mysqldump_binary = Utils\force_env_on_nix_systems( Utils\get_sql_dump_command() );
 
-		$support_column_statistics = exec( $mysqldump_binary . ' --help | grep "column-statistics"' );
+		$support_column_statistics = $this->command_supports_option( $mysqldump_binary, 'column-statistics' );
 
 		/*
 		 * In case that `--default-character-set` is not given and `DB_CHARSET` is `utf8`,
@@ -857,6 +857,40 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Detected character set of the posts table: {$stdout}.", 'db' );
 
 		return $stdout;
+	}
+
+	/**
+	 * Check whether a shell command advertises support for a specific option in `--help`.
+	 *
+	 * @param string $command Base shell command to inspect.
+	 * @param string $option  Option name to look for.
+	 * @return bool Whether the option is listed in help output.
+	 */
+	private function command_supports_option( $command, $option ) {
+		Utils\check_proc_available( __METHOD__ );
+
+		$descriptors = [
+			0 => STDIN,
+			1 => [ 'pipe', 'w' ],
+			2 => [ 'pipe', 'w' ],
+		];
+		$pipes       = [];
+		$process     = Utils\proc_open_compat( "{$command} --help", $descriptors, $pipes );
+
+		if ( ! $process ) {
+			WP_CLI::debug( "Failed to inspect help output for command: {$command}", 'db' );
+			return false;
+		}
+
+		$stdout = stream_get_contents( $pipes[1] );
+		$stderr = stream_get_contents( $pipes[2] );
+
+		fclose( $pipes[1] );
+		fclose( $pipes[2] );
+
+		proc_close( $process );
+
+		return false !== strpos( $stdout . $stderr, $option );
 	}
 
 	/**
