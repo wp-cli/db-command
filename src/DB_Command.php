@@ -1,6 +1,7 @@
 <?php
 
 use WP_CLI\Formatter;
+use WP_CLI\Process;
 use WP_CLI\Utils;
 use cli\table\Column;
 
@@ -867,30 +868,9 @@ class DB_Command extends WP_CLI_Command {
 	 * @return bool Whether the option is listed in help output.
 	 */
 	private function command_supports_option( $command, $option ) {
-		Utils\check_proc_available( __METHOD__ );
+		$result = Process::create( "{$command} --help" )->run();
 
-		$descriptors = [
-			0 => STDIN,
-			1 => [ 'pipe', 'w' ],
-			2 => [ 'pipe', 'w' ],
-		];
-		$pipes       = [];
-		$process     = Utils\proc_open_compat( "{$command} --help", $descriptors, $pipes );
-
-		if ( ! $process ) {
-			WP_CLI::debug( "Failed to inspect help output for command: {$command}", 'db' );
-			return false;
-		}
-
-		$stdout = stream_get_contents( $pipes[1] );
-		$stderr = stream_get_contents( $pipes[2] );
-
-		fclose( $pipes[1] );
-		fclose( $pipes[2] );
-
-		proc_close( $process );
-
-		return false !== strpos( $stdout . $stderr, $option );
+		return false !== strpos( $result->stdout . $result->stderr, $option );
 	}
 
 	/**
