@@ -683,16 +683,13 @@ class DB_Command extends WP_CLI_Command {
 	 * [--porcelain]
 	 * : Output filename for the exported database.
 	 *
-	 * [--add-drop-table]
-	 * : Include a `DROP TABLE IF EXISTS` statement before each `CREATE TABLE` statement.
-	 *
 	 * [--defaults]
 	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     # Export database with drop query included
-	 *     $ wp db export --add-drop-table
+	 *     # Export database with `--skip-opt` and `--add-drop-table` mysqldump flags
+	 *     $ wp db export --skip-opt --add-drop-table
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export certain tables
@@ -1000,7 +997,22 @@ class DB_Command extends WP_CLI_Command {
 	 * : List tables based on wildcard search, e.g. 'wp_*_options' or 'wp_post?'.
 	 *
 	 * [--scope=<scope>]
-	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
+	 * : List tables based on the scope.
+	 *
+	 * - all: returns 'all' and 'global' tables. No old tables are returned.
+	 * - blog: returns the blog-level tables for the queried blog.
+	 * - global: returns the global tables for the installation, returning multisite tables only on multisite.
+	 * - ms_global: returns the multisite global tables, regardless if current installation is multisite.
+	 * - old: returns tables which are deprecated.
+	 * ---
+	 * default: all
+	 * options:
+	 *   - all
+	 *   - blog
+	 *   - global
+	 *   - ms_global
+	 *   - old
+	 * ---
 	 *
 	 * [--network]
 	 * : List all the tables in a multisite install.
