@@ -659,6 +659,10 @@ class DB_Command extends WP_CLI_Command {
 	 * [--exclude_tables=<tables>]
 	 * : The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
 	 *
+	 * [--exclude_tables_data=<tables>]
+	 * : The comma separated list of specific tables for which only the structure will be exported. Excluding this parameter will export data for all tables in the export.
+	 *   Note: currently only supported by MariaDB.
+	 *
 	 * [--include-tablespaces]
 	 * : Skips adding the default --no-tablespaces option to mysqldump.
 	 *
@@ -704,6 +708,10 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     # Skip all tables matching prefix from the exported database
 	 *     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
+	 *
+	 *     # Skip data of certain tables from the exported database
+	 *     $ wp db export --exclude_tables_data=wp_actionscheduler_logs
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export database to STDOUT.
@@ -802,6 +810,26 @@ class DB_Command extends WP_CLI_Command {
 				$command           .= ' --ignore-table';
 				$command           .= ' %s';
 				$command_esc_args[] = trim( DB_NAME . '.' . $table );
+			}
+		}
+
+		$exclude_tables_data = Utils\get_flag_value( $assoc_args, 'exclude_tables_data', '' );
+		if ( ! empty( $exclude_tables_data ) ) {
+			unset( $assoc_args['exclude_tables_data'] );
+
+			if ( 'mariadb' !== Utils\get_db_type() ) {
+				WP_CLI::error( 'The --exclude_tables_data option is only supported by MariaDB.' );
+			}
+
+			$tables = explode( ',', trim( $exclude_tables_data, ',' ) );
+			foreach ( $tables as $table ) {
+				$table = trim( $table );
+				if ( '' === $table ) {
+					continue;
+				}
+				$command           .= ' --ignore-table-data';
+				$command           .= ' %s';
+				$command_esc_args[] = DB_NAME . '.' . $table;
 			}
 		}
 
