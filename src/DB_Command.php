@@ -592,6 +592,9 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		// Preserve the original defaults flag value before get_defaults_flag_string modifies $assoc_args.
+		$original_assoc_args_for_sql_mode = $assoc_args;
+
 		$command = sprintf(
 			'/usr/bin/env %s%s --no-auto-rehash',
 			$this->get_mysql_command(),
@@ -608,7 +611,7 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( isset( $assoc_args['execute'] ) ) {
 			// Ensure that the SQL mode is compatible with WPDB.
-			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
+			$assoc_args['execute'] = $this->get_sql_mode_query( $original_assoc_args_for_sql_mode ) . $assoc_args['execute'];
 		}
 
 		$is_row_modifying_query = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $assoc_args['execute'] );
@@ -921,6 +924,9 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		// Preserve the original defaults flag value before get_defaults_flag_string modifies $assoc_args.
+		$original_assoc_args_for_sql_mode = $assoc_args;
+
 		// Process options to MySQL.
 		$mysql_args = array_merge(
 			[ 'database' => DB_NAME ],
@@ -937,7 +943,7 @@ class DB_Command extends WP_CLI_Command {
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
 
-			$query = $this->get_sql_mode_query( $assoc_args ) . $query;
+			$query = $this->get_sql_mode_query( $original_assoc_args_for_sql_mode ) . $query;
 
 			$mysql_args['execute'] = sprintf( $query, $result_file );
 		} else {
@@ -1926,8 +1932,11 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args Optional. Associative array of arguments.
 	 */
 	protected function run_query( $query, $assoc_args = [] ) {
+		// Preserve the original defaults flag value before get_defaults_flag_string modifies $assoc_args.
+		$original_assoc_args_for_sql_mode = $assoc_args;
+
 		// Ensure that the SQL mode is compatible with WPDB.
-		$query = $this->get_sql_mode_query( $assoc_args ) . $query;
+		$query = $this->get_sql_mode_query( $original_assoc_args_for_sql_mode ) . $query;
 
 		WP_CLI::debug( "Query: {$query}", 'db' );
 
@@ -2218,6 +2227,7 @@ class DB_Command extends WP_CLI_Command {
 			'ssl-fips-mode',
 			'ssl-key',
 			'ssl-mode',
+			'ssl-verify-server-cert',
 			'syslog',
 			'table',
 			'tee',
@@ -2328,8 +2338,11 @@ class DB_Command extends WP_CLI_Command {
 		static $modes = null;
 
 		// Make sure the provided arguments don't interfere with the expected
-		// output here.
-		$args = [];
+		// output here, while preserving all valid MySQL connection arguments
+		// (including --defaults, --host, --port, --ssl-* options) so that SQL
+		// mode discovery connects to the database with the same configuration
+		// as the main query.
+		$args = self::get_mysql_args( $assoc_args );
 
 		if ( null === $modes ) {
 			$modes = [];
