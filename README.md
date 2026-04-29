@@ -3,7 +3,7 @@ wp-cli/db-command
 
 Performs basic database operations using credentials stored in wp-config.php.
 
-[![Testing](https://github.com/wp-cli/db-command/actions/workflows/testing.yml/badge.svg)](https://github.com/wp-cli/db-command/actions/workflows/testing.yml)
+[![Testing](https://github.com/wp-cli/db-command/actions/workflows/testing.yml/badge.svg)](https://github.com/wp-cli/db-command/actions/workflows/testing.yml) [![Code Coverage](https://codecov.io/gh/wp-cli/db-command/branch/main/graph/badge.svg)](https://codecov.io/gh/wp-cli/db-command/tree/main)
 
 Quick links: [Using](#using) | [Installing](#installing) | [Contributing](#contributing) | [Support](#support)
 
@@ -431,7 +431,7 @@ To confirm the ID for the site you want to query, you can use the `wp site list`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--add-drop-table] [--defaults]
+wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--defaults]
 ~~~
 
 **Alias:** `dump`
@@ -466,16 +466,13 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 	[--porcelain]
 		Output filename for the exported database.
 
-	[--add-drop-table]
-		Include a `DROP TABLE IF EXISTS` statement before each `CREATE TABLE` statement.
-
 	[--defaults]
 		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
-    # Export database with drop query included
-    $ wp db export --add-drop-table
+    # Export database with `--skip-opt` and `--add-drop-table` mysqldump flags
+    $ wp db export --skip-opt --add-drop-table
     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Export certain tables
@@ -648,39 +645,39 @@ Defaults to searching through all tables registered to $wpdb. On multisite, this
 		  - count
 		---
 
-The percent color codes available are:
+		The percent color codes available are:
 
-| Code | Color
-| ---- | -----
-|  %y  | Yellow (dark) (mustard)
-|  %g  | Green (dark)
-|  %b  | Blue (dark)
-|  %r  | Red (dark)
-|  %m  | Magenta (dark)
-|  %c  | Cyan (dark)
-|  %w  | White (dark) (light gray)
-|  %k  | Black
-|  %Y  | Yellow (bright)
-|  %G  | Green (bright)
-|  %B  | Blue (bright)
-|  %R  | Red (bright)
-|  %M  | Magenta (bright)
-|  %C  | Cyan (bright)
-|  %W  | White
-|  %K  | Black (bright) (dark gray)
-|  %3  | Yellow background (dark) (mustard)
-|  %2  | Green background (dark)
-|  %4  | Blue background (dark)
-|  %1  | Red background (dark)
-|  %5  | Magenta background (dark)
-|  %6  | Cyan background (dark)
-|  %7  | White background (dark) (light gray)
-|  %0  | Black background
-|  %8  | Reverse
-|  %U  | Underline
-|  %F  | Blink (unlikely to work)
+		| Code | Color
+		| ---- | -----
+		|  %y  | Yellow (dark) (mustard)
+		|  %g  | Green (dark)
+		|  %b  | Blue (dark)
+		|  %r  | Red (dark)
+		|  %m  | Magenta (dark)
+		|  %c  | Cyan (dark)
+		|  %w  | White (dark) (light gray)
+		|  %k  | Black
+		|  %Y  | Yellow (bright)
+		|  %G  | Green (bright)
+		|  %B  | Blue (bright)
+		|  %R  | Red (bright)
+		|  %M  | Magenta (bright)
+		|  %C  | Cyan (bright)
+		|  %W  | White
+		|  %K  | Black (bright) (dark gray)
+		|  %3  | Yellow background (dark) (mustard)
+		|  %2  | Green background (dark)
+		|  %4  | Blue background (dark)
+		|  %1  | Red background (dark)
+		|  %5  | Magenta background (dark)
+		|  %6  | Cyan background (dark)
+		|  %7  | White background (dark) (light gray)
+		|  %0  | Black background
+		|  %8  | Reverse
+		|  %U  | Underline
+		|  %F  | Blink (unlikely to work)
 
-They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background `%3%k` can be made black on a bright yellow background with `%Y%0%8`.
+		They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background `%3%k` can be made black on a bright yellow background with `%Y%0%8`.
 
 **AVAILABLE FIELDS**
 
@@ -759,7 +756,22 @@ Defaults to all tables registered to the $wpdb database handler.
 		List tables based on wildcard search, e.g. 'wp_*_options' or 'wp_post?'.
 
 	[--scope=<scope>]
-		Can be all, global, ms_global, blog, or old tables. Defaults to all.
+		List tables based on the scope.
+
+		- all: returns 'all' and 'global' tables. No old tables are returned.
+		- blog: returns the blog-level tables for the queried blog.
+		- global: returns the global tables for the installation, returning multisite tables only on multisite.
+		- ms_global: returns the multisite global tables, regardless if current installation is multisite.
+		- old: returns tables which are deprecated.
+		---
+		default: all
+		options:
+		  - all
+		  - blog
+		  - global
+		  - ms_global
+		  - old
+		---
 
 	[--network]
 		List all the tables in a multisite install.
@@ -1019,6 +1031,10 @@ Once you’ve done a bit of searching and discovered there isn’t an open or fi
 Want to contribute a new feature? Please first [open a new issue](https://github.com/wp-cli/db-command/issues/new) to discuss whether the feature is a good fit for the project.
 
 Once you've decided to commit the time to seeing your pull request through, [please follow our guidelines for creating a pull request](https://make.wordpress.org/cli/handbook/pull-requests/) to make sure it's a pleasant experience. See "[Setting up](https://make.wordpress.org/cli/handbook/pull-requests/#setting-up)" for details specific to working on this package locally.
+
+### License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Support
 
