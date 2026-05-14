@@ -2327,9 +2327,12 @@ class DB_Command extends WP_CLI_Command {
 	protected function get_current_sql_modes( $assoc_args ) {
 		static $modes = null;
 
-		// Make sure the provided arguments don't interfere with the expected
-		// output here.
-		$args = [];
+		// Pass through connection parameters like host, dbuser, dbpass
+		// but filter out other parameters that might interfere with the query output.
+		$args = array_merge(
+			self::get_dbuser_dbpass_args( $assoc_args ),
+			self::get_mysql_args( $assoc_args )
+		);
 
 		if ( null === $modes ) {
 			$modes = [];
