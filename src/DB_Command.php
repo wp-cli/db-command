@@ -2369,9 +2369,13 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Returns the correct `mysql` command based on the detected database type.
 	 *
-	 * @return string The appropriate check command.
+	 * Delegates to get_mysql_binary_path() which already probes for the MariaDB
+	 * binary and falls back to MySQL when not available.
+	 *
+	 * @return string The appropriate mysql command.
 	 */
 	private function get_mysql_command() {
-		return 'mariadb' === Utils\get_db_type() ? 'mariadb' : 'mysql';
+		$path = Utils\get_mysql_binary_path();
+		return '' !== $path ? basename( $path ) : 'mysql';
 	}
 }
