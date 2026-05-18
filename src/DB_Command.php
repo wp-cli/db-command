@@ -1973,6 +1973,10 @@ class DB_Command extends WP_CLI_Command {
 			'pass' => DB_PASSWORD,
 		];
 
+		if ( array_key_exists( 'defaults', $assoc_args ) ) {
+			unset( $assoc_args['defaults'] );
+		}
+
 		if ( ! isset( $assoc_args['default-character-set'] )
 			&& defined( 'DB_CHARSET' ) && constant( 'DB_CHARSET' ) ) {
 			$required['default-character-set'] = constant( 'DB_CHARSET' );
@@ -2248,7 +2252,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array $assoc_args Associative args array.
 	 * @return string Either the '--no-defaults' flag for use in the command or an empty string.
 	 */
-	protected function get_defaults_flag_string( &$assoc_args ) {
+	protected function get_defaults_flag_string( $assoc_args ) {
 
 		$flag_string = ' --no-defaults';
 
@@ -2257,9 +2261,6 @@ class DB_Command extends WP_CLI_Command {
 			if ( true === Utils\get_flag_value( $assoc_args, 'defaults' ) ) {
 				$flag_string = '';
 			}
-
-			unset( $assoc_args['defaults'] );
-
 		}
 
 		return $flag_string;
