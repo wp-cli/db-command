@@ -32,6 +32,8 @@ Feature: Display database size
       B
       """
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display only table sizes for a WordPress install
     Given a WP install
 
@@ -81,6 +83,8 @@ Feature: Display database size
       KB
       """
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display only table sizes in a human readable format for a WordPress install
     Given a WP install
 
@@ -213,22 +217,17 @@ Feature: Display database size
     Given a WP install
 
     When I run `wp db size --size_format=b --format=csv`
-    Then STDOUT should contain:
-      """
-      Name,Size
-      .ht.sqlite,"
-      """
+    Then STDOUT should match /Name,Size\n\.ht\.sqlite(\.php)?,"/
 
     But STDOUT should not be a number
 
     When I run `wp db size --size_format=b --format=json`
-    Then STDOUT should contain:
-      """
-      [{"Name":".ht.sqlite","Size":"
-      """
+    Then STDOUT should match /^\[\{"Name":"\.ht\.sqlite(\.php)?","Size":"/
 
     But STDOUT should not be a number
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display all table sizes for a WordPress install
     Given a WP install
 
@@ -289,6 +288,8 @@ Feature: Display database size
       [{"Name":"wp_posts",
       """
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display ordered table sizes for a WordPress install
     Given a WP install
 

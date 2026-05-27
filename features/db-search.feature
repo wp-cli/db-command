@@ -679,19 +679,19 @@ Feature: Search through the database
       :あいうえおかきくけこさしすせとたちつてと
       """
 
-    When I run `wp db search 'ppppp' --before_context=3 --after_context=4`
+    When I run `wp db search "ppppp" --before_context=3 --after_context=4`
     Then STDOUT should contain:
       """
       :ムnöppppp
       """
 
-    When I run `wp db search 'ppppp' --before_context=1 --after_context=1`
+    When I run `wp db search "ppppp" --before_context=1 --after_context=1`
     Then STDOUT should contain:
       """
       :öppppp
       """
 
-    When I run `wp db search 'ムn' --before_context=2 --after_context=1`
+    When I run `wp db search "ムn" --before_context=2 --after_context=1`
     Then STDOUT should contain:
       """
       :llムnö
@@ -701,7 +701,7 @@ Feature: Search through the database
       :llムnöp
       """
 
-    When I run `wp db search 'ムn' --before_context=2 --after_context=2`
+    When I run `wp db search "ムn" --before_context=2 --after_context=2`
     Then STDOUT should contain:
       """
       :llムnöp
@@ -720,7 +720,7 @@ Feature: Search through the database
     # Note ö is o with combining umlaut.
     And I run `wp option update regextst_combining 'lllllムnöppppp'`
 
-    When I run `wp db search 'https?:\/\/example.c.m' --regex`
+    When I run `wp db search "https?:\/\/example.c.m" --regex`
     Then STDOUT should contain:
       """
       wp_options:option_value
@@ -731,10 +731,10 @@ Feature: Search through the database
       [...]
       """
 
-    When I run `wp db search 'unfindable' --regex`
+    When I run `wp db search "unfindable" --regex`
     Then STDOUT should be empty
 
-    When I try `wp db search 'unfindable' --regex --regex-flags='abcd'`
+    When I try `wp db search "unfindable" --regex --regex-flags="abcd"`
     Then STDERR should contain:
       """
       unfindable
@@ -745,42 +745,42 @@ Feature: Search through the database
       """
     And the return code should be 1
 
-    When I try `wp db search 'unfindable' --regex --regex-delimiter='1'`
+    When I try `wp db search "unfindable" --regex --regex-delimiter="1"`
     Then STDERR should be:
       """
       Error: The regex '1unfindable1' fails.
       """
     And the return code should be 1
 
-    When I try `wp db search 'regex error)' --regex`
+    When I try `wp db search "regex error)" --regex`
     Then STDERR should be:
       """
       Error: The regex pattern 'regex error)' with default delimiter 'chr(1)' and no flags fails.
       """
     And the return code should be 1
 
-    When I try `wp db search 'regex error)' --regex --regex-flags=u`
+    When I try `wp db search "regex error)" --regex --regex-flags=u`
     Then STDERR should be:
       """
       Error: The regex pattern 'regex error)' with default delimiter 'chr(1)' and flags 'u' fails.
       """
     And the return code should be 1
 
-    When I try `wp db search 'regex error)' --regex --regex-delimiter=/`
+    When I try `wp db search "regex error)" --regex --regex-delimiter=#`
     Then STDERR should be:
       """
-      Error: The regex '/regex error)/' fails.
+      Error: The regex '#regex error)#' fails.
       """
     And the return code should be 1
 
-    When I try `wp db search 'regex error)' --regex --regex-delimiter=/ --regex-flags=u`
+    When I try `wp db search "regex error)" --regex --regex-delimiter=# --regex-flags=u`
     Then STDERR should be:
       """
-      Error: The regex '/regex error)/u' fails.
+      Error: The regex '#regex error)#u' fails.
       """
     And the return code should be 1
 
-    When I run `wp db search '[0-9é]+?https:' --regex --regex-flags=u --before_context=0 --after_context=0`
+    When I run `wp db search "[0-9é]+?https:" --regex --regex-flags=u --before_context=0 --after_context=0`
     Then STDOUT should contain:
       """
       :1234567890123456789éhttps:
@@ -794,7 +794,7 @@ Feature: Search through the database
       [...]
       """
 
-    When I run `wp db search 'htt(p(s):)\/\/' --regex --before_context=1 --after_context=3`
+    When I run `wp db search "htt(p(s):)\/\/" --regex --before_context=1 --after_context=3`
     Then STDOUT should contain:
       """
       :あhttps://reg [...] éhttps://reg
@@ -804,7 +804,7 @@ Feature: Search through the database
       rege
       """
 
-    When I run `wp db search 'https://' --regex --regex-delimiter=# --before_context=9 --after_context=11`
+    When I run `wp db search "https://" --regex --regex-delimiter=# --before_context=9 --after_context=11`
     Then STDOUT should contain:
       """
       :2345é789あhttps://regextst.co [...] 23456789éhttps://regextst.co
@@ -814,10 +814,10 @@ Feature: Search through the database
       regextst.com
       """
 
-    When I run `wp db search 'httPs://' --regex --regex-delimiter=# --before_context=3 --after_context=0`
+    When I run `wp db search "httPs://" --regex --regex-delimiter=# --before_context=3 --after_context=0`
     Then STDOUT should be empty
 
-    When I run `wp db search 'httPs://' --regex --regex-flags=i --regex-delimiter=# --before_context=3 --after_context=0`
+    When I run `wp db search "httPs://" --regex --regex-flags=i --regex-delimiter=# --before_context=3 --after_context=0`
     Then STDOUT should contain:
       """
       :89あhttps:// [...] 89éhttps://
@@ -827,19 +827,19 @@ Feature: Search through the database
       https://r
       """
 
-    When I run `wp db search 'ppppp' --regex --before_context=3 --after_context=4`
+    When I run `wp db search "ppppp" --regex --before_context=3 --after_context=4`
     Then STDOUT should contain:
       """
       :ムnöppppp
       """
 
-    When I run `wp db search 'ppppp' --regex --before_context=1 --after_context=1`
+    When I run `wp db search "ppppp" --regex --before_context=1 --after_context=1`
     Then STDOUT should contain:
       """
       :öppppp
       """
 
-    When I run `wp db search 'ムn' --before_context=2 --after_context=1`
+    When I run `wp db search "ムn" --before_context=2 --after_context=1`
     Then STDOUT should contain:
       """
       :llムnö
@@ -849,7 +849,7 @@ Feature: Search through the database
       :llムnöp
       """
 
-    When I run `wp db search 'ムn' --regex --before_context=2 --after_context=2`
+    When I run `wp db search "ムn" --regex --before_context=2 --after_context=2`
     Then STDOUT should contain:
       """
       :llムnöp
@@ -859,7 +859,7 @@ Feature: Search through the database
       :llムnöpp
       """
 
-    When I run `wp db search 't\.c' --regex --before_context=1 --after_context=1`
+    When I run `wp db search "t\.c" --regex --before_context=1 --after_context=1`
     Then STDOUT should contain:
       """
       :st.co [...] st.co [...] st.co [...] 0t.co
@@ -869,7 +869,7 @@ Feature: Search through the database
       st.com
       """
 
-    When I run `wp db search 'https://' --regex`
+    When I run `wp db search "https://" --regex`
     Then the return code should be 0
 
   Scenario: Search with output options
@@ -982,6 +982,7 @@ Feature: Search through the database
     And STDOUT should match /\d tables? skipped:.*wp_term_relationships/
     And STDERR should be empty
 
+  @skip-windows
   Scenario: Search with custom colors
     Given a WP install
 
@@ -1060,7 +1061,7 @@ Feature: Search through the database
     When I run `wp db query "SOURCE esc_sql_ident.sql;"`
     Then STDERR should be empty
 
-    When I run `wp db search 'v_v' TABLE --all-tables`
+    When I run `wp db search "v_v" TABLE --all-tables`
     Then STDOUT should be:
       """
       TABLE:VALUES

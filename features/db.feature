@@ -256,7 +256,7 @@ Feature: Perform database operations
       1
       """
 
-    When I run `wp db export /tmp/wp-cli-behat.sql`
+    When I run `wp db export wp-cli-behat.sql`
     Then STDOUT should contain:
       """
       Success: Exported
@@ -283,7 +283,7 @@ Feature: Perform database operations
     When I try `wp post list --format=count`
     Then STDERR should not be empty
 
-    When I run `wp db import /tmp/wp-cli-behat.sql`
+    When I run `wp db import wp-cli-behat.sql`
     Then STDOUT should contain:
       """
       Success: Imported
@@ -312,7 +312,7 @@ Feature: Perform database operations
     When I run `wp db create`
     Then STDOUT should not be empty
 
-    When I run `wp db export /tmp/wp-cli-behat.sql`
+    When I run `wp db export wp-cli-behat.sql`
     Then STDOUT should contain:
       """
       Success: Exported
@@ -383,7 +383,8 @@ Feature: Perform database operations
       Query succeeded. Rows affected: 1
       """
 
-  @require-sqlite
+  @require-sqlite @skip-windows
+  # Skipped on Windows due to persistent file locking issues when run via Behat.
   Scenario: SQLite DB CRUD operations
     Given a WP install
     And a session_yes file:
@@ -420,7 +421,8 @@ Feature: Perform database operations
       total
       """
 
-  @require-sqlite
+  @require-sqlite @skip-windows
+  # Skipped on Windows due to persistent file locking issues when run via Behat.
   Scenario: SQLite DB export/import
     Given a WP install
     And a session_yes file:
@@ -434,7 +436,7 @@ Feature: Perform database operations
       1
       """
 
-    When I run `wp db export /tmp/wp-cli-sqlite-behat.sql`
+    When I run `wp db export wp-cli-sqlite-behat.sql`
     Then STDOUT should contain:
       """
       Success: Exported
@@ -446,7 +448,7 @@ Feature: Perform database operations
       Success: Database reset
       """
 
-    When I run `wp db import /tmp/wp-cli-sqlite-behat.sql`
+    When I run `wp db import wp-cli-sqlite-behat.sql`
     Then STDOUT should contain:
       """
       Success: Imported
