@@ -2645,6 +2645,15 @@ class DB_Command extends WP_CLI_Command {
 				continue;
 			}
 
+			// Handle backslash escaping inside quoted strings (e.g. \' or \").
+			if ( '\\' === $char && ( $in_single_quote || $in_double_quote ) ) {
+				$current .= $char;
+				if ( $i + 1 < $length ) {
+					$current .= $sql[ ++$i ];
+				}
+				continue;
+			}
+
 			if ( "'" === $char && ! $in_double_quote ) {
 				$in_single_quote = ! $in_single_quote;
 			} elseif ( '"' === $char && ! $in_single_quote ) {
