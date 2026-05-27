@@ -147,3 +147,16 @@ Feature: Export a WordPress database
 
     When I try `wp db export --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running initial shell command: /usr/bin/env (mysqldump|mariadb-dump) --no-defaults#
+
+  @skip-sqlite
+  @skip-windows
+  Scenario: Export database when PHP exec() is disabled
+    Given a WP install
+
+    When I try `{INVOKE_WP_CLI_WITH_PHP_ARGS--ddisable_functions=exec} db export wp_cli_test.sql --porcelain`
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      wp_cli_test.sql
+      """
+    And the wp_cli_test.sql file should exist

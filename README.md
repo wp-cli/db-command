@@ -431,7 +431,7 @@ To confirm the ID for the site you want to query, you can use the `wp site list`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--add-drop-table] [--defaults]
+wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--defaults]
 ~~~
 
 **Alias:** `dump`
@@ -466,16 +466,13 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 	[--porcelain]
 		Output filename for the exported database.
 
-	[--add-drop-table]
-		Include a `DROP TABLE IF EXISTS` statement before each `CREATE TABLE` statement.
-
 	[--defaults]
 		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
-    # Export database with drop query included
-    $ wp db export --add-drop-table
+    # Export database with `--skip-opt` and `--add-drop-table` mysqldump flags
+    $ wp db export --skip-opt --add-drop-table
     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Export certain tables

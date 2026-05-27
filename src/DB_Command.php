@@ -1,6 +1,7 @@
 <?php
 
 use WP_CLI\Formatter;
+use WP_CLI\Process;
 use WP_CLI\Utils;
 use cli\table\Column;
 
@@ -664,16 +665,13 @@ class DB_Command extends WP_CLI_Command {
 	 * [--porcelain]
 	 * : Output filename for the exported database.
 	 *
-	 * [--add-drop-table]
-	 * : Include a `DROP TABLE IF EXISTS` statement before each `CREATE TABLE` statement.
-	 *
 	 * [--defaults]
 	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     # Export database with drop query included
-	 *     $ wp db export --add-drop-table
+	 *     # Export database with `--skip-opt` and `--add-drop-table` mysqldump flags
+	 *     $ wp db export --skip-opt --add-drop-table
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export certain tables
@@ -750,7 +748,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$mysqldump_binary = Utils\force_env_on_nix_systems( Utils\get_sql_dump_command() );
 
-		$support_column_statistics = exec( $mysqldump_binary . ' --help | grep "column-statistics"' );
+		$support_column_statistics = $this->command_supports_option( $mysqldump_binary, 'column-statistics' );
 
 		/*
 		 * In case that `--default-character-set` is not given and `DB_CHARSET` is `utf8`,
@@ -860,6 +858,19 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Detected character set of the posts table: {$stdout}.", 'db' );
 
 		return $stdout;
+	}
+
+	/**
+	 * Check whether a shell command advertises support for a specific option in `--help`.
+	 *
+	 * @param string $command Base shell command to inspect.
+	 * @param string $option  Option name to look for.
+	 * @return bool Whether the option is listed in help output.
+	 */
+	private function command_supports_option( $command, $option ) {
+		$result = Process::create( "{$command} --help" )->run();
+
+		return false !== strpos( $result->stdout . $result->stderr, $option );
 	}
 
 	/**
