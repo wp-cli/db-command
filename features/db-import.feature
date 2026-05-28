@@ -87,7 +87,7 @@ Feature: Import a WordPress database
     Then the wp_cli_test.sql file should exist
 
     When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
-    And I run `env PATH={RUN_DIR}/fake-bin:$PATH wp db import wp_cli_test.sql --debug`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db import wp_cli_test.sql --debug`
     Then STDOUT should be:
       """
       Success: Imported from 'wp_cli_test.sql'.
