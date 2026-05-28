@@ -162,6 +162,7 @@ Feature: Check the database
     When I try `wp db check --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysqlcheck|mariadb-check) --no-defaults %s#
 
+  @require-mysql-or-mariadb
   Scenario: Empty DB credentials should not cause empty parameter errors
     Given a WP install
     And a wp-config.php file:
@@ -177,7 +178,12 @@ Feature: Check the database
       """
 
     When I try `wp db check --debug`
-    Then STDERR should contain:
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      Success: Database checked.
+      """
+    And STDERR should contain:
       """
       Debug (db): Final MySQL command:
       """
