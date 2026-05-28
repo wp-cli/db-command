@@ -20,7 +20,7 @@ trait DB_Command_SQLite {
 		static $available = null;
 
 		if ( null === $available ) {
-			$result    = \WP_CLI\Process::create( '/usr/bin/env sqlite3 --version', null, null )->run();
+			$result    = \WP_CLI\Process::create( Utils\force_env_on_nix_systems( 'sqlite3' ) . ' --version', null, null )->run();
 			$available = 0 === $result->return_code;
 		}
 
@@ -149,7 +149,12 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Database does not exist.' );
 		}
 
-		if ( ! unlink( $db_path ) ) {
+		global $wpdb;
+		if ( $wpdb instanceof \wpdb ) {
+			$wpdb->close();
+		}
+
+		if ( ! @unlink( $db_path ) ) {
 			WP_CLI::error( "Could not delete database file: {$db_path}" );
 		}
 
@@ -168,7 +173,12 @@ trait DB_Command_SQLite {
 
 		// Delete if exists.
 		if ( file_exists( $db_path ) ) {
-			if ( ! unlink( $db_path ) ) {
+			global $wpdb;
+			if ( $wpdb instanceof \wpdb ) {
+				$wpdb->close();
+			}
+
+			if ( ! @unlink( $db_path ) ) {
 				WP_CLI::error( "Could not delete database file: {$db_path}" );
 			}
 		}
@@ -292,6 +302,7 @@ trait DB_Command_SQLite {
 		if ( false === $temp_db ) {
 			WP_CLI::error( 'Could not create temporary database file for export.' );
 		}
+		$temp_db = str_replace( '\\', '/', $temp_db );
 
 		if ( ! copy( $db_path, $temp_db ) ) {
 			// Clean up temporary file if the copy operation fails.
@@ -320,7 +331,8 @@ trait DB_Command_SQLite {
 				WP_CLI::error( 'Could not export database' );
 			}
 
-			$all_tables = explode( "\n", $result->stdout );
+			$all_tables = array_map( 'trim', explode( "\n", $result->stdout ) );
+			$all_tables = array_filter( $all_tables );
 
 			$exclude_tables = array_diff( $all_tables, $include_tables );
 		}
@@ -342,27 +354,46 @@ trait DB_Command_SQLite {
 			$drop_statements[]  = sprintf( 'DROP TABLE %s;', $escaped_identifier );
 		}
 
-		if ( ! empty( $drop_statements ) ) {
-			$args         = array_merge( array( 'sqlite3', $temp_db ), $drop_statements );
-			$placeholders = array_fill( 0, count( $args ), '%s' );
-			$command      = Utils\esc_cmd( implode( ' ', $placeholders ), ...$args );
-
-			WP_CLI::debug( "Running shell command: {$command}", 'db' );
-
-			$result = \WP_CLI\Process::create( $command, null, null )->run();
-
-			if ( 0 !== $result->return_code ) {
-				WP_CLI::error( 'Could not export database' );
+		$init_file = tempnam( sys_get_temp_dir(), 'export_init' );
+		if ( false === $init_file ) {
+			if ( file_exists( $temp_db ) ) {
+				unlink( $temp_db );
 			}
+
+			WP_CLI::error( 'Failed to create temporary SQLite init file for export.' );
+		}
+		$init_file = str_replace( '\\', '/', $init_file );
+
+		$init_contents = '';
+		if ( ! empty( $drop_statements ) ) {
+			$init_contents .= implode( "\n", $drop_statements ) . "\n";
+		}
+		$init_contents .= ".dump\n";
+
+		$bytes_written = file_put_contents( $init_file, $init_contents );
+		if ( false === $bytes_written ) {
+			if ( file_exists( $init_file ) ) {
+				unlink( $init_file );
+			}
+			if ( file_exists( $temp_db ) ) {
+				unlink( $temp_db );
+			}
+			WP_CLI::error( 'Could not export database' );
 		}
 
-		$command = Utils\esc_cmd( 'sqlite3 %s .dump', $temp_db );
+		$command = Utils\esc_cmd( 'sqlite3 -init %s %s .exit', $init_file, $temp_db );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$result = \WP_CLI\Process::create( $command, null, null )->run();
+		if ( file_exists( $init_file ) ) {
+			unlink( $init_file );
+		}
 
 		if ( 0 !== $result->return_code ) {
+			if ( file_exists( $temp_db ) ) {
+				unlink( $temp_db );
+			}
 			WP_CLI::error( 'Could not export database' );
 		}
 
@@ -401,6 +432,7 @@ trait DB_Command_SQLite {
 		if ( ! $db_path ) {
 			WP_CLI::error( 'Could not determine the database path.' );
 		}
+		$db_path = str_replace( '\\', '/', $db_path );
 
 		if ( ! file_exists( $db_path ) ) {
 			WP_CLI::error( 'Database does not exist.' );
@@ -431,7 +463,18 @@ trait DB_Command_SQLite {
 		$contents = preg_replace( '/\bCREATE UNIQUE INDEX (?!IF NOT EXISTS\b)/i', 'CREATE UNIQUE INDEX IF NOT EXISTS ', (string) $contents );
 
 		$import_file = tempnam( sys_get_temp_dir(), 'temp.db' );
-		file_put_contents( $import_file, $contents );
+		if ( false === $import_file ) {
+			WP_CLI::error( 'Failed to create a temporary file for SQLite import.' );
+		}
+
+		$import_file   = str_replace( '\\', '/', $import_file );
+		$bytes_written = file_put_contents( $import_file, $contents );
+		if ( false === $bytes_written ) {
+			if ( file_exists( $import_file ) ) {
+				unlink( $import_file );
+			}
+			WP_CLI::error( sprintf( 'Failed to write SQLite import data to temporary file: %s', $import_file ) );
+		}
 
 		// Build sqlite3 command.
 		$command_parts = [ 'sqlite3' ];
@@ -447,6 +490,8 @@ trait DB_Command_SQLite {
 			$command_parts[] = 'PRAGMA journal_mode=MEMORY;';
 		}
 
+		$command_parts[] = '-init';
+		$command_parts[] = $import_file;
 		$command_parts[] = $db_path;
 
 		// Build a properly escaped string command. Process::create() requires a string, not an array.
@@ -455,8 +500,8 @@ trait DB_Command_SQLite {
 			...$command_parts
 		);
 
-		// Pass the .read dot-command as a single quoted argument (sqlite3 reads it as SQL input).
-		$command .= ' ' . escapeshellarg( '.read ' . $import_file );
+		// Pass .exit to quit interactive mode after running -init.
+		$command .= ' ' . escapeshellarg( '.exit' );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
