@@ -171,29 +171,26 @@ Feature: Check the database
       define( 'DB_NAME', 'wp_cli_test' );
       define( 'DB_USER', 'wp_cli_test' );
       define( 'DB_PASSWORD', 'password1' );
-      define( 'DB_HOST', '' );
-      define( 'DB_CHARSET', 'utf8' );
+      define( 'DB_HOST', 'localhost' );
+      define( 'DB_CHARSET', '' );
+      define( 'DB_COLLATE', '' );
       $table_prefix = 'wp_';
       require_once ABSPATH . 'wp-settings.php';
       """
 
-    When I try `wp db check --debug`
+    When I run `wp db check --debug`
     Then the return code should be 0
     And STDOUT should contain:
       """
       Success: Database checked.
       """
-    And STDERR should contain:
+    And STDERR should not contain:
       """
-      Debug (db): Final MySQL command:
+      --default-character-set=''
       """
     And STDERR should not contain:
       """
-      --host=''
-      """
-    And STDERR should not contain:
-      """
-      --host=
+      --default-character-set=
       """
 
   @require-sqlite
