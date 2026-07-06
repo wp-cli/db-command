@@ -164,19 +164,20 @@ Feature: Check the database
 
   @require-mysql-or-mariadb
   Scenario: Empty DB credentials should not cause empty parameter errors
-    Given a WP install
-    And a wp-config.php file:
+    Given an empty directory
+    And WP files
+
+    When I run `wp config create {CORE_CONFIG_SETTINGS} --dbcharset="" --skip-check`
+    Then STDOUT should not be empty
+
+    When I run `cat wp-config.php`
+    Then STDOUT should contain:
       """
-      <?php
-      define( 'DB_NAME', 'wp_cli_test' );
-      define( 'DB_USER', 'wp_cli_test' );
-      define( 'DB_PASSWORD', 'password1' );
-      define( 'DB_HOST', 'localhost' );
       define( 'DB_CHARSET', '' );
-      define( 'DB_COLLATE', '' );
-      $table_prefix = 'wp_';
-      require_once ABSPATH . 'wp-settings.php';
       """
+
+    When I run `wp db create`
+    Then STDOUT should not be empty
 
     When I run `wp db check --debug`
     Then the return code should be 0
