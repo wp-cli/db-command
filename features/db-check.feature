@@ -179,7 +179,7 @@ Feature: Check the database
     When I run `wp db create`
     Then STDOUT should not be empty
 
-    When I run `wp db check --debug`
+    When I try `wp db check --debug`
     Then the return code should be 0
     And STDOUT should contain:
       """
