@@ -472,8 +472,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -593,8 +593,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -837,7 +837,7 @@ class DB_Command extends WP_CLI_Command {
 		list( $stdout, $stderr, $exit_code ) = self::run(
 			sprintf(
 				'%s%s --no-auto-rehash --batch --skip-column-names',
-				$this->get_mysql_command(),
+				Utils\get_mysql_binary_path(),
 				$this->get_defaults_flag_string( $assoc_args )
 			),
 			[ 'execute' => $query ],
@@ -945,8 +945,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -1939,7 +1939,7 @@ class DB_Command extends WP_CLI_Command {
 		self::run(
 			sprintf(
 				'%s%s --no-auto-rehash',
-				$this->get_mysql_command(),
+				Utils\get_mysql_binary_path(),
 				$this->get_defaults_flag_string( $assoc_args )
 			),
 			array_merge( [ 'execute' => $query ], $mysql_args )
@@ -2360,7 +2360,7 @@ class DB_Command extends WP_CLI_Command {
 			list( $stdout, $stderr, $exit_code ) = self::run(
 				sprintf(
 					'%s%s --no-auto-rehash --batch --skip-column-names',
-					$this->get_mysql_command(),
+					Utils\get_mysql_binary_path(),
 					$this->get_defaults_flag_string( $assoc_args )
 				),
 				array_merge( $args, [ 'execute' => 'SELECT @@SESSION.sql_mode' ] ),
@@ -2387,14 +2387,5 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		return $modes;
-	}
-
-	/**
-	 * Returns the correct `mysql` command based on the detected database type.
-	 *
-	 * @return string The appropriate check command.
-	 */
-	private function get_mysql_command() {
-		return 'mariadb' === Utils\get_db_type() ? 'mariadb' : 'mysql';
 	}
 }
