@@ -106,6 +106,25 @@ Feature: Import a WordPress database
       Success: Imported from 'debug.sql'.
       """
 
+  # Regression test for https://github.com/wp-cli/db-command/issues/218
+  # The `--ssl` flag used to be silently dropped by `get_mysql_args()` because it
+  # was missing from the list of allowed MySQL client options, so `wp db import
+  # --ssl` connected without SSL. Assert the flag is now forwarded to the MySQL
+  # command (visible in the debug output before the connection is attempted).
+  # SQLite does not use the MySQL client, hence the tag.
+  @require-mysql-or-mariadb
+  Scenario: Import forwards the --ssl flag to the MySQL client
+    Given a WP install
+
+    When I run `wp db export wp_cli_test.sql`
+    Then the wp_cli_test.sql file should exist
+
+    When I try `wp db import wp_cli_test.sql --ssl --debug`
+    Then STDERR should contain:
+      """
+      --ssl
+      """
+
   # For SQLite this would fail at the `wp db create` step
   # because of the missing plugin/drop-in.
   @require-mysql-or-mariadb
