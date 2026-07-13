@@ -1,6 +1,7 @@
 <?php
 
 use WP_CLI\Formatter;
+use WP_CLI\Process;
 use WP_CLI\Utils;
 use cli\table\Column;
 
@@ -471,8 +472,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -611,8 +612,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -654,7 +655,7 @@ class DB_Command extends WP_CLI_Command {
 	 * Exports the database to a file or to STDOUT.
 	 *
 	 * Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
-	 * `DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid `mysqldump` flags.
+	 * `DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid [`mysqldump` flags](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
 	 *
 	 * ## OPTIONS
 	 *
@@ -766,7 +767,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$mysqldump_binary = Utils\force_env_on_nix_systems( Utils\get_sql_dump_command() );
 
-		$support_column_statistics = exec( $mysqldump_binary . ' --help | grep "column-statistics"' );
+		$support_column_statistics = $this->command_supports_option( $mysqldump_binary, 'column-statistics' );
 
 		/*
 		 * In case that `--default-character-set` is not given and `DB_CHARSET` is `utf8`,
@@ -855,7 +856,7 @@ class DB_Command extends WP_CLI_Command {
 		list( $stdout, $stderr, $exit_code ) = self::run(
 			sprintf(
 				'%s%s --no-auto-rehash --batch --skip-column-names',
-				$this->get_mysql_command(),
+				Utils\get_mysql_binary_path(),
 				$this->get_defaults_flag_string( $assoc_args )
 			),
 			[ 'execute' => $query ],
@@ -876,6 +877,19 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Detected character set of the posts table: {$stdout}.", 'db' );
 
 		return $stdout;
+	}
+
+	/**
+	 * Check whether a shell command advertises support for a specific option in `--help`.
+	 *
+	 * @param string $command Base shell command to inspect.
+	 * @param string $option  Option name to look for.
+	 * @return bool Whether the option is listed in help output.
+	 */
+	private function command_supports_option( $command, $option ) {
+		$result = Process::create( "{$command} --help" )->run();
+
+		return false !== strpos( $result->stdout . $result->stderr, $option );
 	}
 
 	/**
@@ -974,8 +988,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -1986,7 +2000,7 @@ class DB_Command extends WP_CLI_Command {
 		self::run(
 			sprintf(
 				'%s%s --no-auto-rehash',
-				$this->get_mysql_command(),
+				Utils\get_mysql_binary_path(),
 				$this->get_defaults_flag_string( $assoc_args )
 			),
 			array_merge( [ 'execute' => $query ], $mysql_args )
@@ -2036,6 +2050,29 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$final_args = array_merge( $required, $assoc_args );
+
+		// Filter out empty string values to avoid passing empty parameters to MySQL commands
+		// which can cause errors like "Character set '' is not a compiled character set".
+		// However, keep empty strings for credential options like 'user' and 'pass' so that
+		// an explicitly empty value is not silently converted into an omitted parameter.
+		$final_args = array_filter(
+			$final_args,
+			static function ( $value, $key ) {
+				// Always drop null values.
+				if ( null === $value ) {
+					return false;
+				}
+
+				// Preserve explicitly empty credential arguments.
+				if ( '' === $value && in_array( $key, [ 'user', 'pass' ], true ) ) {
+					return true;
+				}
+
+				// For all other options, filter out empty strings.
+				return '' !== $value;
+			},
+			ARRAY_FILTER_USE_BOTH
+		);
 
 		// Adapt ordering of arguments.
 		uksort(
@@ -2255,7 +2292,9 @@ class DB_Command extends WP_CLI_Command {
 			'skip-named-commands',
 			'skip-pager',
 			'skip-reconnect',
+			'skip-ssl',
 			'socket',
+			'ssl',
 			'ssl-ca',
 			'ssl-capath',
 			'ssl-cert',
@@ -2384,7 +2423,7 @@ class DB_Command extends WP_CLI_Command {
 			list( $stdout, $stderr, $exit_code ) = self::run(
 				sprintf(
 					'%s%s --no-auto-rehash --batch --skip-column-names',
-					$this->get_mysql_command(),
+					Utils\get_mysql_binary_path(),
 					$this->get_defaults_flag_string( $assoc_args )
 				),
 				array_merge( $args, [ 'execute' => 'SELECT @@SESSION.sql_mode' ] ),
@@ -2411,15 +2450,6 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		return $modes;
-	}
-
-	/**
-	 * Returns the correct `mysql` command based on the detected database type.
-	 *
-	 * @return string The appropriate check command.
-	 */
-	private function get_mysql_command() {
-		return 'mariadb' === Utils\get_db_type() ? 'mariadb' : 'mysql';
 	}
 
 	/**
