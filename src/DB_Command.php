@@ -2461,8 +2461,7 @@ class DB_Command extends WP_CLI_Command {
 		static $available = null;
 
 		if ( null === $available ) {
-			$binary    = $this->get_mysql_command();
-			$result    = \WP_CLI\Process::create( '/usr/bin/env ' . escapeshellarg( $binary ) . ' --version', null, null )->run();
+			$result    = \WP_CLI\Process::create( Utils\get_mysql_binary_path() . ' --version', null, null )->run();
 			$available = 0 === $result->return_code;
 		}
 
