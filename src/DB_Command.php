@@ -1960,6 +1960,51 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
+	 * Run a single query via PHP's mysqli extension.
+	 *
+	 * Used as a fallback when the MySQL/MariaDB binary is not available.
+	 * Creates a fresh connection per call so that DDL operations like
+	 * DROP DATABASE followed by CREATE DATABASE work correctly.
+	 *
+	 * @param string $query SQL query to execute.
+	 */
+	protected function run_query_via_mysqli( $query ) {
+		$db_host = DB_HOST;
+		$port    = null;
+		$socket  = null;
+
+		if ( ':' === substr( $db_host, 0, 1 ) ) {
+			$socket  = substr( $db_host, 1 );
+			$db_host = 'localhost';
+		} else {
+			$parts   = explode( ':', $db_host, 2 );
+			$db_host = $parts[0];
+			if ( isset( $parts[1] ) ) {
+				$port_or_socket = trim( $parts[1] );
+				if ( '/' === $port_or_socket[0] ) {
+					$socket = $port_or_socket;
+				} else {
+					$port = (int) $port_or_socket;
+				}
+			}
+		}
+
+		// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- direct mysqli required as wpdb fallback when mysql binary is unavailable.
+		$conn = new mysqli( $db_host, DB_USER, DB_PASSWORD, '', null !== $port ? $port : 3306, null !== $socket ? $socket : '' );
+
+		if ( $conn->connect_errno ) {
+			WP_CLI::error( sprintf( 'Failed to connect to the database: %s', $conn->connect_error ) );
+		}
+
+		if ( ! $conn->query( $query ) ) {
+			$error = $conn->error;
+			$conn->close();
+			WP_CLI::error( sprintf( 'Query failed: %s', $error ) );
+		}
+		$conn->close();
+	}
+
+	/**
 	 * Run a single query via the 'mysql' binary.
 	 *
 	 * This includes the necessary setup to make sure the queries behave similar
@@ -1970,20 +2015,8 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	protected function run_query( $query, $assoc_args = [] ) {
 		if ( ! $this->is_mysql_binary_available() ) {
-			WP_CLI::debug( "Query via wpdb: {$query}", 'db' );
-			$this->maybe_load_wpdb();
-			global $wpdb;
-
-			if ( ! isset( $wpdb ) ) {
-				WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
-			}
-
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$result = $wpdb->query( $query );
-			if ( false === $result ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
-				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
-			}
+			WP_CLI::debug( "Query via mysqli: {$query}", 'db' );
+			$this->run_query_via_mysqli( $query );
 			return;
 		}
 
