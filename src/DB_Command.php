@@ -2635,13 +2635,14 @@ class DB_Command extends WP_CLI_Command {
 	 * @return string[] Array of individual SQL statements.
 	 */
 	private function split_sql_statements( $sql ) {
-		$statements      = [];
-		$current         = '';
-		$in_single_quote = false;
-		$in_double_quote = false;
-		$in_comment      = false;
-		$in_line_comment = false;
-		$length          = strlen( $sql );
+		$statements             = [];
+		$current                = '';
+		$in_single_quote        = false;
+		$in_double_quote        = false;
+		$in_comment             = false;
+		$in_line_comment        = false;
+		$in_conditional_comment = false;
+		$length                 = strlen( $sql );
 
 		for ( $i = 0; $i < $length; $i++ ) {
 			$char = $sql[ $i ];
@@ -2662,9 +2663,34 @@ class DB_Command extends WP_CLI_Command {
 				continue;
 			}
 
+			// Handle end of MySQL conditional comment (/*!...*/): resume normal parsing.
+			if ( $in_conditional_comment && ! $in_single_quote && ! $in_double_quote ) {
+				if ( '*' === $char && '/' === $next ) {
+					$in_conditional_comment = false;
+					++$i;
+					continue;
+				}
+				// Fall through: treat content as regular SQL (handled below).
+			}
+
 			if ( '/' === $char && '*' === $next && ! $in_single_quote && ! $in_double_quote ) {
-				$in_comment = true;
-				++$i;
+				$peek = ( $i + 2 < $length ) ? $sql[ $i + 2 ] : '';
+				if ( '!' === $peek ) {
+					// MySQL conditional comment (/*!...*/): execute its SQL content.
+					$in_conditional_comment = true;
+					$i                     += 2; // skip /*!
+					// Skip optional version digits (e.g. 40101 in /*!40101 SET ... */).
+					while ( $i + 1 < $length && ctype_digit( $sql[ $i + 1 ] ) ) {
+						++$i;
+					}
+					// Skip one space following version digits, if present.
+					if ( $i + 1 < $length && ' ' === $sql[ $i + 1 ] ) {
+						++$i;
+					}
+				} else {
+					$in_comment = true;
+					++$i;
+				}
 				continue;
 			}
 
