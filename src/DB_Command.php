@@ -1981,16 +1981,20 @@ class DB_Command extends WP_CLI_Command {
 			$db_host = $parts[0];
 			if ( isset( $parts[1] ) ) {
 				$port_or_socket = trim( $parts[1] );
-				if ( '/' === $port_or_socket[0] ) {
+				if ( '' !== $port_or_socket && '/' === $port_or_socket[0] ) {
 					$socket = $port_or_socket;
-				} else {
+				} elseif ( '' !== $port_or_socket ) {
 					$port = (int) $port_or_socket;
 				}
 			}
 		}
 
+		// When using a socket, pass 0 for port. When a port is explicitly set, use it; otherwise use the default.
+		$port_val   = null !== $port ? $port : 0;
+		$socket_val = null !== $socket ? $socket : '';
+
 		// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- direct mysqli required as wpdb fallback when mysql binary is unavailable.
-		$conn = new mysqli( $db_host, DB_USER, DB_PASSWORD, '', null !== $port ? $port : 3306, null !== $socket ? $socket : '' );
+		$conn = new mysqli( $db_host, DB_USER, DB_PASSWORD, '', $port_val, $socket_val );
 
 		if ( $conn->connect_errno ) {
 			WP_CLI::error( sprintf( 'Failed to connect to the database: %s', $conn->connect_error ) );
