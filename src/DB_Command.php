@@ -1960,55 +1960,6 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Run a single query via PHP's mysqli extension.
-	 *
-	 * Used as a fallback when the MySQL/MariaDB binary is not available.
-	 * Creates a fresh connection per call so that DDL operations like
-	 * DROP DATABASE followed by CREATE DATABASE work correctly.
-	 *
-	 * @param string $query SQL query to execute.
-	 */
-	protected function run_query_via_mysqli( $query ) {
-		$db_host = DB_HOST;
-		$port    = null;
-		$socket  = null;
-
-		if ( ':' === substr( $db_host, 0, 1 ) ) {
-			$socket  = substr( $db_host, 1 );
-			$db_host = 'localhost';
-		} else {
-			$parts   = explode( ':', $db_host, 2 );
-			$db_host = $parts[0];
-			if ( isset( $parts[1] ) ) {
-				$port_or_socket = trim( $parts[1] );
-				if ( '' !== $port_or_socket && '/' === $port_or_socket[0] ) {
-					$socket = $port_or_socket;
-				} elseif ( '' !== $port_or_socket ) {
-					$port = (int) $port_or_socket;
-				}
-			}
-		}
-
-		// When using a socket, pass 0 for port. When a port is explicitly set, use it; otherwise use the default.
-		$port_val   = null !== $port ? $port : 0;
-		$socket_val = null !== $socket ? $socket : '';
-
-		// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- direct mysqli required as wpdb fallback when mysql binary is unavailable.
-		$conn = new mysqli( $db_host, DB_USER, DB_PASSWORD, '', $port_val, $socket_val );
-
-		if ( $conn->connect_errno ) {
-			WP_CLI::error( sprintf( 'Failed to connect to the database: %s', $conn->connect_error ) );
-		}
-
-		if ( ! $conn->query( $query ) ) {
-			$error = $conn->error;
-			$conn->close();
-			WP_CLI::error( sprintf( 'Query failed: %s', $error ) );
-		}
-		$conn->close();
-	}
-
-	/**
 	 * Run a single query via the 'mysql' binary.
 	 *
 	 * This includes the necessary setup to make sure the queries behave similar
@@ -2019,8 +1970,20 @@ class DB_Command extends WP_CLI_Command {
 	 */
 	protected function run_query( $query, $assoc_args = [] ) {
 		if ( ! $this->is_mysql_binary_available() ) {
-			WP_CLI::debug( "Query via mysqli: {$query}", 'db' );
-			$this->run_query_via_mysqli( $query );
+			WP_CLI::debug( "Query via wpdb: {$query}", 'db' );
+			$this->maybe_load_wpdb();
+			global $wpdb;
+
+			if ( ! isset( $wpdb ) ) {
+				WP_CLI::error( 'WordPress database (wpdb) could not be initialized. Please ensure WordPress core files are properly installed.' );
+			}
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$result = $wpdb->query( $query );
+			if ( false === $result ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
+			}
 			return;
 		}
 
@@ -2527,21 +2490,31 @@ class DB_Command extends WP_CLI_Command {
 			define( 'WP_CONTENT_DIR', ABSPATH . 'wp-content' );
 		}
 
-		// Load required WordPress files if not already loaded.
+		// Load prerequisite files if not already loaded.
 		if ( ! function_exists( 'add_action' ) ) {
-			$required_files = [
-				ABSPATH . WPINC . '/load.php',
-				ABSPATH . WPINC . '/compat.php',
-				ABSPATH . WPINC . '/plugin.php',
-				// Defines `wp_debug_backtrace_summary()` as used by wpdb.
-				ABSPATH . WPINC . '/functions.php',
-				ABSPATH . WPINC . '/class-wpdb.php',
-			];
-
-			foreach ( $required_files as $required_file ) {
-				if ( file_exists( $required_file ) ) {
-					require_once $required_file;
+			foreach ( [ 'load.php', 'compat.php', 'plugin.php' ] as $file ) {
+				$path = ABSPATH . WPINC . '/' . $file;
+				if ( file_exists( $path ) ) {
+					require_once $path;
 				}
+			}
+		}
+
+		// Load class-wpdb.php if the wpdb class is not yet available.
+		// This is checked independently of add_action, since WP-CLI's config loading
+		// may have already loaded plugin.php (defining add_action) without loading wpdb.
+		if ( ! class_exists( 'wpdb' ) ) {
+			// Defines `wp_debug_backtrace_summary()` as used by wpdb.
+			if ( ! function_exists( 'wp_debug_backtrace_summary' ) ) {
+				$functions_file = ABSPATH . WPINC . '/functions.php';
+				if ( file_exists( $functions_file ) ) {
+					require_once $functions_file;
+				}
+			}
+
+			$wpdb_file = ABSPATH . WPINC . '/class-wpdb.php';
+			if ( file_exists( $wpdb_file ) ) {
+				require_once $wpdb_file;
 			}
 		}
 

@@ -405,7 +405,7 @@ Feature: Perform database operations
       """
     And STDERR should contain:
       """
-      Query via mysqli:
+      Query via wpdb:
       """
 
   @require-mysql-or-mariadb
@@ -430,7 +430,7 @@ Feature: Perform database operations
       """
     And STDERR should contain:
       """
-      Query via mysqli:
+      Query via wpdb:
       """
 
   # Skipped on Windows due to persistent file locking issues when run via Behat.
