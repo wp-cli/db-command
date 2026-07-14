@@ -606,7 +606,6 @@ class DB_Command extends WP_CLI_Command {
 			}
 
 			WP_CLI::debug( 'MySQL/MariaDB binary not available, falling back to wpdb.', 'db' );
-			$this->maybe_load_wpdb();
 			$this->wpdb_query( $query, $assoc_args );
 			return;
 		}
@@ -958,7 +957,6 @@ class DB_Command extends WP_CLI_Command {
 			}
 
 			WP_CLI::debug( 'MySQL/MariaDB binary not available, falling back to wpdb for import.', 'db' );
-			$this->maybe_load_wpdb();
 			$this->wpdb_import( (string) $sql_content, $assoc_args );
 			WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
 			return;
@@ -1969,37 +1967,8 @@ class DB_Command extends WP_CLI_Command {
 	 * @param string $query SQL query to execute.
 	 */
 	protected function run_query_via_mysqli( $query ) {
-		$db_host = DB_HOST;
-		$port    = null;
-		$socket  = null;
-
-		if ( ':' === substr( $db_host, 0, 1 ) ) {
-			$socket  = substr( $db_host, 1 );
-			$db_host = 'localhost';
-		} else {
-			$parts   = explode( ':', $db_host, 2 );
-			$db_host = $parts[0];
-			if ( isset( $parts[1] ) ) {
-				$port_or_socket = trim( $parts[1] );
-				if ( '' !== $port_or_socket && '/' === $port_or_socket[0] ) {
-					$socket = $port_or_socket;
-				} elseif ( '' !== $port_or_socket ) {
-					$port = (int) $port_or_socket;
-				}
-			}
-		}
-
-		// When using a socket, pass 0 for port. When a port is explicitly set, use it; otherwise use the default.
-		$port_value   = null !== $port ? $port : 0;
-		$socket_value = null !== $socket ? $socket : '';
-
-		// No database is selected intentionally — DDL operations like DROP/CREATE DATABASE work at the server level.
-		// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- direct mysqli required as wpdb fallback when mysql binary is unavailable.
-		$conn = new mysqli( $db_host, DB_USER, DB_PASSWORD, '', $port_value, $socket_value );
-
-		if ( $conn->connect_errno ) {
-			WP_CLI::error( sprintf( 'Failed to connect to the database: %s', $conn->connect_error ) );
-		}
+		// No database selected — DDL operations like DROP/CREATE DATABASE work at the server level.
+		$conn = $this->get_db_connection( false );
 
 		if ( ! $conn->query( $query ) ) {
 			$error = $conn->error;
@@ -2507,118 +2476,101 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Load WordPress's wpdb if not already available.
+	 * Open a mysqli connection using the WordPress database credentials.
 	 *
-	 * Loads the minimal required WordPress files to make $wpdb available,
-	 * including any db.php drop-in (e.g., HyperDB or other custom drivers).
+	 * Used as a fallback when the mysql/mariadb binary is not available.
+	 * Parses DB_HOST the same way WordPress does (host:port, host:/socket, :/socket).
+	 *
+	 * @param bool $select_db Whether to select DB_NAME on connect. Pass false for
+	 *                        server-level DDL (DROP/CREATE DATABASE).
+	 * @return mysqli Connected mysqli instance. Calls WP_CLI::error() on failure.
 	 */
-	protected function maybe_load_wpdb() {
-		global $wpdb;
+	protected function get_db_connection( $select_db = true ) {
+		$db_host = DB_HOST;
+		$port    = null;
+		$socket  = null;
 
-		if ( isset( $wpdb ) ) {
-			return;
-		}
-
-		if ( ! defined( 'WPINC' ) ) {
-			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
-			define( 'WPINC', 'wp-includes' );
-		}
-
-		if ( ! defined( 'WP_CONTENT_DIR' ) ) {
-			define( 'WP_CONTENT_DIR', ABSPATH . 'wp-content' );
-		}
-
-		// Load prerequisite files if not already loaded.
-		if ( ! function_exists( 'add_action' ) ) {
-			foreach ( [ 'load.php', 'compat.php', 'plugin.php' ] as $file ) {
-				$path = ABSPATH . WPINC . '/' . $file;
-				if ( file_exists( $path ) ) {
-					require_once $path;
+		if ( ':' === substr( $db_host, 0, 1 ) ) {
+			$socket  = substr( $db_host, 1 );
+			$db_host = 'localhost';
+		} else {
+			$parts   = explode( ':', $db_host, 2 );
+			$db_host = $parts[0];
+			if ( isset( $parts[1] ) ) {
+				$port_or_socket = trim( $parts[1] );
+				if ( '' !== $port_or_socket && '/' === $port_or_socket[0] ) {
+					$socket = $port_or_socket;
+				} elseif ( '' !== $port_or_socket ) {
+					$port = (int) $port_or_socket;
 				}
 			}
 		}
 
-		// Load class-wpdb.php if the wpdb class is not yet available.
-		// This is checked independently of add_action, since WP-CLI's config loading
-		// may have already loaded plugin.php (defining add_action) without loading wpdb.
-		if ( ! class_exists( 'wpdb' ) ) {
-			// Defines `wp_debug_backtrace_summary()` as used by wpdb.
-			if ( ! function_exists( 'wp_debug_backtrace_summary' ) ) {
-				$functions_file = ABSPATH . WPINC . '/functions.php';
-				if ( file_exists( $functions_file ) ) {
-					require_once $functions_file;
-				}
-			}
+		$port_value   = null !== $port ? $port : 0;
+		$socket_value = null !== $socket ? $socket : '';
+		$database     = $select_db ? DB_NAME : '';
 
-			$wpdb_file = ABSPATH . WPINC . '/class-wpdb.php';
-			if ( file_exists( $wpdb_file ) ) {
-				require_once $wpdb_file;
-			}
+		// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- direct mysqli required as fallback when mysql binary is unavailable.
+		$conn = new mysqli( $db_host, DB_USER, DB_PASSWORD, $database, $port_value, $socket_value );
+
+		if ( $conn->connect_errno ) {
+			WP_CLI::error( sprintf( 'Failed to connect to the database: %s', $conn->connect_error ) );
 		}
 
-		// Load db.php drop-in if it exists (e.g., HyperDB or other custom drivers).
-		$db_dropin_path = WP_CONTENT_DIR . '/db.php';
-		if ( file_exists( $db_dropin_path ) && ! $this->is_sqlite() ) {
-			require_once $db_dropin_path;
-		}
-
-		// If $wpdb is still not set (e.g. no drop-in), create a new instance using the DB credentials from wp-config.php.
-		if ( ! isset( $GLOBALS['wpdb'] ) && class_exists( 'wpdb' ) ) {
-			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-			$wpdb = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
-			if ( isset( $GLOBALS['table_prefix'] ) && is_string( $GLOBALS['table_prefix'] ) ) {
-				$wpdb->set_prefix( $GLOBALS['table_prefix'] );
-			}
-		}
+		return $conn;
 	}
 
 	/**
-	 * Execute a query against the database using wpdb.
+	 * Execute a query against the database using mysqli.
 	 *
 	 * Used as a fallback when the mysql/mariadb binary is not available.
+	 * Outputs results in the same tab-separated format as the mysql binary.
 	 *
 	 * @param string $query      SQL query to execute.
 	 * @param array  $assoc_args Associative arguments.
 	 */
 	protected function wpdb_query( $query, $assoc_args = [] ) {
-		global $wpdb;
+		$conn = $this->get_db_connection();
 
-		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
-			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
-		}
-
-		$skip_column_names = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
-
-		$is_row_modifying_query = preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $query );
+		$skip_column_names      = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
+		$is_row_modifying_query = (bool) preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $query );
 
 		if ( $is_row_modifying_query ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$affected_rows = $wpdb->query( $query );
-			if ( false === $affected_rows ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
-				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
+			if ( ! $conn->query( $query ) ) {
+				$error = $conn->error;
+				$conn->close();
+				WP_CLI::error( "Query failed: {$error}" );
 			}
+			$affected_rows = $conn->affected_rows;
+			$conn->close();
 			WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
 		} else {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$results = $wpdb->get_results( $query, ARRAY_A );
-
-			if ( $wpdb->last_error ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
-				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
+			$result = $conn->query( $query );
+			if ( ! $result ) {
+				$error = $conn->error;
+				$conn->close();
+				WP_CLI::error( "Query failed: {$error}" );
 			}
 
-			if ( empty( $results ) ) {
-				return;
+			if ( $result instanceof mysqli_result ) {
+				$fields  = $result->fetch_fields();
+				$headers = $fields ? array_column( (array) $fields, 'name' ) : [];
+				if ( ! $skip_column_names && ! empty( $headers ) ) {
+					WP_CLI::line( implode( "\t", $headers ) );
+				}
+				$all_rows = $result->fetch_all( MYSQLI_NUM );
+				foreach ( $all_rows as $row ) {
+					WP_CLI::line( implode( "\t", array_map( 'strval', $row ) ) );
+				}
+				$result->free();
 			}
 
-			$headers = array_keys( $results[0] );
-			$this->display_query_results( $headers, $results, $skip_column_names );
+			$conn->close();
 		}
 	}
 
 	/**
-	 * Import SQL content into the database using wpdb.
+	 * Import SQL content into the database using mysqli.
 	 *
 	 * Used as a fallback when the mysql/mariadb binary is not available.
 	 *
@@ -2626,21 +2578,14 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args  Associative arguments.
 	 */
 	protected function wpdb_import( $sql_content, $assoc_args = [] ) {
-		global $wpdb;
-
-		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
-			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
-		}
+		$conn = $this->get_db_connection();
 
 		$skip_optimization = Utils\get_flag_value( $assoc_args, 'skip-optimization', false );
 
 		if ( ! $skip_optimization ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$wpdb->query( 'SET autocommit = 0' );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$wpdb->query( 'SET unique_checks = 0' );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$wpdb->query( 'SET foreign_key_checks = 0' );
+			$conn->query( 'SET autocommit = 0' );
+			$conn->query( 'SET unique_checks = 0' );
+			$conn->query( 'SET foreign_key_checks = 0' );
 		}
 
 		$statements = $this->split_sql_statements( $sql_content );
@@ -2650,28 +2595,24 @@ class DB_Command extends WP_CLI_Command {
 			if ( '' === $statement ) {
 				continue;
 			}
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$result = $wpdb->query( $statement );
-			if ( false === $result ) {
+			if ( ! $conn->query( $statement ) ) {
+				$error = $conn->error;
 				if ( ! $skip_optimization ) {
-					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-					$wpdb->query( 'ROLLBACK' );
+					$conn->query( 'ROLLBACK' );
 				}
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
-				WP_CLI::error( 'Import failed: ' . strip_tags( $wpdb->last_error ) );
+				$conn->close();
+				WP_CLI::error( "Import failed: {$error}" );
 			}
 		}
 
 		if ( ! $skip_optimization ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$wpdb->query( 'COMMIT' );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$wpdb->query( 'SET autocommit = 1' );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$wpdb->query( 'SET unique_checks = 1' );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$wpdb->query( 'SET foreign_key_checks = 1' );
+			$conn->query( 'COMMIT' );
+			$conn->query( 'SET autocommit = 1' );
+			$conn->query( 'SET unique_checks = 1' );
+			$conn->query( 'SET foreign_key_checks = 1' );
 		}
+
+		$conn->close();
 	}
 
 	/**
