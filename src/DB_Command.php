@@ -2554,13 +2554,23 @@ class DB_Command extends WP_CLI_Command {
 
 			if ( $result instanceof mysqli_result ) {
 				$fields  = $result->fetch_fields();
-				$headers = $fields ? array_column( (array) $fields, 'name' ) : [];
+				$headers = $fields ? array_column( $fields, 'name' ) : [];
 				if ( ! $skip_column_names && ! empty( $headers ) ) {
 					WP_CLI::line( implode( "\t", $headers ) );
 				}
 				$all_rows = $result->fetch_all( MYSQLI_NUM );
 				foreach ( $all_rows as $row ) {
-					WP_CLI::line( implode( "\t", array_map( 'strval', $row ) ) );
+					WP_CLI::line(
+						implode(
+							"\t",
+							array_map(
+								static function ( $v ) {
+									return null === $v ? 'NULL' : (string) $v;
+								},
+								$row
+							)
+						)
+					);
 				}
 				$result->free();
 			}
