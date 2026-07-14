@@ -2674,19 +2674,21 @@ class DB_Command extends WP_CLI_Command {
 			}
 
 			if ( '/' === $char && '*' === $next && ! $in_single_quote && ! $in_double_quote ) {
-				$peek = ( $i + 2 < $length ) ? $sql[ $i + 2 ] : '';
-				if ( '!' === $peek ) {
+				$char_after_asterisk = ( $i + 2 < $length ) ? $sql[ $i + 2 ] : '';
+				if ( '!' === $char_after_asterisk ) {
 					// MySQL conditional comment (/*!...*/): execute its SQL content.
 					$in_conditional_comment = true;
-					$i                     += 2; // skip /*!
-					// Skip optional version digits (e.g. 40101 in /*!40101 SET ... */).
+					$i                     += 2; // skip past /*!; $i now points at !
+					// Advance past optional version digits (e.g. "40101" in /*!40101 SET ... */).
+					// Loop checks the NEXT character so $i ends at the last digit.
 					while ( $i + 1 < $length && ctype_digit( $sql[ $i + 1 ] ) ) {
 						++$i;
 					}
-					// Skip one space following version digits, if present.
+					// Skip one space following the version digits, if present.
 					if ( $i + 1 < $length && ' ' === $sql[ $i + 1 ] ) {
 						++$i;
 					}
+					// The for-loop's own ++$i then lands on the first SQL char.
 				} else {
 					$in_comment = true;
 					++$i;
