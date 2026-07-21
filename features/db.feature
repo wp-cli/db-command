@@ -181,14 +181,18 @@ Feature: Perform database operations
       """
     And STDOUT should be empty
 
-    # Verbose option prints to STDERR.
-    When I try `wp db repair --verbose`
+    # `--verbose` makes the check command print progress information. MySQL's
+    # mysqlcheck writes "# Connecting to ..." to STDERR at a single --verbose,
+    # while MariaDB's mariadb-check writes "Processing databases" to STDOUT and
+    # only prints connection information at a higher verbosity. Merge the streams
+    # and accept either client's marker.
+    When I try `wp db repair --verbose 2>&1`
     Then the return code should be 0
-    And STDERR should contain:
+    And STDOUT should match /(?:# Connecting to |Processing databases)/
+    And STDOUT should contain:
       """
-      Connecting
+      Success: Database repaired.
       """
-    And STDOUT should not be empty
 
   @skip-sqlite
   Scenario: db repair with --quiet flag should only show errors
