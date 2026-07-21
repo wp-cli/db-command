@@ -928,13 +928,12 @@ class DB_Command extends WP_CLI_Command {
 			self::get_mysql_args( $assoc_args )
 		);
 
-		// Adapt the session SQL mode to be WordPress-compatible via --init-command,
-		// so it runs on connect before any SQL is read. This covers both file and
-		// STDIN imports, and needs no separate probe connection.
+		// Adapt the session SQL mode to be WordPress-compatible. When there is an
+		// --execute batch (importing from a file), prepend it there so it composes
+		// with any init command the caller already set (via --init-command or an
+		// option file). When importing from STDIN there is no --execute, so apply
+		// it via --init-command instead. Either way, no separate probe connection.
 		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
-		if ( '' !== $sql_mode_compat && ! isset( $mysql_args['init-command'] ) ) {
-			$mysql_args['init-command'] = $sql_mode_compat;
-		}
 
 		if ( '-' !== $result_file ) {
 			if ( ! is_readable( $result_file ) ) {
@@ -945,9 +944,17 @@ class DB_Command extends WP_CLI_Command {
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
 
+			if ( '' !== $sql_mode_compat ) {
+				$query = $sql_mode_compat . '; ' . $query;
+			}
+
 			$mysql_args['execute'] = sprintf( $query, $result_file );
 		} else {
 			$result_file = 'STDIN';
+
+			if ( '' !== $sql_mode_compat && ! isset( $mysql_args['init-command'] ) ) {
+				$mysql_args['init-command'] = $sql_mode_compat;
+			}
 		}
 
 		$command = sprintf(
@@ -1932,19 +1939,20 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args Optional. Associative array of arguments.
 	 */
 	protected function run_query( $query, $assoc_args = [] ) {
+		// Adapt the session SQL mode to be WordPress-compatible by prepending it to
+		// the executed batch, so it composes with any init command the caller set
+		// and needs no separate probe connection.
+		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
+		if ( '' !== $sql_mode_compat ) {
+			$query = $sql_mode_compat . '; ' . $query;
+		}
+
 		WP_CLI::debug( "Query: {$query}", 'db' );
 
 		$mysql_args = array_merge(
 			self::get_dbuser_dbpass_args( $assoc_args ),
 			self::get_mysql_args( $assoc_args )
 		);
-
-		// Adapt the session SQL mode to be WordPress-compatible via --init-command
-		// (runs on connect, needs no separate probe connection).
-		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
-		if ( '' !== $sql_mode_compat && ! isset( $mysql_args['init-command'] ) ) {
-			$mysql_args['init-command'] = $sql_mode_compat;
-		}
 
 		self::run(
 			sprintf(
@@ -2317,20 +2325,22 @@ class DB_Command extends WP_CLI_Command {
 	 * Get the statement that strips the SQL modes incompatible with WordPress
 	 * from the current session.
 	 *
-	 * This is handed to the MySQL client as `--init-command`, so it runs on the
-	 * very same connection right after connecting and before any SQL is read.
-	 * Imports therefore behave like WordPress Core (which disables these modes in
-	 * `wpdb`), including when the dump is streamed from STDIN. Unlike the previous
-	 * implementation, no separate connection is opened to first discover the
-	 * current modes, so it works regardless of the connection options in play
-	 * (custom `--host`, `--defaults`, SSL/TLS, sockets, ...).
+	 * The statement is run on the same connection as the import or query -- either
+	 * prepended to the executed batch, or via `--init-command` when importing from
+	 * STDIN (where there is no executed batch). Imports therefore behave like
+	 * WordPress Core (which disables these modes in `wpdb`), including when the
+	 * dump is streamed from STDIN. Unlike the previous implementation, no separate
+	 * connection is opened to first discover the current modes, so it works
+	 * regardless of the connection options in play (custom `--host`, `--defaults`,
+	 * SSL/TLS, sockets, ...).
 	 *
 	 * Returns an empty string when the `--skip-sql-mode-compat` flag is set.
 	 *
 	 * @see https://github.com/WordPress/wordpress-develop/blob/5.4.0/src/wp-includes/wp-db.php#L559-L572
 	 *
 	 * @param array $assoc_args The associative argument array passed to the command.
-	 * @return string SQL statement to run via `--init-command`, or an empty string.
+	 * @return string SQL statement that sets a WordPress-compatible SQL mode, or an
+	 *                empty string.
 	 */
 	protected function get_sql_mode_compat_statement( $assoc_args = [] ) {
 		if ( Utils\get_flag_value( $assoc_args, 'skip-sql-mode-compat', false ) ) {

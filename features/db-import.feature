@@ -256,10 +256,10 @@ Feature: Import a WordPress database
     When I run `wp db export wp_cli_test.sql`
     Then the wp_cli_test.sql file should exist
 
-    # The WordPress-compatibility mode adaptation is applied via the MySQL client's
-    # --init-command on the same connection, so it is visible in the debug output
-    # and no separate mode probe runs (which is what used to break with custom
-    # connection options).
+    # The WordPress-compatibility mode adaptation runs on the same import
+    # connection (prepended to the executed statement for a file import), so it is
+    # visible in the debug output and no separate mode probe runs (which is what
+    # used to break with custom connection options).
     When I try `wp db import wp_cli_test.sql --debug`
     Then the return code should be 0
     And STDERR should contain:
@@ -338,4 +338,22 @@ Feature: Import a WordPress database
     Then STDOUT should contain:
       """
       1
+      """
+
+  # The compatibility statement must compose with a caller-supplied --init-command
+  # rather than replace it. A file import prepends it to the executed batch, so the
+  # caller's own init command still runs and the zero-date import still succeeds.
+  @require-mysql-or-mariadb
+  Scenario: `wp db import` keeps SQL-mode compatibility when the caller sets --init-command
+    Given a WP install
+    And a zerodate_compose.sql file:
+      """
+      CREATE TABLE wp_cli_zd_compose (id int NOT NULL, d datetime NOT NULL DEFAULT '0000-00-00 00:00:00');
+      INSERT INTO wp_cli_zd_compose (id, d) VALUES (1, '0000-00-00 00:00:00');
+      """
+
+    When I run `wp db import zerodate_compose.sql --init-command="SET @x = 1"`
+    Then STDOUT should contain:
+      """
+      Success: Imported from 'zerodate_compose.sql'.
       """
