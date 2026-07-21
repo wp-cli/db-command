@@ -91,33 +91,69 @@ Feature: Query the database with WordPress' MySQL config
     When I try `wp db query --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /([^/]+/)+(mysql|mariadb) --no-defaults --no-auto-rehash#
 
-  Scenario: SQL modes do not include any of the modes incompatible with WordPress
+  # `wp db query` adapts the session SQL mode to be WordPress-compatible the same
+  # way `wp db import` does: via --init-command on the query's own connection, with
+  # no separate mode probe. This keeps statements against WordPress's zero-date
+  # schema (e.g. `ALTER TABLE wp_blogs ...`, `CREATE TABLE ... AS SELECT` from a
+  # WordPress table) working on servers whose default SQL mode is strict.
+  @require-mysql-or-mariadb
+  Scenario: `wp db query` adapts the SQL mode by default without a separate mode probe
     Given a WP install
 
-    When I try `wp db query 'SELECT @@SESSION.sql_mode;' --debug`
-    Then STDOUT should not contain:
+    When I try `wp db query 'SELECT 1;' --debug`
+    Then the return code should be 0
+    And STDERR should contain:
       """
-      NO_ZERO_DATE
+      SET SESSION sql_mode
       """
-    And STDOUT should not contain:
+    And STDERR should not contain:
       """
-      ONLY_FULL_GROUP_BY
+      Failed to get current SQL modes
       """
-    And STDOUT should not contain:
+
+  @require-mysql-or-mariadb
+  Scenario: `wp db query --skip-sql-mode-compat` runs under the server's own SQL modes
+    Given a WP install
+
+    When I try `wp db query 'SELECT 1;' --skip-sql-mode-compat --debug`
+    Then the return code should be 0
+    And STDERR should not contain:
       """
-      STRICT_TRANS_TABLES
+      SET SESSION sql_mode
       """
-    And STDOUT should not contain:
+
+  # Regression test for https://github.com/wp-cli/db-command/issues/311
+  # Passing connection options alongside an inline query used to fail, because the
+  # old SQL-mode probe opened a *second* connection that ignored those very options
+  # (custom --host, --defaults, SSL/TLS, sockets, ...) and then aborted the whole
+  # command with "Failed to get current SQL modes". The probe is gone -- the
+  # compatibility mode is now applied via --init-command on the query's own
+  # connection -- so the inline query runs directly under the given options.
+  Scenario: `wp db query` with an inline query and connection options does not trigger a failing mode probe
+    Given a WP install
+
+    When I try `wp db query 'SELECT 1;' --defaults --debug`
+    Then STDERR should not contain:
       """
-      STRICT_ALL_TABLES
+      Failed to get current SQL modes
       """
-    And STDOUT should not contain:
+
+  # Regression test for https://github.com/wp-cli/db-command/issues/309
+  # MariaDB 11.4+ verifies the server certificate by default and prints a warning to
+  # STDERR (or fails) against the auto-generated self-signed certificate, which broke
+  # the tests. `run()` now opts out via `--skip-ssl-verify-server-cert` on MariaDB, and
+  # both `ssl-verify-server-cert` and its `skip-` variant are allowed so the behaviour
+  # can be overridden. Assert the flag is forwarded to the MySQL client (visible in the
+  # debug output before the connection is attempted). SQLite does not use the MySQL
+  # client, hence the tag.
+  @require-mysql-or-mariadb
+  Scenario: Query forwards the ssl-verify-server-cert flags to the MySQL client
+    Given a WP install
+
+    When I try `wp db query "SELECT 1" --skip-ssl-verify-server-cert --debug`
+    Then STDERR should contain:
       """
-      TRADITIONAL
-      """
-    And STDOUT should not contain:
-      """
-      ANSI
+      skip-ssl-verify-server-cert
       """
 
   @require-mysql-or-mariadb
