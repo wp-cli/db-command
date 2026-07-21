@@ -1988,6 +1988,17 @@ class DB_Command extends WP_CLI_Command {
 			unset( $assoc_args['dbpass'], $assoc_args['password'] );
 		}
 
+		// MariaDB 11.4 enables TLS server certificate verification by default. WP-CLI
+		// connects the same way WordPress does, which does not verify the certificate,
+		// and against MariaDB's auto-generated self-signed certificate verification
+		// either just warns on STDERR that it disabled itself or fails outright. Opt out
+		// explicitly to keep the previous behaviour, unless the user asked to verify.
+		if ( 'mariadb' === Utils\get_db_type()
+			&& ! isset( $assoc_args['ssl-verify-server-cert'] )
+			&& ! isset( $assoc_args['skip-ssl-verify-server-cert'] ) ) {
+			$required['skip-ssl-verify-server-cert'] = true;
+		}
+
 		$final_args = array_merge( $required, $assoc_args );
 
 		// Filter out empty string values to avoid passing empty parameters to MySQL commands
@@ -2232,6 +2243,7 @@ class DB_Command extends WP_CLI_Command {
 			'skip-pager',
 			'skip-reconnect',
 			'skip-ssl',
+			'skip-ssl-verify-server-cert',
 			'socket',
 			'ssl',
 			'ssl-ca',
@@ -2243,6 +2255,7 @@ class DB_Command extends WP_CLI_Command {
 			'ssl-fips-mode',
 			'ssl-key',
 			'ssl-mode',
+			'ssl-verify-server-cert',
 			'syslog',
 			'table',
 			'tee',
