@@ -247,3 +247,114 @@ Feature: Import a WordPress database
       """
       🍣
       """
+
+  # SQLite does not use the MySQL client and has no concept of SQL modes.
+  @require-mysql-or-mariadb
+  Scenario: `wp db import` adapts the SQL mode via --init-command by default
+    Given a WP install
+
+    When I run `wp db export wp_cli_test.sql`
+    Then the wp_cli_test.sql file should exist
+
+    # The WordPress-compatibility mode adaptation runs on the same import
+    # connection via --init-command, so it is visible in the debug output and no
+    # separate mode probe runs (which is what used to break with custom connection
+    # options).
+    When I try `wp db import wp_cli_test.sql --debug`
+    Then the return code should be 0
+    And STDERR should contain:
+      """
+      SET SESSION sql_mode
+      """
+    And STDERR should not contain:
+      """
+      Failed to get current SQL modes
+      """
+
+  @require-mysql-or-mariadb
+  Scenario: `wp db import --skip-sql-mode-compat` imports under the server's own SQL modes
+    Given a WP install
+
+    When I run `wp db export wp_cli_test.sql`
+    Then the wp_cli_test.sql file should exist
+
+    When I try `wp db import wp_cli_test.sql --skip-sql-mode-compat --debug`
+    Then the return code should be 0
+    And STDERR should not contain:
+      """
+      SET SESSION sql_mode
+      """
+
+  # Regression test for the WordPress-compatibility behavior. WordPress schema
+  # declares datetime columns as `DEFAULT '0000-00-00 00:00:00'`, so real dumps
+  # carry zero-date values. On servers whose default SQL mode includes
+  # NO_ZERO_DATE/STRICT_TRANS_TABLES (MySQL 5.7+/8.0), a raw dump without its own
+  # SQL_MODE header would fail to import with "Invalid default value". `wp db
+  # import` must strip those modes for the session so the import succeeds.
+  @require-mysql-or-mariadb
+  Scenario: `wp db import` loads a dump containing legacy zero-date values
+    Given a WP install
+    And a zerodate.sql file:
+      """
+      CREATE TABLE `wp_cli_zerodate` (
+        `id` int NOT NULL,
+        `d` datetime NOT NULL DEFAULT '0000-00-00 00:00:00'
+      );
+      INSERT INTO `wp_cli_zerodate` (`id`, `d`) VALUES (1, '0000-00-00 00:00:00');
+      """
+
+    When I run `wp db import zerodate.sql`
+    Then STDOUT should contain:
+      """
+      Success: Imported from 'zerodate.sql'.
+      """
+
+    When I run `wp db query 'SELECT COUNT(*) FROM wp_cli_zerodate;' --skip-column-names`
+    Then STDOUT should contain:
+      """
+      1
+      """
+
+  # Regression test for https://github.com/wp-cli/db-command/issues/171
+  # A dump streamed from STDIN must get the same WordPress SQL-mode compatibility
+  # as a file import. This is now handled via --init-command, which applies on the
+  # STDIN connection too (the previous prepend only covered file imports).
+  @require-mysql-or-mariadb
+  Scenario: `wp db import -` from STDIN loads a dump containing legacy zero-date values
+    Given a WP install
+    And a zerodate_stdin.sql file:
+      """
+      CREATE TABLE wp_cli_zerodate_stdin (id int NOT NULL, d datetime NOT NULL DEFAULT '0000-00-00 00:00:00');
+      INSERT INTO wp_cli_zerodate_stdin (id, d) VALUES (1, '0000-00-00 00:00:00');
+      """
+
+    When I run `wp db import - < zerodate_stdin.sql`
+    Then STDOUT should contain:
+      """
+      Success: Imported from 'STDIN'.
+      """
+
+    When I run `wp db query 'SELECT COUNT(*) FROM wp_cli_zerodate_stdin;' --skip-column-names`
+    Then STDOUT should contain:
+      """
+      1
+      """
+
+  # The compatibility statement must compose with a caller-supplied --init-command
+  # rather than replace it. Both are sent as a single multi-statement
+  # --init-command (compatibility statement first, caller's second), so the
+  # caller's own init command still runs and the zero-date import still succeeds.
+  @require-mysql-or-mariadb
+  Scenario: `wp db import` keeps SQL-mode compatibility when the caller sets --init-command
+    Given a WP install
+    And a zerodate_compose.sql file:
+      """
+      CREATE TABLE wp_cli_zd_compose (id int NOT NULL, d datetime NOT NULL DEFAULT '0000-00-00 00:00:00');
+      INSERT INTO wp_cli_zd_compose (id, d) VALUES (1, '0000-00-00 00:00:00');
+      """
+
+    When I run `wp db import zerodate_compose.sql --init-command="SET @x = 1"`
+    Then STDOUT should contain:
+      """
+      Success: Imported from 'zerodate_compose.sql'.
+      """
