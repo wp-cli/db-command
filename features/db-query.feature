@@ -91,19 +91,32 @@ Feature: Query the database with WordPress' MySQL config
     When I try `wp db query --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /([^/]+/)+(mysql|mariadb) --no-defaults --no-auto-rehash#
 
-  Scenario: `wp db query` runs under the server's own SQL modes without a separate mode probe
+  # `wp db query` adapts the session SQL mode to be WordPress-compatible the same
+  # way `wp db import` does: via --init-command on the query's own connection, with
+  # no separate mode probe. This keeps statements against WordPress's zero-date
+  # schema (e.g. `ALTER TABLE wp_blogs ...`, `CREATE TABLE ... AS SELECT` from a
+  # WordPress table) working on servers whose default SQL mode is strict.
+  @require-mysql-or-mariadb
+  Scenario: `wp db query` adapts the SQL mode by default without a separate mode probe
     Given a WP install
 
-    # The previous implementation always opened a second `SELECT @@SESSION.sql_mode`
-    # connection to decide whether to rewrite the query, then prepended a
-    # `SET SESSION sql_mode=...` statement. Both are gone: `wp db query` now behaves
-    # like the `mysql` client and runs under the server's own SQL modes.
     When I try `wp db query 'SELECT 1;' --debug`
     Then the return code should be 0
+    And STDERR should contain:
+      """
+      SET SESSION sql_mode
+      """
     And STDERR should not contain:
       """
-      @@SESSION.sql_mode
+      Failed to get current SQL modes
       """
+
+  @require-mysql-or-mariadb
+  Scenario: `wp db query --skip-sql-mode-compat` runs under the server's own SQL modes
+    Given a WP install
+
+    When I try `wp db query 'SELECT 1;' --skip-sql-mode-compat --debug`
+    Then the return code should be 0
     And STDERR should not contain:
       """
       SET SESSION sql_mode
@@ -111,10 +124,11 @@ Feature: Query the database with WordPress' MySQL config
 
   # Regression test for https://github.com/wp-cli/db-command/issues/311
   # Passing connection options alongside an inline query used to fail, because the
-  # SQL-mode probe opened a *second* connection that ignored those very options
+  # old SQL-mode probe opened a *second* connection that ignored those very options
   # (custom --host, --defaults, SSL/TLS, sockets, ...) and then aborted the whole
-  # command with "Failed to get current SQL modes". With the probe removed, the
-  # inline query runs directly under the given options.
+  # command with "Failed to get current SQL modes". The probe is gone -- the
+  # compatibility mode is now applied via --init-command on the query's own
+  # connection -- so the inline query runs directly under the given options.
   Scenario: `wp db query` with an inline query and connection options does not trigger a failing mode probe
     Given a WP install
 
@@ -122,10 +136,6 @@ Feature: Query the database with WordPress' MySQL config
     Then STDERR should not contain:
       """
       Failed to get current SQL modes
-      """
-    And STDERR should not contain:
-      """
-      @@SESSION.sql_mode
       """
 
   # Regression test for https://github.com/wp-cli/db-command/issues/309

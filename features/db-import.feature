@@ -250,16 +250,16 @@ Feature: Import a WordPress database
 
   # SQLite does not use the MySQL client and has no concept of SQL modes.
   @require-mysql-or-mariadb
-  Scenario: `wp db import` adapts the SQL mode in-band by default
+  Scenario: `wp db import` adapts the SQL mode via --init-command by default
     Given a WP install
 
     When I run `wp db export wp_cli_test.sql`
     Then the wp_cli_test.sql file should exist
 
     # The WordPress-compatibility mode adaptation runs on the same import
-    # connection (prepended to the executed statement for a file import), so it is
-    # visible in the debug output and no separate mode probe runs (which is what
-    # used to break with custom connection options).
+    # connection via --init-command, so it is visible in the debug output and no
+    # separate mode probe runs (which is what used to break with custom connection
+    # options).
     When I try `wp db import wp_cli_test.sql --debug`
     Then the return code should be 0
     And STDERR should contain:
@@ -341,7 +341,8 @@ Feature: Import a WordPress database
       """
 
   # The compatibility statement must compose with a caller-supplied --init-command
-  # rather than replace it. A file import prepends it to the executed batch, so the
+  # rather than replace it. Both are sent as a single multi-statement
+  # --init-command (compatibility statement first, caller's second), so the
   # caller's own init command still runs and the zero-date import still succeeds.
   @require-mysql-or-mariadb
   Scenario: `wp db import` keeps SQL-mode compatibility when the caller sets --init-command

@@ -513,6 +513,13 @@ class DB_Command extends WP_CLI_Command {
 	 * [--defaults]
 	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
+	 * [--skip-sql-mode-compat]
+	 * : Run the query under the server's own SQL modes instead of adapting them to
+	 * be WordPress-compatible. By default, the incompatible modes that WordPress
+	 * disables in `wpdb` (such as `NO_ZERO_DATE` and `STRICT_TRANS_TABLES`) are
+	 * stripped for the session, so statements against WordPress's zero-date schema
+	 * behave the same as they do in WordPress itself.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     # Execute a query stored in a file
@@ -606,8 +613,14 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['execute'] = $args[0];
 		}
 
-		// Note: `wp db query` intentionally runs under the server's own SQL modes,
-		// like the `mysql` client itself. No SQL-mode adaptation is applied here.
+		// Adapt the session SQL mode to be WordPress-compatible via --init-command,
+		// so it runs on connect before the query -- exactly like `wp db import` and
+		// WordPress Core's own wpdb -- and composes with any caller-provided
+		// --init-command. No separate probe connection is needed. Pass
+		// --skip-sql-mode-compat to run under the server's own SQL modes instead.
+		$this->apply_sql_mode_compat_init_command( $assoc_args, $assoc_args );
+		unset( $assoc_args['skip-sql-mode-compat'] );
+
 		$is_row_modifying_query = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $assoc_args['execute'] );
 
 		if ( $is_row_modifying_query ) {
@@ -928,12 +941,11 @@ class DB_Command extends WP_CLI_Command {
 			self::get_mysql_args( $assoc_args )
 		);
 
-		// Adapt the session SQL mode to be WordPress-compatible. When there is an
-		// --execute batch (importing from a file), prepend it there so it composes
-		// with any init command the caller already set (via --init-command or an
-		// option file). When importing from STDIN there is no --execute, so apply
-		// it via --init-command instead. Either way, no separate probe connection.
-		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
+		// Adapt the session SQL mode to be WordPress-compatible via --init-command,
+		// so it runs on connect before any SQL is read. This covers both file and
+		// STDIN imports, composes with any caller-provided --init-command, and needs
+		// no separate probe connection.
+		$this->apply_sql_mode_compat_init_command( $mysql_args, $assoc_args );
 
 		if ( '-' !== $result_file ) {
 			if ( ! is_readable( $result_file ) ) {
@@ -944,17 +956,9 @@ class DB_Command extends WP_CLI_Command {
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
 
-			if ( '' !== $sql_mode_compat ) {
-				$query = $sql_mode_compat . '; ' . $query;
-			}
-
 			$mysql_args['execute'] = sprintf( $query, $result_file );
 		} else {
 			$result_file = 'STDIN';
-
-			if ( '' !== $sql_mode_compat && ! isset( $mysql_args['init-command'] ) ) {
-				$mysql_args['init-command'] = $sql_mode_compat;
-			}
 		}
 
 		$command = sprintf(
@@ -1939,20 +1943,17 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args Optional. Associative array of arguments.
 	 */
 	protected function run_query( $query, $assoc_args = [] ) {
-		// Adapt the session SQL mode to be WordPress-compatible by prepending it to
-		// the executed batch, so it composes with any init command the caller set
-		// and needs no separate probe connection.
-		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
-		if ( '' !== $sql_mode_compat ) {
-			$query = $sql_mode_compat . '; ' . $query;
-		}
-
 		WP_CLI::debug( "Query: {$query}", 'db' );
 
 		$mysql_args = array_merge(
 			self::get_dbuser_dbpass_args( $assoc_args ),
 			self::get_mysql_args( $assoc_args )
 		);
+
+		// Adapt the session SQL mode to be WordPress-compatible via --init-command,
+		// so it runs on connect before the query, composes with any caller-provided
+		// --init-command, and needs no separate probe connection.
+		$this->apply_sql_mode_compat_init_command( $mysql_args, $assoc_args );
 
 		self::run(
 			sprintf(
@@ -2325,14 +2326,14 @@ class DB_Command extends WP_CLI_Command {
 	 * Get the statement that strips the SQL modes incompatible with WordPress
 	 * from the current session.
 	 *
-	 * The statement is run on the same connection as the import or query -- either
-	 * prepended to the executed batch, or via `--init-command` when importing from
-	 * STDIN (where there is no executed batch). Imports therefore behave like
-	 * WordPress Core (which disables these modes in `wpdb`), including when the
-	 * dump is streamed from STDIN. Unlike the previous implementation, no separate
-	 * connection is opened to first discover the current modes, so it works
-	 * regardless of the connection options in play (custom `--host`, `--defaults`,
-	 * SSL/TLS, sockets, ...).
+	 * The statement is applied on the same connection as the import or query via
+	 * the MySQL client's `--init-command`, so it runs on connect before any SQL is
+	 * read. Imports and queries therefore behave like WordPress Core (which
+	 * disables these modes in `wpdb`), including when a dump is streamed from
+	 * STDIN. Unlike the previous implementation, no separate connection is opened
+	 * to first discover the current modes, so it works regardless of the
+	 * connection options in play (custom `--host`, `--defaults`, SSL/TLS,
+	 * sockets, ...).
 	 *
 	 * Returns an empty string when the `--skip-sql-mode-compat` flag is set.
 	 *
@@ -2357,5 +2358,39 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		return sprintf( "SET SESSION sql_mode = TRIM( BOTH ',' FROM %s )", $expression );
+	}
+
+	/**
+	 * Applies the WordPress SQL-mode compatibility statement to the MySQL client
+	 * arguments via `--init-command`, so it runs on connect before any SQL is read.
+	 *
+	 * If the caller already supplied their own `--init-command` (via the CLI or an
+	 * option file), the compatibility statement is composed with it as a single
+	 * multi-statement `--init-command` value -- the compatibility statement first,
+	 * the caller's command second -- rather than dropping either one. A caller that
+	 * re-sets `sql_mode` in their own command therefore still wins (last statement
+	 * takes effect), while the compatibility statement is guaranteed to run.
+	 *
+	 * Running both statements from a single `--init-command` value works across
+	 * every targeted client (mysql 5.6/5.7/8.0/8.4 and mariadb). The newer
+	 * `--init-command-add` option is only available on mysql 8.4+, so it is not
+	 * used here.
+	 *
+	 * Does nothing when compatibility is disabled via `--skip-sql-mode-compat`.
+	 *
+	 * @param array $mysql_args MySQL client arguments, passed by reference.
+	 * @param array $assoc_args The associative argument array passed to the command.
+	 */
+	protected function apply_sql_mode_compat_init_command( &$mysql_args, $assoc_args ) {
+		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
+		if ( '' === $sql_mode_compat ) {
+			return;
+		}
+
+		if ( isset( $mysql_args['init-command'] ) && '' !== trim( (string) $mysql_args['init-command'] ) ) {
+			$mysql_args['init-command'] = $sql_mode_compat . '; ' . $mysql_args['init-command'];
+		} else {
+			$mysql_args['init-command'] = $sql_mode_compat;
+		}
 	}
 }
