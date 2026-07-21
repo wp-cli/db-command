@@ -119,3 +119,21 @@ Feature: Query the database with WordPress' MySQL config
       """
       ANSI
       """
+
+  # Regression test for https://github.com/wp-cli/db-command/issues/309
+  # MariaDB 11.4+ verifies the server certificate by default and prints a warning to
+  # STDERR (or fails) against the auto-generated self-signed certificate, which broke
+  # the tests. `run()` now opts out via `--skip-ssl-verify-server-cert` on MariaDB, and
+  # both `ssl-verify-server-cert` and its `skip-` variant are allowed so the behaviour
+  # can be overridden. Assert the flag is forwarded to the MySQL client (visible in the
+  # debug output before the connection is attempted). SQLite does not use the MySQL
+  # client, hence the tag.
+  @require-mysql-or-mariadb
+  Scenario: Query forwards the ssl-verify-server-cert flags to the MySQL client
+    Given a WP install
+
+    When I try `wp db query "SELECT 1" --skip-ssl-verify-server-cert --debug`
+    Then STDERR should contain:
+      """
+      skip-ssl-verify-server-cert
+      """
