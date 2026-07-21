@@ -91,33 +91,41 @@ Feature: Query the database with WordPress' MySQL config
     When I try `wp db query --no-defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /([^/]+/)+(mysql|mariadb) --no-defaults --no-auto-rehash#
 
-  Scenario: SQL modes do not include any of the modes incompatible with WordPress
+  Scenario: `wp db query` runs under the server's own SQL modes without a separate mode probe
     Given a WP install
 
-    When I try `wp db query 'SELECT @@SESSION.sql_mode;' --debug`
-    Then STDOUT should not contain:
+    # The previous implementation always opened a second `SELECT @@SESSION.sql_mode`
+    # connection to decide whether to rewrite the query, then prepended a
+    # `SET SESSION sql_mode=...` statement. Both are gone: `wp db query` now behaves
+    # like the `mysql` client and runs under the server's own SQL modes.
+    When I try `wp db query 'SELECT 1;' --debug`
+    Then the return code should be 0
+    And STDERR should not contain:
       """
-      NO_ZERO_DATE
+      @@SESSION.sql_mode
       """
-    And STDOUT should not contain:
+    And STDERR should not contain:
       """
-      ONLY_FULL_GROUP_BY
+      SET SESSION sql_mode
       """
-    And STDOUT should not contain:
+
+  # Regression test for https://github.com/wp-cli/db-command/issues/311
+  # Passing connection options alongside an inline query used to fail, because the
+  # SQL-mode probe opened a *second* connection that ignored those very options
+  # (custom --host, --defaults, SSL/TLS, sockets, ...) and then aborted the whole
+  # command with "Failed to get current SQL modes". With the probe removed, the
+  # inline query runs directly under the given options.
+  Scenario: `wp db query` with an inline query and connection options does not trigger a failing mode probe
+    Given a WP install
+
+    When I try `wp db query 'SELECT 1;' --defaults --debug`
+    Then STDERR should not contain:
       """
-      STRICT_TRANS_TABLES
+      Failed to get current SQL modes
       """
-    And STDOUT should not contain:
+    And STDERR should not contain:
       """
-      STRICT_ALL_TABLES
-      """
-    And STDOUT should not contain:
-      """
-      TRADITIONAL
-      """
-    And STDOUT should not contain:
-      """
-      ANSI
+      @@SESSION.sql_mode
       """
 
   # Regression test for https://github.com/wp-cli/db-command/issues/309

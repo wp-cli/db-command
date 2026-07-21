@@ -606,11 +606,8 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['execute'] = $args[0];
 		}
 
-		if ( isset( $assoc_args['execute'] ) ) {
-			// Ensure that the SQL mode is compatible with WPDB.
-			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
-		}
-
+		// Note: `wp db query` intentionally runs under the server's own SQL modes,
+		// like the `mysql` client itself. No SQL-mode adaptation is applied here.
 		$is_row_modifying_query = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $assoc_args['execute'] );
 
 		if ( $is_row_modifying_query ) {
@@ -898,6 +895,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--skip-optimization]
 	 * : When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
 	 *
+	 * [--skip-sql-mode-compat]
+	 * : Do not adapt the session SQL mode for WordPress compatibility. By default, `wp db import` strips the SQL modes that WordPress Core disables (such as `STRICT_TRANS_TABLES` and `NO_ZERO_DATE`) so that dumps containing legacy values like `0000-00-00` import cleanly. Pass this flag to import under the server's own SQL modes instead.
+	 *
 	 * [--defaults]
 	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
@@ -928,6 +928,14 @@ class DB_Command extends WP_CLI_Command {
 			self::get_mysql_args( $assoc_args )
 		);
 
+		// Adapt the session SQL mode to be WordPress-compatible via --init-command,
+		// so it runs on connect before any SQL is read. This covers both file and
+		// STDIN imports, and needs no separate probe connection.
+		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
+		if ( '' !== $sql_mode_compat && ! isset( $mysql_args['init-command'] ) ) {
+			$mysql_args['init-command'] = $sql_mode_compat;
+		}
+
 		if ( '-' !== $result_file ) {
 			if ( ! is_readable( $result_file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
@@ -936,8 +944,6 @@ class DB_Command extends WP_CLI_Command {
 			$query = Utils\get_flag_value( $assoc_args, 'skip-optimization' )
 				? 'SOURCE %s;'
 				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
-
-			$query = $this->get_sql_mode_query( $assoc_args ) . $query;
 
 			$mysql_args['execute'] = sprintf( $query, $result_file );
 		} else {
@@ -1926,15 +1932,19 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args Optional. Associative array of arguments.
 	 */
 	protected function run_query( $query, $assoc_args = [] ) {
-		// Ensure that the SQL mode is compatible with WPDB.
-		$query = $this->get_sql_mode_query( $assoc_args ) . $query;
-
 		WP_CLI::debug( "Query: {$query}", 'db' );
 
 		$mysql_args = array_merge(
 			self::get_dbuser_dbpass_args( $assoc_args ),
 			self::get_mysql_args( $assoc_args )
 		);
+
+		// Adapt the session SQL mode to be WordPress-compatible via --init-command
+		// (runs on connect, needs no separate probe connection).
+		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
+		if ( '' !== $sql_mode_compat && ! isset( $mysql_args['init-command'] ) ) {
+			$mysql_args['init-command'] = $sql_mode_compat;
+		}
 
 		self::run(
 			sprintf(
@@ -2304,103 +2314,38 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Get the query to change the current SQL mode, and ensure its WordPress compatibility.
+	 * Get the statement that strips the SQL modes incompatible with WordPress
+	 * from the current session.
 	 *
-	 * If no modes are passed, it will ensure the current MySQL server modes are
-	 * compatible.
+	 * This is handed to the MySQL client as `--init-command`, so it runs on the
+	 * very same connection right after connecting and before any SQL is read.
+	 * Imports therefore behave like WordPress Core (which disables these modes in
+	 * `wpdb`), including when the dump is streamed from STDIN. Unlike the previous
+	 * implementation, no separate connection is opened to first discover the
+	 * current modes, so it works regardless of the connection options in play
+	 * (custom `--host`, `--defaults`, SSL/TLS, sockets, ...).
 	 *
-	 * Copied and adapted from WordPress Core code.
+	 * Returns an empty string when the `--skip-sql-mode-compat` flag is set.
 	 *
-	 * @see https://github.com/WordPress/wordpress-develop/blob/5.4.0/src/wp-includes/wp-db.php#L817-L880
+	 * @see https://github.com/WordPress/wordpress-develop/blob/5.4.0/src/wp-includes/wp-db.php#L559-L572
 	 *
 	 * @param array $assoc_args The associative argument array passed to the command.
-	 * @param array $modes      Optional. A list of SQL modes to set.
-	 * @return string Query string to use for setting the SQL modes to a
-	 *                compatible state.
+	 * @return string SQL statement to run via `--init-command`, or an empty string.
 	 */
-	protected function get_sql_mode_query( $assoc_args, $modes = [] ) {
-		if ( empty( $modes ) ) {
-			$modes = $this->get_current_sql_modes( $assoc_args );
-		}
-
-		$modes = array_change_key_case( $modes, CASE_UPPER );
-
-		$is_mode_adaptation_needed = false;
-		foreach ( $modes as $i => $mode ) {
-			if ( in_array( $mode, $this->sql_incompatible_modes, true ) ) {
-				unset( $modes[ $i ] );
-				$is_mode_adaptation_needed = true;
-			}
-		}
-
-		if ( ! $is_mode_adaptation_needed ) {
-			WP_CLI::debug(
-				sprintf(
-					'SQL modes look fine: %s',
-					json_encode( $modes )
-				)
-			);
+	protected function get_sql_mode_compat_statement( $assoc_args = [] ) {
+		if ( Utils\get_flag_value( $assoc_args, 'skip-sql-mode-compat', false ) ) {
 			return '';
 		}
 
-		WP_CLI::debug(
-			sprintf(
-				'SQL mode adaptation is needed: %s => %s',
-				json_encode( $this->get_current_sql_modes( $assoc_args ) ),
-				json_encode( $modes )
-			)
-		);
-
-		$modes_str = implode( ',', $modes );
-
-		return "SET SESSION sql_mode='{$modes_str}';";
-	}
-
-	/**
-	 * Get the list of current SQL modes.
-	 *
-	 * @param array $assoc_args The associative argument array passed to the command.
-	 * @return string[] Array of SQL modes.
-	 */
-	protected function get_current_sql_modes( $assoc_args ) {
-		static $modes = null;
-
-		// Make sure the provided arguments don't interfere with the expected
-		// output here.
-		$args = [];
-
-		if ( null === $modes ) {
-			$modes = [];
-
-			list( $stdout, $stderr, $exit_code ) = self::run(
-				sprintf(
-					'%s%s --no-auto-rehash --batch --skip-column-names',
-					Utils\get_mysql_binary_path(),
-					$this->get_defaults_flag_string( $assoc_args )
-				),
-				array_merge( $args, [ 'execute' => 'SELECT @@SESSION.sql_mode' ] ),
-				false
-			);
-
-			if ( $exit_code ) {
-				WP_CLI::error(
-					'Failed to get current SQL modes.'
-					. ( ! empty( $stderr ) ? " Reason: {$stderr}" : '' ),
-					$exit_code
-				);
-			}
-
-			if ( ! empty( $stdout ) ) {
-				$lines = preg_split( "/\r\n|\n|\r|,/", $stdout );
-				$modes = array_filter(
-					array_map(
-						'trim',
-						$lines ? $lines : []
-					)
-				);
-			}
+		// Strip the incompatible modes from the session mode list. Each mode is
+		// wrapped in commas so that it only matches as a whole token and never as
+		// a substring -- stripping `ANSI` must not turn `ANSI_QUOTES` into
+		// `_QUOTES`, for example.
+		$expression = "CONCAT( ',', @@SESSION.sql_mode, ',' )";
+		foreach ( $this->sql_incompatible_modes as $mode ) {
+			$expression = sprintf( "REPLACE( %s, ',%s,', ',' )", $expression, $mode );
 		}
 
-		return $modes;
+		return sprintf( "SET SESSION sql_mode = TRIM( BOTH ',' FROM %s )", $expression );
 	}
 }
