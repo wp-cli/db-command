@@ -83,7 +83,7 @@ Feature: Import a WordPress database
       exit 127
       """
 
-    When I run `wp db export wp_cli_test.sql`
+    When I try `wp db export wp_cli_test.sql`
     Then the wp_cli_test.sql file should exist
 
     When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
