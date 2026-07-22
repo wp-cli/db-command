@@ -2473,43 +2473,40 @@ class DB_Command extends WP_CLI_Command {
 			define( 'WP_CONTENT_DIR', ABSPATH . 'wp-content' );
 		}
 
-		// Load prerequisite files if not already loaded.
-		if ( ! function_exists( 'add_action' ) ) {
-			foreach ( [ 'load.php', 'compat.php', 'plugin.php' ] as $file ) {
-				$path = ABSPATH . WPINC . '/' . $file;
-				if ( file_exists( $path ) ) {
-					require_once $path;
-				}
-			}
-		}
+		// Load prerequisite WordPress files if not already loaded.
+		$prereqs = [
+			'load.php'           => ABSPATH . WPINC . '/load.php',
+			'compat.php'         => ABSPATH . WPINC . '/compat.php',
+			'plugin.php'         => ABSPATH . WPINC . '/plugin.php',
+			'class-wp-error.php' => ABSPATH . WPINC . '/class-wp-error.php',
+			'class-wpdb.php'     => ABSPATH . WPINC . '/class-wpdb.php',
+		];
 
-		// Load class-wpdb.php if the wpdb class is not yet available.
-		if ( ! class_exists( 'wpdb' ) ) {
-			if ( ! function_exists( 'wp_debug_backtrace_summary' ) ) {
-				$functions_file = ABSPATH . WPINC . '/functions.php';
-				if ( file_exists( $functions_file ) ) {
-					require_once $functions_file;
-				}
-			}
-
-			$wpdb_file = ABSPATH . WPINC . '/class-wpdb.php';
-			if ( file_exists( $wpdb_file ) ) {
-				require_once $wpdb_file;
+		foreach ( $prereqs as $name => $path ) {
+			if ( file_exists( $path ) ) {
+				WP_CLI::debug( "Loading WordPress core file: {$name}", 'db' );
+				require_once $path;
 			}
 		}
 
 		// Load db.php drop-in if it exists (e.g., HyperDB or other custom drivers).
 		$db_dropin_path = WP_CONTENT_DIR . '/db.php';
 		if ( file_exists( $db_dropin_path ) && ! $this->is_sqlite() ) {
+			WP_CLI::debug( "Loading db.php drop-in from {$db_dropin_path}", 'db' );
 			require_once $db_dropin_path;
 		}
 
 		// If $wpdb is still not set (e.g. no drop-in), create a new instance using the DB credentials from wp-config.php.
 		if ( ! isset( $GLOBALS['wpdb'] ) && class_exists( 'wpdb' ) ) {
+			WP_CLI::debug( 'Instantiating new wpdb instance.', 'db' );
 			$table_prefix = isset( $GLOBALS['table_prefix'] ) && is_string( $GLOBALS['table_prefix'] ) ? $GLOBALS['table_prefix'] : 'wp_';
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 			$wpdb = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 			$wpdb->set_prefix( $table_prefix );
+		}
+
+		if ( ! isset( $GLOBALS['wpdb'] ) || ! ( $GLOBALS['wpdb'] instanceof wpdb ) ) {
+			WP_CLI::debug( sprintf( 'wpdb initialization failed. class_exists(wpdb): %s, isset($wpdb): %s', class_exists( 'wpdb' ) ? 'true' : 'false', isset( $GLOBALS['wpdb'] ) ? 'true' : 'false' ), 'db' );
 		}
 	}
 
