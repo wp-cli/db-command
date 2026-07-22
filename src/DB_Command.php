@@ -1975,27 +1975,6 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Run a single DDL query (e.g. DROP/CREATE DATABASE) using PHP's mysqli extension.
-	 *
-	 * Used as a fallback when the mysql/mariadb CLI binary is not available.
-	 * Creates a fresh connection per call so that DDL operations like
-	 * DROP DATABASE followed by CREATE DATABASE work correctly.
-	 *
-	 * @param string $query SQL query to execute.
-	 */
-	protected function run_query_via_mysqli( $query ) {
-		// No database selected — DDL operations like DROP/CREATE DATABASE work at the server level.
-		$conn = $this->get_db_connection( false );
-
-		if ( ! $conn->query( $query ) ) {
-			$error = $conn->error;
-			$conn->close();
-			WP_CLI::error( sprintf( 'Query failed: %s', $error ) );
-		}
-		$conn->close();
-	}
-
-	/**
 	 * Run a single query via the 'mysql' binary.
 	 *
 	 * This includes the necessary setup to make sure the queries behave similar
@@ -2005,12 +1984,6 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args Optional. Associative array of arguments.
 	 */
 	protected function run_query( $query, $assoc_args = [] ) {
-		if ( ! $this->is_mysql_binary_available() ) {
-			WP_CLI::debug( "Query via mysqli: {$query}", 'db' );
-			$this->run_query_via_mysqli( $query );
-			return;
-		}
-
 		WP_CLI::debug( "Query: {$query}", 'db' );
 
 		$mysql_args = array_merge(
@@ -2479,52 +2452,69 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Open a mysqli connection using the WordPress database credentials.
+	 * Load WordPress's wpdb if not already available.
 	 *
-	 * Used as a fallback when the mysql/mariadb binary is not available.
-	 * Parses DB_HOST the same way WordPress does (host:port, host:/socket, :/socket).
-	 *
-	 * @param bool $select_db Whether to select DB_NAME on connect. Pass false for
-	 *                        server-level DDL (DROP/CREATE DATABASE).
-	 * @return mysqli Connected mysqli instance. Calls WP_CLI::error() on failure.
+	 * Loads the minimal required WordPress files to make $wpdb available,
+	 * including any db.php drop-in (e.g., HyperDB or other custom drivers).
 	 */
-	protected function get_db_connection( $select_db = true ) {
-		$db_host = DB_HOST;
-		$port    = null;
-		$socket  = null;
+	protected function maybe_load_wpdb() {
+		global $wpdb;
 
-		if ( ':' === substr( $db_host, 0, 1 ) ) {
-			$socket  = substr( $db_host, 1 );
-			$db_host = 'localhost';
-		} else {
-			$parts   = explode( ':', $db_host, 2 );
-			$db_host = $parts[0];
-			if ( isset( $parts[1] ) ) {
-				$port_or_socket = trim( $parts[1] );
-				if ( '' !== $port_or_socket && '/' === $port_or_socket[0] ) {
-					$socket = $port_or_socket;
-				} elseif ( '' !== $port_or_socket ) {
-					$port = (int) $port_or_socket;
+		if ( isset( $wpdb ) && $wpdb instanceof wpdb ) {
+			return;
+		}
+
+		if ( ! defined( 'WPINC' ) ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
+			define( 'WPINC', 'wp-includes' );
+		}
+
+		if ( ! defined( 'WP_CONTENT_DIR' ) ) {
+			define( 'WP_CONTENT_DIR', ABSPATH . 'wp-content' );
+		}
+
+		// Load prerequisite files if not already loaded.
+		if ( ! function_exists( 'add_action' ) ) {
+			foreach ( [ 'load.php', 'compat.php', 'plugin.php' ] as $file ) {
+				$path = ABSPATH . WPINC . '/' . $file;
+				if ( file_exists( $path ) ) {
+					require_once $path;
 				}
 			}
 		}
 
-		$port_value   = null !== $port ? $port : 0;
-		$socket_value = null !== $socket ? $socket : '';
-		$database     = $select_db ? DB_NAME : '';
+		// Load class-wpdb.php if the wpdb class is not yet available.
+		if ( ! class_exists( 'wpdb' ) ) {
+			if ( ! function_exists( 'wp_debug_backtrace_summary' ) ) {
+				$functions_file = ABSPATH . WPINC . '/functions.php';
+				if ( file_exists( $functions_file ) ) {
+					require_once $functions_file;
+				}
+			}
 
-		// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- direct mysqli required as fallback when mysql binary is unavailable.
-		$conn = new mysqli( $db_host, DB_USER, DB_PASSWORD, $database, $port_value, $socket_value );
-
-		if ( $conn->connect_errno ) {
-			WP_CLI::error( sprintf( 'Failed to connect to the database: %s', $conn->connect_error ) );
+			$wpdb_file = ABSPATH . WPINC . '/class-wpdb.php';
+			if ( file_exists( $wpdb_file ) ) {
+				require_once $wpdb_file;
+			}
 		}
 
-		return $conn;
+		// Load db.php drop-in if it exists (e.g., HyperDB or other custom drivers).
+		$db_dropin_path = WP_CONTENT_DIR . '/db.php';
+		if ( file_exists( $db_dropin_path ) && ! $this->is_sqlite() ) {
+			require_once $db_dropin_path;
+		}
+
+		// If $wpdb is still not set (e.g. no drop-in), create a new instance using the DB credentials from wp-config.php.
+		if ( ! isset( $GLOBALS['wpdb'] ) && class_exists( 'wpdb' ) ) {
+			$table_prefix = isset( $GLOBALS['table_prefix'] ) && is_string( $GLOBALS['table_prefix'] ) ? $GLOBALS['table_prefix'] : 'wp_';
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			$wpdb = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+			$wpdb->set_prefix( $table_prefix );
+		}
 	}
 
 	/**
-	 * Execute a query against the database using mysqli.
+	 * Execute a query against the database using wpdb.
 	 *
 	 * Used as a fallback when the mysql/mariadb binary is not available.
 	 * Outputs results in the same tab-separated format as the mysql binary.
@@ -2533,57 +2523,65 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args Associative arguments.
 	 */
 	protected function wpdb_query( $query, $assoc_args = [] ) {
-		$conn = $this->get_db_connection();
+		$this->maybe_load_wpdb();
+		global $wpdb;
+
+		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
+			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
+		}
 
 		$skip_column_names      = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
 		$is_row_modifying_query = (bool) preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $query );
 
 		if ( $is_row_modifying_query ) {
-			if ( ! $conn->query( $query ) ) {
-				$error = $conn->error;
-				$conn->close();
-				WP_CLI::error( "Query failed: {$error}" );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$affected_rows = $wpdb->query( $query );
+			if ( false === $affected_rows ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
 			}
-			$affected_rows = $conn->affected_rows;
-			$conn->close();
 			WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
 		} else {
-			$result = $conn->query( $query );
-			if ( ! $result ) {
-				$error = $conn->error;
-				$conn->close();
-				WP_CLI::error( "Query failed: {$error}" );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$results = $wpdb->get_results( $query, ARRAY_A );
+
+			if ( $wpdb->last_error ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
 			}
 
-			if ( $result instanceof mysqli_result ) {
-				$fields  = $result->fetch_fields();
-				$headers = $fields ? array_column( $fields, 'name' ) : [];
-				if ( ! $skip_column_names && ! empty( $headers ) ) {
-					WP_CLI::line( implode( "\t", $headers ) );
-				}
-				$all_rows = $result->fetch_all( MYSQLI_NUM );
-				foreach ( $all_rows as $row ) {
-					WP_CLI::line(
-						implode(
-							"\t",
-							array_map(
-								static function ( $v ) {
-									return null === $v ? 'NULL' : (string) $v;
-								},
-								$row
-							)
+			if ( empty( $results ) ) {
+				return;
+			}
+
+			$headers = array_keys( $results[0] );
+			if ( ! $skip_column_names && ! empty( $headers ) ) {
+				WP_CLI::line( implode( "\t", $headers ) );
+			}
+			foreach ( $results as $row ) {
+				WP_CLI::line(
+					implode(
+						"\t",
+						array_map(
+							static function ( $v ) {
+								if ( null === $v ) {
+									return 'NULL';
+								}
+								if ( is_scalar( $v ) ) {
+									return (string) $v;
+								}
+								return '';
+							},
+							array_values( $row )
 						)
-					);
-				}
-				$result->free();
+					)
+				);
 			}
-
-			$conn->close();
 		}
 	}
 
 	/**
-	 * Import SQL content into the database using mysqli.
+	 * Import SQL content into the database using wpdb.
 	 *
 	 * Used as a fallback when the mysql/mariadb binary is not available.
 	 *
@@ -2591,14 +2589,24 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args  Associative arguments.
 	 */
 	protected function wpdb_import( $sql_content, $assoc_args = [] ) {
-		$conn = $this->get_db_connection();
+		$this->maybe_load_wpdb();
+		global $wpdb;
+
+		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
+			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
+		$suppress = $wpdb->suppress_errors( true );
 
 		$skip_optimization = Utils\get_flag_value( $assoc_args, 'skip-optimization', false );
 
 		if ( ! $skip_optimization ) {
-			$conn->query( 'SET autocommit = 0' );
-			$conn->query( 'SET unique_checks = 0' );
-			$conn->query( 'SET foreign_key_checks = 0' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET autocommit = 0' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET unique_checks = 0' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET foreign_key_checks = 0' );
 		}
 
 		$statements = $this->split_sql_statements( $sql_content );
@@ -2608,24 +2616,38 @@ class DB_Command extends WP_CLI_Command {
 			if ( '' === $statement ) {
 				continue;
 			}
-			if ( ! $conn->query( $statement ) ) {
-				$error = $conn->error;
-				if ( ! $skip_optimization ) {
-					$conn->query( 'ROLLBACK' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$result = $wpdb->query( $statement );
+			if ( false === $result ) {
+				$error = $wpdb->last_error;
+
+				// Ignore privilege/permission errors for SET statements (e.g. SQL_LOG_BIN, GTID) in dumps when user lacks SUPER admin rights.
+				if ( 0 === stripos( ltrim( $statement ), 'SET ' ) && ( false !== strpos( $error, 'Access denied' ) || false !== strpos( $error, 'privilege' ) ) ) {
+					continue;
 				}
-				$conn->close();
-				WP_CLI::error( "Import failed: {$error}" );
+
+				if ( ! $skip_optimization ) {
+					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+					$wpdb->query( 'ROLLBACK' );
+				}
+				$wpdb->suppress_errors( $suppress );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Import failed: ' . strip_tags( $error ) );
 			}
 		}
 
 		if ( ! $skip_optimization ) {
-			$conn->query( 'COMMIT' );
-			$conn->query( 'SET autocommit = 1' );
-			$conn->query( 'SET unique_checks = 1' );
-			$conn->query( 'SET foreign_key_checks = 1' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'COMMIT' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET autocommit = 1' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET unique_checks = 1' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET foreign_key_checks = 1' );
 		}
 
-		$conn->close();
+		$wpdb->suppress_errors( $suppress );
 	}
 
 	/**
