@@ -125,6 +125,36 @@ Feature: Import a WordPress database
       Success: Imported from 'zero_date.sql'.
       """
 
+  @require-mysql-or-mariadb
+  Scenario: Database import falls back to wpdb and handles DELIMITER blocks with procedures
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a procedure.sql file:
+      """
+      DELIMITER //
+      CREATE PROCEDURE wp_test_procedure()
+      BEGIN
+        SELECT 1;
+      END//
+      DELIMITER ;
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db import procedure.sql --debug`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'procedure.sql'.
+      """
+
   # SQLite doesn't support the --dbuser flag.
   @require-mysql-or-mariadb
   Scenario: Import from database name path by default with passed-in dbuser/dbpass

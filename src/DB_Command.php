@@ -2468,7 +2468,19 @@ class DB_Command extends WP_CLI_Command {
 	 * @return bool True if the binary is available, false otherwise.
 	 */
 	protected function is_mysql_binary_available() {
-		return '' !== Utils\get_mysql_binary_path();
+		static $available = null;
+
+		if ( null === $available ) {
+			$path = Utils\get_mysql_binary_path();
+			if ( '' === $path ) {
+				$available = false;
+			} else {
+				$result    = \WP_CLI\Process::create( escapeshellarg( $path ) . ' --version', null, null )->run();
+				$available = 0 === $result->return_code;
+			}
+		}
+
+		return $available;
 	}
 
 	/**
@@ -2750,6 +2762,22 @@ class DB_Command extends WP_CLI_Command {
 			$char = $sql[ $i ];
 			$next = ( $i + 1 < $length ) ? $sql[ $i + 1 ] : '';
 
+			// Check for DELIMITER directive at line boundary / statement start
+			if ( ! $in_single_quote && ! $in_double_quote && ! $in_comment && ! $in_line_comment && ! $in_conditional_comment ) {
+				$trimmed_current = trim( $current );
+				if ( '' === $trimmed_current && 0 === stripos( substr( $sql, $i, 10 ), 'DELIMITER ' ) ) {
+					$line_end = strpos( $sql, "\n", $i );
+					if ( false === $line_end ) {
+						$line_end = $length;
+					}
+					$delimiter_line = trim( substr( $sql, $i, $line_end - $i ) );
+					$delimiter      = trim( substr( $delimiter_line, 10 ) );
+					$current        = '';
+					$i              = $line_end;
+					continue;
+				}
+			}
+
 			if ( $in_line_comment ) {
 				if ( "\n" === $char ) {
 					$in_line_comment = false;
@@ -2825,9 +2853,7 @@ class DB_Command extends WP_CLI_Command {
 			$delim_len = strlen( $delimiter );
 			if ( ! $in_single_quote && ! $in_double_quote && substr( $sql, $i, $delim_len ) === $delimiter ) {
 				$trimmed = trim( $current );
-				if ( 0 === stripos( $trimmed, 'DELIMITER ' ) ) {
-					$delimiter = trim( substr( $trimmed, 10 ) );
-				} elseif ( '' !== $trimmed ) {
+				if ( '' !== $trimmed ) {
 					$statements[] = $trimmed;
 				}
 				$current = '';
@@ -2838,7 +2864,7 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$trimmed = trim( $current );
-		if ( '' !== $trimmed && 0 !== stripos( $trimmed, 'DELIMITER ' ) ) {
+		if ( '' !== $trimmed ) {
 			$statements[] = $trimmed;
 		}
 
