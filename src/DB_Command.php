@@ -2532,6 +2532,7 @@ class DB_Command extends WP_CLI_Command {
 		$required_files = [
 			ABSPATH . WPINC . '/load.php',
 			ABSPATH . WPINC . '/compat.php',
+			ABSPATH . WPINC . '/functions.php',
 			ABSPATH . WPINC . '/plugin.php',
 			ABSPATH . WPINC . '/class-wp-error.php',
 			$wpdb_file,
