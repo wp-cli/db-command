@@ -2768,16 +2768,22 @@ class DB_Command extends WP_CLI_Command {
 			// Check for DELIMITER directive at line boundary / statement start
 			if ( ! $in_single_quote && ! $in_double_quote && ! $in_comment && ! $in_line_comment && ! $in_conditional_comment ) {
 				$trimmed_current = trim( $current );
-				if ( '' === $trimmed_current && 0 === stripos( substr( $sql, $i, 10 ), 'DELIMITER ' ) ) {
-					$line_end = strpos( $sql, "\n", $i );
-					if ( false === $line_end ) {
-						$line_end = $length;
+				if ( '' === $trimmed_current && 0 === stripos( substr( $sql, $i, 9 ), 'DELIMITER' ) ) {
+					$char_after = ( $i + 9 < $length ) ? $sql[ $i + 9 ] : "\n";
+					if ( ' ' === $char_after || "\t" === $char_after || "\r" === $char_after || "\n" === $char_after ) {
+						$line_end = strpos( $sql, "\n", $i );
+						if ( false === $line_end ) {
+							$line_end = $length;
+						}
+						$delimiter_line = trim( substr( $sql, $i, $line_end - $i ) );
+						$new_delimiter  = trim( substr( $delimiter_line, 9 ) );
+						if ( '' !== $new_delimiter ) {
+							$delimiter = $new_delimiter;
+						}
+						$current = '';
+						$i       = $line_end;
+						continue;
 					}
-					$delimiter_line = trim( substr( $sql, $i, $line_end - $i ) );
-					$delimiter      = trim( substr( $delimiter_line, 10 ) );
-					$current        = '';
-					$i              = $line_end;
-					continue;
 				}
 			}
 
