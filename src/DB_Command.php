@@ -286,9 +286,14 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		$check_cmd = Utils\get_sql_check_command();
+		if ( '' === $check_cmd ) {
+			WP_CLI::error( 'mysqlcheck or mariadb-check binary is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
-			Utils\get_sql_check_command(),
+			$check_cmd,
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -347,9 +352,14 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		$check_cmd = Utils\get_sql_check_command();
+		if ( '' === $check_cmd ) {
+			WP_CLI::error( 'mysqlcheck or mariadb-check binary is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
-			Utils\get_sql_check_command(),
+			$check_cmd,
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -408,9 +418,14 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		$check_cmd = Utils\get_sql_check_command();
+		if ( '' === $check_cmd ) {
+			WP_CLI::error( 'mysqlcheck or mariadb-check binary is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
 		$command = sprintf(
 			'/usr/bin/env %s%s %s',
-			Utils\get_sql_check_command(),
+			$check_cmd,
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -471,6 +486,10 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		if ( ! $this->is_mysql_binary_available() ) {
+			WP_CLI::error( 'MySQL/MariaDB client binary is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
 		$command = sprintf(
 			'%s%s --no-auto-rehash',
 			Utils\get_mysql_binary_path(),
@@ -490,7 +509,9 @@ class DB_Command extends WP_CLI_Command {
 	 * Executes a SQL query against the database.
 	 *
 	 * Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
-	 *  and `DB_PASSWORD` database credentials specified in wp-config.php.
+	 * and `DB_PASSWORD` database credentials specified in wp-config.php.
+	 * If MySQL/MariaDB client binaries are not available, falls back to
+	 * executing queries via WordPress's `wpdb`.
 	 *
 	 * Use the `--skip-column-names` MySQL argument to exclude the headers
 	 * from a SELECT query. Pipe the output to remove the ASCII table
@@ -774,7 +795,12 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$mysqldump_binary = Utils\force_env_on_nix_systems( Utils\get_sql_dump_command() );
+		$dump_cmd = Utils\get_sql_dump_command();
+		if ( '' === $dump_cmd ) {
+			WP_CLI::error( 'mysqldump or mariadb-dump binary is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
+		$mysqldump_binary = Utils\force_env_on_nix_systems( $dump_cmd );
 
 		$support_column_statistics = $this->command_supports_option( $mysqldump_binary, 'column-statistics' );
 
@@ -907,7 +933,8 @@ class DB_Command extends WP_CLI_Command {
 	 * Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
 	 * `DB_PASSWORD` database credentials specified in wp-config.php. This
 	 * does not create database by itself and only performs whatever tasks are
-	 * defined in the SQL.
+	 * defined in the SQL. If MySQL/MariaDB client binaries are not available,
+	 * falls back to importing via WordPress's `wpdb`.
 	 *
 	 * ## OPTIONS
 	 *
@@ -2444,8 +2471,13 @@ class DB_Command extends WP_CLI_Command {
 		static $available = null;
 
 		if ( null === $available ) {
-			$result    = \WP_CLI\Process::create( Utils\get_mysql_binary_path() . ' --version', null, null )->run();
-			$available = 0 === $result->return_code;
+			$path = Utils\get_mysql_binary_path();
+			if ( '' === $path ) {
+				$available = false;
+			} else {
+				$result    = \WP_CLI\Process::create( $path . ' --version', null, null )->run();
+				$available = 0 === $result->return_code;
+			}
 		}
 
 		return $available;
@@ -2456,11 +2488,30 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Loads the minimal required WordPress files to make $wpdb available,
 	 * including any db.php drop-in (e.g., HyperDB or other custom drivers).
+	 *
+	 * @param array $assoc_args Optional. Associative arguments containing db credentials.
 	 */
-	protected function maybe_load_wpdb() {
+	protected function maybe_load_wpdb( $assoc_args = [] ) {
 		global $wpdb;
 
-		if ( isset( $wpdb ) && $wpdb instanceof wpdb ) {
+		$default_user = defined( 'DB_USER' ) ? DB_USER : '';
+		$default_pass = defined( 'DB_PASSWORD' ) ? DB_PASSWORD : '';
+		$default_name = defined( 'DB_NAME' ) ? DB_NAME : '';
+		$default_host = defined( 'DB_HOST' ) ? DB_HOST : '';
+
+		$db_user = Utils\get_flag_value( $assoc_args, 'dbuser', $default_user );
+		$db_pass = Utils\get_flag_value( $assoc_args, 'dbpass', $default_pass );
+		$db_name = Utils\get_flag_value( $assoc_args, 'dbname', $default_name );
+		$db_host = Utils\get_flag_value( $assoc_args, 'dbhost', $default_host );
+
+		$has_custom_credentials = (
+			( isset( $assoc_args['dbuser'] ) && $default_user !== $assoc_args['dbuser'] ) ||
+			( isset( $assoc_args['dbpass'] ) && $default_pass !== $assoc_args['dbpass'] ) ||
+			( isset( $assoc_args['dbname'] ) && $default_name !== $assoc_args['dbname'] ) ||
+			( isset( $assoc_args['dbhost'] ) && $default_host !== $assoc_args['dbhost'] )
+		);
+
+		if ( isset( $wpdb ) && $wpdb instanceof wpdb && ! $has_custom_credentials ) {
 			return;
 		}
 
@@ -2494,15 +2545,15 @@ class DB_Command extends WP_CLI_Command {
 
 		// Load db.php drop-in if it exists (e.g., HyperDB or other custom drivers).
 		$db_dropin_path = WP_CONTENT_DIR . '/db.php';
-		if ( file_exists( $db_dropin_path ) && ! $this->is_sqlite() ) {
+		if ( file_exists( $db_dropin_path ) && ! $this->is_sqlite() && ! $has_custom_credentials ) {
 			require_once $db_dropin_path;
 		}
 
-		// If $wpdb is still not set (e.g. no drop-in), create a new instance using the DB credentials from wp-config.php.
-		if ( ! isset( $GLOBALS['wpdb'] ) && class_exists( 'wpdb' ) ) {
+		// If $wpdb is still not set or custom credentials were supplied, create a new instance using the DB credentials.
+		if ( ( ! isset( $GLOBALS['wpdb'] ) || ! ( $GLOBALS['wpdb'] instanceof wpdb ) || $has_custom_credentials ) && class_exists( 'wpdb' ) ) {
 			$table_prefix = isset( $GLOBALS['table_prefix'] ) && is_string( $GLOBALS['table_prefix'] ) ? $GLOBALS['table_prefix'] : 'wp_';
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-			$wpdb = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+			$wpdb = new wpdb( $db_user, $db_pass, $db_name, $db_host );
 			$wpdb->set_prefix( $table_prefix );
 		}
 	}
@@ -2517,61 +2568,92 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args Associative arguments.
 	 */
 	protected function wpdb_query( $query, $assoc_args = [] ) {
-		$this->maybe_load_wpdb();
+		$this->maybe_load_wpdb( $assoc_args );
 		global $wpdb;
 
 		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
 			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
 		}
 
-		$skip_column_names      = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
-		$is_row_modifying_query = (bool) preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $query );
+		$suppress = $wpdb->suppress_errors( true );
 
-		if ( $is_row_modifying_query ) {
+		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
+		if ( '' !== $sql_mode_compat ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$affected_rows = $wpdb->query( $query );
-			if ( false === $affected_rows ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
-				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
-			}
-			WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
-		} else {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$results = $wpdb->get_results( $query, ARRAY_A );
+			$wpdb->query( $sql_mode_compat );
+		}
 
-			if ( $wpdb->last_error ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
-				WP_CLI::error( 'Query failed: ' . strip_tags( $wpdb->last_error ) );
-			}
+		$skip_column_names = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
+		$statements        = $this->split_sql_statements( $query );
 
-			if ( empty( $results ) ) {
-				return;
+		if ( empty( $statements ) ) {
+			$wpdb->suppress_errors( $suppress );
+			return;
+		}
+
+		foreach ( $statements as $statement ) {
+			$statement = trim( $statement );
+			if ( '' === $statement ) {
+				continue;
 			}
 
-			$headers = array_keys( $results[0] );
-			if ( ! $skip_column_names && ! empty( $headers ) ) {
-				WP_CLI::line( implode( "\t", $headers ) );
-			}
-			foreach ( $results as $row ) {
-				WP_CLI::line(
-					implode(
-						"\t",
-						array_map(
-							static function ( $v ) {
-								if ( null === $v ) {
-									return 'NULL';
-								}
-								if ( is_scalar( $v ) ) {
-									return (string) $v;
-								}
-								return '';
-							},
-							array_values( $row )
+			$is_row_modifying_query = (bool) preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA|CREATE|DROP|ALTER|TRUNCATE)\b/i', $statement );
+
+			if ( $is_row_modifying_query ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				$affected_rows = $wpdb->query( $statement );
+				if ( false === $affected_rows ) {
+					$error = $wpdb->last_error;
+					$wpdb->suppress_errors( $suppress );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+					WP_CLI::error( 'Query failed: ' . strip_tags( $error ) );
+				}
+				$is_dml = (bool) preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $statement );
+				if ( $is_dml ) {
+					WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
+				}
+			} else {
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				$results = $wpdb->get_results( $statement, ARRAY_A );
+
+				if ( $wpdb->last_error ) {
+					$error = $wpdb->last_error;
+					$wpdb->suppress_errors( $suppress );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+					WP_CLI::error( 'Query failed: ' . strip_tags( $error ) );
+				}
+
+				if ( empty( $results ) ) {
+					continue;
+				}
+
+				$headers = array_keys( $results[0] );
+				if ( ! $skip_column_names && ! empty( $headers ) ) {
+					WP_CLI::line( implode( "\t", $headers ) );
+				}
+				foreach ( $results as $row ) {
+					WP_CLI::line(
+						implode(
+							"\t",
+							array_map(
+								static function ( $v ) {
+									if ( null === $v ) {
+										return 'NULL';
+									}
+									if ( is_scalar( $v ) ) {
+										return (string) $v;
+									}
+									return '';
+								},
+								array_values( $row )
+							)
 						)
-					)
-				);
+					);
+				}
 			}
 		}
+
+		$wpdb->suppress_errors( $suppress );
 	}
 
 	/**
@@ -2583,7 +2665,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args  Associative arguments.
 	 */
 	protected function wpdb_import( $sql_content, $assoc_args = [] ) {
-		$this->maybe_load_wpdb();
+		$this->maybe_load_wpdb( $assoc_args );
 		global $wpdb;
 
 		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
@@ -2591,6 +2673,12 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$suppress = $wpdb->suppress_errors( true );
+
+		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
+		if ( '' !== $sql_mode_compat ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( $sql_mode_compat );
+		}
 
 		$skip_optimization = Utils\get_flag_value( $assoc_args, 'skip-optimization', false );
 
@@ -2632,7 +2720,13 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( ! $skip_optimization ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$wpdb->query( 'COMMIT' );
+			$commit_result = $wpdb->query( 'COMMIT' );
+			if ( false === $commit_result ) {
+				$error = $wpdb->last_error;
+				$wpdb->suppress_errors( $suppress );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Import failed to commit: ' . strip_tags( $error ) );
+			}
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$wpdb->query( 'SET autocommit = 1' );
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
@@ -2647,8 +2741,8 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Split a SQL string into individual statements.
 	 *
-	 * Handles single-quoted strings, double-quoted strings, and comments
-	 * so that semicolons inside them are not treated as statement delimiters.
+	 * Handles single-quoted strings, double-quoted strings, comments,
+	 * and DELIMITER directives so that semicolons inside them are not treated as statement delimiters.
 	 *
 	 * @param string $sql SQL string to split.
 	 * @return string[] Array of individual SQL statements.
@@ -2661,6 +2755,7 @@ class DB_Command extends WP_CLI_Command {
 		$in_comment             = false;
 		$in_line_comment        = false;
 		$in_conditional_comment = false;
+		$delimiter              = ';';
 		$length                 = strlen( $sql );
 
 		for ( $i = 0; $i < $length; $i++ ) {
@@ -2689,7 +2784,7 @@ class DB_Command extends WP_CLI_Command {
 					++$i;
 					continue;
 				}
-				// Fall through: treat content as regular SQL (handled below).
+				// Fall through: treat content as regular SQL.
 			}
 
 			if ( '/' === $char && '*' === $next && ! $in_single_quote && ! $in_double_quote ) {
@@ -2698,16 +2793,12 @@ class DB_Command extends WP_CLI_Command {
 					// MySQL conditional comment (/*!...*/): execute its SQL content.
 					$in_conditional_comment = true;
 					$i                     += 2; // skip past /*!; $i now points at !
-					// Advance past optional version digits (e.g. "40101" in /*!40101 SET ... */).
-					// Loop checks the NEXT character so $i ends at the last digit.
 					while ( $i + 1 < $length && ctype_digit( $sql[ $i + 1 ] ) ) {
 						++$i;
 					}
-					// Skip one space following the version digits, if present.
 					if ( $i + 1 < $length && ' ' === $sql[ $i + 1 ] ) {
 						++$i;
 					}
-					// The for-loop's own ++$i then lands on the first SQL char.
 				} else {
 					$in_comment = true;
 					++$i;
@@ -2716,6 +2807,14 @@ class DB_Command extends WP_CLI_Command {
 			}
 
 			if ( '-' === $char && '-' === $next && ! $in_single_quote && ! $in_double_quote ) {
+				$char_after = ( $i + 2 < $length ) ? $sql[ $i + 2 ] : "\n";
+				if ( ' ' === $char_after || "\t" === $char_after || "\r" === $char_after || "\n" === $char_after ) {
+					$in_line_comment = true;
+					continue;
+				}
+			}
+
+			if ( '#' === $char && ! $in_single_quote && ! $in_double_quote ) {
 				$in_line_comment = true;
 				continue;
 			}
@@ -2735,16 +2834,24 @@ class DB_Command extends WP_CLI_Command {
 				$in_double_quote = ! $in_double_quote;
 			}
 
-			if ( ';' === $char && ! $in_single_quote && ! $in_double_quote ) {
-				$statements[] = $current;
-				$current      = '';
+			$delim_len = strlen( $delimiter );
+			if ( ! $in_single_quote && ! $in_double_quote && substr( $sql, $i, $delim_len ) === $delimiter ) {
+				$trimmed = trim( $current );
+				if ( 0 === stripos( $trimmed, 'DELIMITER ' ) ) {
+					$delimiter = trim( substr( $trimmed, 10 ) );
+				} elseif ( '' !== $trimmed ) {
+					$statements[] = $trimmed;
+				}
+				$current = '';
+				$i      += $delim_len - 1;
 			} else {
 				$current .= $char;
 			}
 		}
 
-		if ( '' !== trim( $current ) ) {
-			$statements[] = $current;
+		$trimmed = trim( $current );
+		if ( '' !== $trimmed && 0 !== stripos( $trimmed, 'DELIMITER ' ) ) {
+			$statements[] = $trimmed;
 		}
 
 		return $statements;
