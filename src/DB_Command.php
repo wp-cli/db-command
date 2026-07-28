@@ -2501,16 +2501,16 @@ class DB_Command extends WP_CLI_Command {
 		$default_name = defined( 'DB_NAME' ) ? DB_NAME : '';
 		$default_host = defined( 'DB_HOST' ) ? DB_HOST : '';
 
-		$db_user = Utils\get_flag_value( $assoc_args, 'dbuser', $default_user );
-		$db_pass = Utils\get_flag_value( $assoc_args, 'dbpass', $default_pass );
-		$db_name = Utils\get_flag_value( $assoc_args, 'dbname', $default_name );
-		$db_host = Utils\get_flag_value( $assoc_args, 'dbhost', $default_host );
+		$db_user = Utils\get_flag_value( $assoc_args, 'dbuser', Utils\get_flag_value( $assoc_args, 'user', $default_user ) );
+		$db_pass = Utils\get_flag_value( $assoc_args, 'dbpass', Utils\get_flag_value( $assoc_args, 'password', Utils\get_flag_value( $assoc_args, 'pass', $default_pass ) ) );
+		$db_name = Utils\get_flag_value( $assoc_args, 'dbname', Utils\get_flag_value( $assoc_args, 'database', $default_name ) );
+		$db_host = Utils\get_flag_value( $assoc_args, 'dbhost', Utils\get_flag_value( $assoc_args, 'host', $default_host ) );
 
 		$has_custom_credentials = (
-			( isset( $assoc_args['dbuser'] ) && $default_user !== $assoc_args['dbuser'] ) ||
-			( isset( $assoc_args['dbpass'] ) && $default_pass !== $assoc_args['dbpass'] ) ||
-			( isset( $assoc_args['dbname'] ) && $default_name !== $assoc_args['dbname'] ) ||
-			( isset( $assoc_args['dbhost'] ) && $default_host !== $assoc_args['dbhost'] )
+			( $default_user !== $db_user ) ||
+			( $default_pass !== $db_pass ) ||
+			( $default_name !== $db_name ) ||
+			( $default_host !== $db_host )
 		);
 
 		if ( isset( $wpdb ) && $wpdb instanceof wpdb && ! $has_custom_credentials ) {
