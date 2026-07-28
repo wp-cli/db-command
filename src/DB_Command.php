@@ -951,14 +951,17 @@ class DB_Command extends WP_CLI_Command {
 			if ( ! is_readable( $result_file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
 			}
-
-			$query = Utils\get_flag_value( $assoc_args, 'skip-optimization' )
-				? 'SOURCE %s;'
-				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
-
-			$mysql_args['execute'] = sprintf( $query, $result_file );
 		} else {
 			$result_file = 'STDIN';
+		}
+
+		if ( ! Utils\get_flag_value( $assoc_args, 'skip-optimization' ) ) {
+			$optimization_sql = 'SET unique_checks = 0; SET foreign_key_checks = 0;';
+			if ( isset( $mysql_args['init-command'] ) && '' !== trim( (string) $mysql_args['init-command'] ) ) {
+				$mysql_args['init-command'] .= '; ' . $optimization_sql;
+			} else {
+				$mysql_args['init-command'] = $optimization_sql;
+			}
 		}
 
 		$command = sprintf(
@@ -966,6 +969,11 @@ class DB_Command extends WP_CLI_Command {
 			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
+
+		if ( 'STDIN' !== $result_file ) {
+			$command .= ' < ' . escapeshellarg( $result_file );
+		}
+
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
