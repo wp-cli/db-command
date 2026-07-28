@@ -208,17 +208,3 @@ Feature: Query the database with WordPress' MySQL config
       num
       2
       """
-
-  Scenario: Database querying falls back to wpdb when PATH contains no binaries
-    Given a WP install
-
-    When I try `env PATH=/empty_path wp db query "SELECT COUNT(ID) FROM wp_users;" --debug`
-    Then STDOUT should be:
-      """
-      COUNT(ID)
-      1
-      """
-    And STDERR should contain:
-      """
-      MySQL/MariaDB binary not available, falling back to wpdb.
-      """

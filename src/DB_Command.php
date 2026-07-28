@@ -2468,19 +2468,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @return bool True if the binary is available, false otherwise.
 	 */
 	protected function is_mysql_binary_available() {
-		static $available = null;
-
-		if ( null === $available ) {
-			$path = Utils\get_mysql_binary_path();
-			if ( '' === $path ) {
-				$available = false;
-			} else {
-				$result    = \WP_CLI\Process::create( $path . ' --version', null, null )->run();
-				$available = 0 === $result->return_code;
-			}
-		}
-
-		return $available;
+		return '' !== Utils\get_mysql_binary_path();
 	}
 
 	/**
