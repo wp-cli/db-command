@@ -69,7 +69,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `CREATE_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 	 * `DB_USER` and `DB_PASSWORD` database credentials specified in
-	 * wp-config.php.
+	 * wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 	 *
 	 * ## OPTIONS
 	 *
@@ -105,7 +105,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `DROP_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 	 * `DB_USER` and `DB_PASSWORD` database credentials specified in
-	 * wp-config.php.
+	 * wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 	 *
 	 * ## OPTIONS
 	 *
@@ -148,7 +148,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `DROP_DATABASE` and `CREATE_DATABASE` SQL statements using
 	 * `DB_HOST`, `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-	 * specified in wp-config.php.
+	 * specified in wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 	 *
 	 * ## OPTIONS
 	 *
@@ -251,7 +251,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-	 * specified in wp-config.php.
+	 * specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 	 *
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/check-table.html)
 	 * for more details on the `CHECK TABLE` statement.
@@ -320,7 +320,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `mysqlcheck` utility with `--optimize=true` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-	 * specified in wp-config.php.
+	 * specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 	 *
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/optimize-table.html)
 	 * for more details on the `OPTIMIZE TABLE` statement.
@@ -386,7 +386,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `mysqlcheck` utility with `--repair=true` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-	 * specified in wp-config.php.
+	 * specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 	 *
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/repair-table.html) for
 	 * more details on the `REPAIR TABLE` statement.
@@ -448,7 +448,8 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Opens a MySQL console using credentials from wp-config.php
+	 * Opens a MySQL console using credentials from wp-config.php.
+	 * Requires `mysql` or `mariadb` client binary to be available.
 	 *
 	 * ## OPTIONS
 	 *
@@ -686,6 +687,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 	 * `DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid [`mysqldump` flags](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
+	 * Requires `mysqldump` or `mariadb-dump` client binary to be available.
 	 *
 	 * ## OPTIONS
 	 *
