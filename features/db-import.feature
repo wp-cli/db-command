@@ -374,3 +374,17 @@ Feature: Import a WordPress database
       Success: Imported from 'prefix.sql; \! touch side_effect.sql #.sql'.
       """
     And the side_effect.sql file should not exist
+
+  @require-mysql-or-mariadb
+  Scenario: `wp db import` does not execute embedded client meta-commands in dump content
+    Given a WP install
+    And a dump_with_command_injection.sql file:
+      """
+      CREATE TABLE wp_cli_meta_content_test (id int NOT NULL);
+      INSERT INTO wp_cli_meta_content_test (id) VALUES (99);
+      \! touch side_effect_content.sql
+      """
+
+    When I try `wp db import dump_with_command_injection.sql`
+    Then the side_effect_content.sql file should not exist
+
