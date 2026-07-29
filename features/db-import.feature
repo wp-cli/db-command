@@ -248,6 +248,22 @@ Feature: Import a WordPress database
       🍣
       """
 
+  @require-sqlite
+  Scenario: `wp db import` rejects dot-commands in SQLite dump files
+    Given a WP install
+    And a malicious_sqlite.sql file:
+      """
+      CREATE TABLE wp_cli_sqlite_meta (id int NOT NULL);
+      .shell touch side_effect_sqlite.txt
+      """
+
+    When I try `wp db import malicious_sqlite.sql`
+    Then STDERR should contain:
+      """
+      SQLite dot-commands are not allowed in import files.
+      """
+    And the side_effect_sqlite.txt file should not exist
+
   # SQLite does not use the MySQL client and has no concept of SQL modes.
   @require-mysql-or-mariadb
   Scenario: `wp db import` adapts the SQL mode via --init-command by default
