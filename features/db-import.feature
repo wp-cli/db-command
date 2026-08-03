@@ -391,6 +391,12 @@ Feature: Import a WordPress database
       """
     And the side_effect.sql file should not exist
 
+    When I run `wp db query 'SELECT id FROM wp_cli_meta_test;' --skip-column-names`
+    Then STDOUT should be:
+      """
+      42
+      """
+
   @require-mysql-or-mariadb
   Scenario: `wp db import` does not execute embedded client meta-commands in dump content
     Given a WP install
