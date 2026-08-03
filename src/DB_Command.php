@@ -970,7 +970,7 @@ class DB_Command extends WP_CLI_Command {
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 
-		if ( 'STDIN' !== $result_file ) {
+		if ( '-' !== ( $args[0] ?? '' ) ) {
 			$command .= ' < ' . escapeshellarg( $result_file );
 		}
 
