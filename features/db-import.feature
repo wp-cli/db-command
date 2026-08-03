@@ -378,16 +378,16 @@ Feature: Import a WordPress database
   @require-mysql-or-mariadb
   Scenario: `wp db import` handles filenames containing semicolons and client directives
     Given a WP install
-    And a "prefix.sql; \! touch side_effect.sql #.sql" file:
+    And a prefix.sql;\!touch_side_effect.sql#.sql file:
       """
       CREATE TABLE wp_cli_meta_test (id int NOT NULL);
       INSERT INTO wp_cli_meta_test (id) VALUES (42);
       """
 
-    When I run `wp db import "prefix.sql; \! touch side_effect.sql #.sql"`
+    When I run `wp db import 'prefix.sql;\!touch_side_effect.sql#.sql'`
     Then STDOUT should contain:
       """
-      Success: Imported from 'prefix.sql; \! touch side_effect.sql #.sql'.
+      Success: Imported from 'prefix.sql;\!touch_side_effect.sql#.sql'.
       """
     And the side_effect.sql file should not exist
 

@@ -943,8 +943,10 @@ class DB_Command extends WP_CLI_Command {
 	public function import( $args, $assoc_args ) {
 		$this->maybe_load_sqlite_dropin();
 
+		$is_stdin = false;
 		if ( ! empty( $args[0] ) ) {
 			$result_file = $args[0];
+			$is_stdin    = '-' === $result_file;
 		} else {
 			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
@@ -956,7 +958,10 @@ class DB_Command extends WP_CLI_Command {
 
 		// Process options to MySQL.
 		$mysql_args = array_merge(
-			[ 'database' => DB_NAME ],
+			[
+				'database'    => DB_NAME,
+				'binary-mode' => true,
+			],
 			self::get_dbuser_dbpass_args( $assoc_args ),
 			self::get_mysql_args( $assoc_args )
 		);
@@ -967,7 +972,7 @@ class DB_Command extends WP_CLI_Command {
 		// no separate probe connection.
 		$this->apply_sql_mode_compat_init_command( $mysql_args, $assoc_args );
 
-		if ( '-' !== $result_file ) {
+		if ( ! $is_stdin ) {
 			if ( ! is_readable( $result_file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
 			}
@@ -990,7 +995,7 @@ class DB_Command extends WP_CLI_Command {
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 
-		if ( '-' !== ( $args[0] ?? '' ) ) {
+		if ( ! $is_stdin ) {
 			$command .= ' < ' . escapeshellarg( $result_file );
 		}
 
