@@ -553,7 +553,7 @@ defined in the SQL.
 		Extra arguments to pass to mysql. [Refer to mysql binary docs](https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html).
 
 	[--skip-optimization]
-		When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
+		Do not disable unique checks and foreign key checks during import.
 
 	[--skip-sql-mode-compat]
 		Do not adapt the session SQL mode for WordPress compatibility. By default, `wp db import` strips the SQL modes that WordPress Core disables (such as `STRICT_TRANS_TABLES` and `NO_ZERO_DATE`) so that dumps containing legacy values like `0000-00-00` import cleanly. Pass this flag to import under the server's own SQL modes instead.
