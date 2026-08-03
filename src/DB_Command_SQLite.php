@@ -454,6 +454,10 @@ trait DB_Command_SQLite {
 			$contents = (string) file_get_contents( $file );
 		}
 
+		if ( preg_match( '/^\s*\.[a-zA-Z]+/m', $contents ) ) {
+			WP_CLI::error( 'SQLite dot-commands are not allowed in import files.' );
+		}
+
 		// Ignore errors about unique constraints and existing indexes.
 		$contents = str_replace( 'INSERT INTO', 'INSERT OR IGNORE INTO', $contents );
 		$contents = preg_replace( '/\bCREATE TABLE (?!IF NOT EXISTS\b)/i', 'CREATE TABLE IF NOT EXISTS ', $contents );

@@ -286,9 +286,14 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		$check_command = Utils\get_sql_check_command();
+		if ( '' === $check_command ) {
+			WP_CLI::error( 'The mysqlcheck or mariadb-check binary is not available.' );
+		}
+
 		$command = sprintf(
-			'/usr/bin/env %s%s %s',
-			Utils\get_sql_check_command(),
+			'%s%s %s',
+			$check_command,
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -347,9 +352,14 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		$check_command = Utils\get_sql_check_command();
+		if ( '' === $check_command ) {
+			WP_CLI::error( 'The mysqlcheck or mariadb-check binary is not available.' );
+		}
+
 		$command = sprintf(
-			'/usr/bin/env %s%s %s',
-			Utils\get_sql_check_command(),
+			'%s%s %s',
+			$check_command,
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -408,9 +418,14 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		$check_command = Utils\get_sql_check_command();
+		if ( '' === $check_command ) {
+			WP_CLI::error( 'The mysqlcheck or mariadb-check binary is not available.' );
+		}
+
 		$command = sprintf(
-			'/usr/bin/env %s%s %s',
-			Utils\get_sql_check_command(),
+			'%s%s %s',
+			$check_command,
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -756,7 +771,12 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$mysqldump_binary = Utils\force_env_on_nix_systems( Utils\get_sql_dump_command() );
+		$dump_command = Utils\get_sql_dump_command();
+		if ( '' === $dump_command ) {
+			WP_CLI::error( 'The mysqldump or mariadb-dump binary is not available.' );
+		}
+
+		$mysqldump_binary = $dump_command;
 
 		$support_column_statistics = $this->command_supports_option( $mysqldump_binary, 'column-statistics' );
 
