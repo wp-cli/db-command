@@ -374,3 +374,39 @@ Feature: Import a WordPress database
       """
       Success: Imported from 'zerodate_compose.sql'.
       """
+
+  @require-mysql-or-mariadb
+  Scenario: `wp db import` handles filenames containing semicolons and client directives
+    Given a WP install
+    And a prefix.sql;\!touch_side_effect.sql#.sql file:
+      """
+      CREATE TABLE wp_cli_meta_test (id int NOT NULL);
+      INSERT INTO wp_cli_meta_test (id) VALUES (42);
+      """
+
+    When I run `wp db import 'prefix.sql;\!touch_side_effect.sql#.sql'`
+    Then STDOUT should contain:
+      """
+      Success: Imported from 'prefix.sql;\!touch_side_effect.sql#.sql'.
+      """
+    And the side_effect.sql file should not exist
+
+    When I run `wp db query 'SELECT id FROM wp_cli_meta_test;' --skip-column-names`
+    Then STDOUT should be:
+      """
+      42
+      """
+
+  @require-mysql-or-mariadb
+  Scenario: `wp db import` does not execute embedded client meta-commands in dump content
+    Given a WP install
+    And a dump_with_command_injection.sql file:
+      """
+      CREATE TABLE wp_cli_meta_content_test (id int NOT NULL);
+      INSERT INTO wp_cli_meta_content_test (id) VALUES (99);
+      \! touch side_effect_content.sql
+      """
+
+    When I try `wp db import dump_with_command_injection.sql`
+    Then the side_effect_content.sql file should not exist
+
