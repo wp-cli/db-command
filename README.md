@@ -338,7 +338,7 @@ wp db cli [--database=<database>] [--default-character-set=<character-set>] [--d
 Executes a SQL query against the database.
 
 ~~~
-wp db query [<sql>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults]
+wp db query [<sql>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults] [--skip-sql-mode-compat]
 ~~~
 
 Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
@@ -364,6 +364,13 @@ entirely.
 
 	[--defaults]
 		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
+	[--skip-sql-mode-compat]
+		Run the query under the server's own SQL modes instead of adapting them to
+		be WordPress-compatible. By default, the incompatible modes that WordPress
+		disables in `wpdb` (such as `NO_ZERO_DATE` and `STRICT_TRANS_TABLES`) are
+		stripped for the session, so statements against WordPress's zero-date schema
+		behave the same as they do in WordPress itself.
 
 **EXAMPLES**
 
@@ -437,7 +444,7 @@ wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] 
 **Alias:** `dump`
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
-`DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid `mysqldump` flags.
+`DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid [`mysqldump` flags](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
 
 **OPTIONS**
 
@@ -531,7 +538,7 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 Imports a database from a file or from STDIN.
 
 ~~~
-wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--skip-optimization] [--defaults]
+wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--skip-optimization] [--skip-sql-mode-compat] [--defaults]
 ~~~
 
 Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
@@ -554,7 +561,10 @@ defined in the SQL.
 		Extra arguments to pass to mysql. [Refer to mysql binary docs](https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html).
 
 	[--skip-optimization]
-		When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
+		Do not disable unique checks and foreign key checks during import.
+
+	[--skip-sql-mode-compat]
+		Do not adapt the session SQL mode for WordPress compatibility. By default, `wp db import` strips the SQL modes that WordPress Core disables (such as `STRICT_TRANS_TABLES` and `NO_ZERO_DATE`) so that dumps containing legacy values like `0000-00-00` import cleanly. Pass this flag to import under the server's own SQL modes instead.
 
 	[--defaults]
 		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
@@ -1046,7 +1056,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Support
 
-GitHub issues aren't for general support questions, but there are other venues you can try: https://wp-cli.org/#support
+GitHub issues aren't for general support questions. For support resources and next steps, see the WP-CLI Support page: https://make.wordpress.org/cli/handbook/support/
 
 
 *This README.md is generated dynamically from the project's codebase using `wp scaffold package-readme` ([doc](https://github.com/wp-cli/scaffold-package-command#wp-scaffold-package-readme)). To suggest changes, please submit a pull request against the corresponding part of the codebase.*
