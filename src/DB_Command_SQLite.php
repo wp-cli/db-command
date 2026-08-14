@@ -221,6 +221,19 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'SQLite database not available.' );
 		}
 
+		/*
+		 * Strip redundant trailing semicolons and whitespace.
+		 *
+		 * The MySQL client silently ignores the empty statements they produce,
+		 * whereas the SQLite drop-in parses them as a multi-query and bails out
+		 * with "Multi-query is not supported.". Trim them for parity.
+		 */
+		$query = rtrim( $query, "; \t\n\r\0\x0B" );
+
+		if ( '' === $query ) {
+			WP_CLI::error( 'No query specified.' );
+		}
+
 		$skip_column_names = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
 
 		try {

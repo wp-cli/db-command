@@ -1942,10 +1942,6 @@ class DB_Command extends WP_CLI_Command {
 
 		$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' ];
 
-		if ( $this->is_sqlite() ) {
-			$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default' ];
-		}
-
 		$formatter_args = [
 			'format' => $format,
 		];
