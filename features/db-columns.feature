@@ -58,7 +58,8 @@ Feature: Display information about a given table.
     And I run `wp db query "CREATE TABLE not_wp ( date DATE NOT NULL, awesome_stuff TEXT, PRIMARY KEY (date) );;"`
 
     When I try `wp db columns not_wp`
+    # The `Extra` column is left out because `wp db columns` omits it on SQLite.
     Then STDOUT should be a table containing rows:
       | Field         | Type       | Null | Key | Default |
-      | date          | TEXT       | NO   | PRI | ''      |
-      | awesome_stuff | TEXT       | YES  |     |         |
+      | date          | date       | NO   | PRI |         |
+      | awesome_stuff | text       | YES  |     |         |
