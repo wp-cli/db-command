@@ -256,6 +256,16 @@ Feature: Import a WordPress database
       CREATE TABLE wp_cli_sqlite_meta (id int NOT NULL);
       .shell touch side_effect_sqlite.txt
       """
+    And a malicious_sqlite_space.sql file:
+      """
+      CREATE TABLE wp_cli_sqlite_meta (id int NOT NULL);
+      . shell touch side_effect_sqlite_space.txt
+      """
+    And a malicious_sqlite_quotes.sql file:
+      """
+      CREATE TABLE wp_cli_sqlite_meta (id int NOT NULL);
+      ."shell" touch side_effect_sqlite_quotes.txt
+      """
 
     When I try `wp db import malicious_sqlite.sql`
     Then STDERR should contain:
@@ -263,6 +273,20 @@ Feature: Import a WordPress database
       SQLite dot-commands are not allowed in import files.
       """
     And the side_effect_sqlite.txt file should not exist
+
+    When I try `wp db import malicious_sqlite_space.sql`
+    Then STDERR should contain:
+      """
+      SQLite dot-commands are not allowed in import files.
+      """
+    And the side_effect_sqlite_space.txt file should not exist
+
+    When I try `wp db import malicious_sqlite_quotes.sql`
+    Then STDERR should contain:
+      """
+      SQLite dot-commands are not allowed in import files.
+      """
+    And the side_effect_sqlite_quotes.txt file should not exist
 
   # SQLite does not use the MySQL client and has no concept of SQL modes.
   @require-mysql-or-mariadb
