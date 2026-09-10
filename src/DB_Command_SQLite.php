@@ -467,7 +467,7 @@ trait DB_Command_SQLite {
 			$contents = (string) file_get_contents( $file );
 		}
 
-		if ( preg_match( '/^[ \t]*\./m', $contents ) ) {
+		if ( preg_match( '/^[ \t]*\.(?![0-9])/m', $contents ) ) {
 			WP_CLI::error( 'SQLite dot-commands are not allowed in import files.' );
 		}
 

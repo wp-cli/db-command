@@ -288,6 +288,29 @@ Feature: Import a WordPress database
       """
     And the side_effect_sqlite_quotes.txt file should not exist
 
+  @require-sqlite
+  Scenario: `wp db import` allows multiline SQL containing numeric literals starting with a dot
+    Given a WP install
+    And a numeric_literal.sql file:
+      """
+      CREATE TABLE wp_cli_prices (value REAL);
+      INSERT INTO wp_cli_prices (value) VALUES (
+      .5
+      );
+      """
+
+    When I run `wp db import numeric_literal.sql`
+    Then STDOUT should contain:
+      """
+      Success: Imported from 'numeric_literal.sql'.
+      """
+
+    When I run `wp db query 'SELECT value FROM wp_cli_prices;' --skip-column-names`
+    Then STDOUT should be:
+      """
+      0.5
+      """
+
   # SQLite does not use the MySQL client and has no concept of SQL modes.
   @require-mysql-or-mariadb
   Scenario: `wp db import` adapts the SQL mode via --init-command by default
