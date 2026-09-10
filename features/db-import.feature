@@ -256,6 +256,16 @@ Feature: Import a WordPress database
       CREATE TABLE wp_cli_sqlite_meta (id int NOT NULL);
       .shell touch side_effect_sqlite.txt
       """
+    And a malicious_sqlite_space.sql file:
+      """
+      CREATE TABLE wp_cli_sqlite_meta (id int NOT NULL);
+      . shell touch side_effect_sqlite_space.txt
+      """
+    And a malicious_sqlite_quotes.sql file:
+      """
+      CREATE TABLE wp_cli_sqlite_meta (id int NOT NULL);
+      ."shell" touch side_effect_sqlite_quotes.txt
+      """
 
     When I try `wp db import malicious_sqlite.sql`
     Then STDERR should contain:
@@ -263,6 +273,43 @@ Feature: Import a WordPress database
       SQLite dot-commands are not allowed in import files.
       """
     And the side_effect_sqlite.txt file should not exist
+
+    When I try `wp db import malicious_sqlite_space.sql`
+    Then STDERR should contain:
+      """
+      SQLite dot-commands are not allowed in import files.
+      """
+    And the side_effect_sqlite_space.txt file should not exist
+
+    When I try `wp db import malicious_sqlite_quotes.sql`
+    Then STDERR should contain:
+      """
+      SQLite dot-commands are not allowed in import files.
+      """
+    And the side_effect_sqlite_quotes.txt file should not exist
+
+  @require-sqlite
+  Scenario: `wp db import` allows multiline SQL containing numeric literals starting with a dot
+    Given a WP install
+    And a numeric_literal.sql file:
+      """
+      CREATE TABLE wp_cli_prices (value REAL);
+      INSERT INTO wp_cli_prices (value) VALUES (
+      .5
+      );
+      """
+
+    When I run `wp db import numeric_literal.sql`
+    Then STDOUT should contain:
+      """
+      Success: Imported from 'numeric_literal.sql'.
+      """
+
+    When I run `wp db query 'SELECT value FROM wp_cli_prices;' --skip-column-names`
+    Then STDOUT should be:
+      """
+      0.5
+      """
 
   # SQLite does not use the MySQL client and has no concept of SQL modes.
   @require-mysql-or-mariadb
