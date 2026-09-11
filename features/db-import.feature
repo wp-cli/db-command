@@ -69,6 +69,118 @@ Feature: Import a WordPress database
       Success: Imported from 'wp_cli_test.sql'.
       """
 
+  @require-mysql-or-mariadb
+  Scenario: Database import falls back to wpdb when mysql binary is unavailable
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I try `wp db export wp_cli_test.sql`
+    Then the wp_cli_test.sql file should exist
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db import wp_cli_test.sql --debug`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'wp_cli_test.sql'.
+      """
+    And STDERR should contain:
+      """
+      MySQL/MariaDB binary not available, falling back to wpdb for import.
+      """
+
+  @require-mysql-or-mariadb
+  Scenario: Database import falls back to wpdb and handles zero-date column defaults
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a zero_date.sql file:
+      """
+      CREATE TABLE IF NOT EXISTS wp_zero_date_test (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        created_at DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00'
+      );
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db import zero_date.sql --debug`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'zero_date.sql'.
+      """
+
+  @require-mysql-or-mariadb
+  Scenario: Database import falls back to wpdb and handles DELIMITER blocks with procedures
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a procedure.sql file:
+      """
+      DELIMITER //
+      CREATE PROCEDURE wp_test_procedure()
+      BEGIN
+        SELECT 1;
+      END//
+      DELIMITER ;
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db import procedure.sql --debug`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'procedure.sql'.
+      """
+
+  @require-mysql-or-mariadb
+  Scenario: Database import falls back to wpdb and handles malformed empty DELIMITER lines
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a malformed_delimiter.sql file:
+      """
+      DELIMITER
+      SELECT 1;
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db import malformed_delimiter.sql --debug`
+    Then STDOUT should be:
+      """
+      Success: Imported from 'malformed_delimiter.sql'.
+      """
+
   # SQLite doesn't support the --dbuser flag.
   @require-mysql-or-mariadb
   Scenario: Import from database name path by default with passed-in dbuser/dbpass
