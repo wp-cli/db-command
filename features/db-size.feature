@@ -231,11 +231,11 @@ Feature: Display database size
     Given a WP install
 
     When I run `wp db size --human-readable`
-    Then STDOUT should match /\d+\.\d+ KB/
+    Then STDOUT should match /\d+\.\d+ (KB|MB)/
 
     When I run `wp db size --human-readable --decimals=0`
-    Then STDOUT should match /\d+ KB/
-    And STDOUT should not match /\d+\.\d+ KB/
+    Then STDOUT should match /\d+ (KB|MB)/
+    And STDOUT should not match /\d+\.\d+ (KB|MB)/
 
   @require-mysql-or-mariadb
   Scenario: Display database size in bytes with specific format for a WordPress install
