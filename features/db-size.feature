@@ -112,6 +112,41 @@ Feature: Display database size
       """
     And STDOUT should be empty
 
+  @require-mysql-or-mariadb
+  Scenario: Display data and index size of a database for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --fields=Name,Data,Index,Size`
+    Then STDOUT should match /wp_cli_test\s+\d+ B\s+\d+ B\s+\d+ B/
+
+    When I run `wp db size --fields=Name,Data,Index,Size --format=csv`
+    Then STDOUT should contain:
+      """
+      Name,Data,Index,Size
+      """
+
+  @require-sqlite @skip-windows
+  Scenario: Display data and index size of a database for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --fields=Name,Data,Index,Size`
+    Then STDOUT should match /\.ht\.sqlite(\.php)?\s+\d+ B\s+\d+ B\s+\d+ B/
+
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
+  Scenario: Display data and index size of each table for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --tables --fields=Name,Data,Index,Size`
+    Then STDOUT should match /wp_posts\s+\d+ B\s+\d+ B\s+\d+ B/
+
+    When I run `wp db size --tables --fields=Name,Index --human-readable`
+    Then STDOUT should match /wp_posts\s+[\d.]+ (B|KB)/
+    But STDOUT should not contain:
+      """
+      Size
+      """
+
   Scenario: Display only database size in bytes for a WordPress install
     Given a WP install
 
@@ -190,6 +225,17 @@ Feature: Display database size
       """
       MB
       """
+
+  @require-mysql-or-mariadb
+  Scenario: Display database size in a human readable format with specific precision for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --human-readable`
+    Then STDOUT should match /\d+\.\d+ KB/
+
+    When I run `wp db size --human-readable --decimals=0`
+    Then STDOUT should match /\d+ KB/
+    And STDOUT should not match /\d+\.\d+ KB/
 
   @require-mysql-or-mariadb
   Scenario: Display database size in bytes with specific format for a WordPress install

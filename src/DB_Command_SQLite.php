@@ -553,6 +553,23 @@ trait DB_Command_SQLite {
 	}
 
 	/**
+	 * Get the size of all SQLite objects of a given type.
+	 *
+	 * @param string $type Object type, either `table` or `index`.
+	 * @return int Size in bytes.
+	 */
+	protected function sqlite_type_size( $type ) {
+		global $wpdb;
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT SUM(pgsize) as size_in_bytes FROM dbstat where name IN ( SELECT name FROM sqlite_master WHERE type = %s )',
+				$type
+			)
+		);
+	}
+
+	/**
 	 * Load WordPress db.php drop-in if SQLite is detected.
 	 *
 	 * This should be called early in commands that run at after_wp_config_load.
