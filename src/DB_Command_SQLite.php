@@ -553,20 +553,62 @@ trait DB_Command_SQLite {
 	}
 
 	/**
-	 * Get the size of all SQLite objects of a given type.
+	 * Get the data and the index size of the SQLite database, or of a single table.
 	 *
-	 * @param string $type Object type, either `table` or `index`.
-	 * @return int Size in bytes.
+	 * Both sizes are collected in a single pass over `dbstat`, which walks every
+	 * page of the database file.
+	 *
+	 * @param string $table_name Optional. Table to limit the sizes to. Defaults to the whole database.
+	 * @return array{data: int, index: int} Sizes in bytes.
 	 */
-	protected function sqlite_type_size( $type ) {
+	protected function sqlite_size_breakdown( $table_name = '' ) {
 		global $wpdb;
 
-		return (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT SUM(pgsize) as size_in_bytes FROM dbstat where name IN ( SELECT name FROM sqlite_master WHERE type = %s )',
-				$type
-			)
-		);
+		// The dbstat virtual table is not part of every SQLite build.
+		$suppress_errors = $wpdb->suppress_errors( true );
+
+		if ( '' !== $table_name ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT sqlite_master.type as type, SUM(dbstat.pgsize) as size_in_bytes FROM dbstat JOIN sqlite_master ON sqlite_master.name = dbstat.name WHERE sqlite_master.name = %s OR ( sqlite_master.type = 'index' AND sqlite_master.tbl_name = %s ) GROUP BY sqlite_master.type",
+					$table_name,
+					$table_name
+				),
+				ARRAY_A
+			);
+		} else {
+			$rows = $wpdb->get_results(
+				'SELECT sqlite_master.type as type, SUM(dbstat.pgsize) as size_in_bytes FROM dbstat JOIN sqlite_master ON sqlite_master.name = dbstat.name GROUP BY sqlite_master.type',
+				ARRAY_A
+			);
+		}
+
+		$last_error = $wpdb->last_error;
+
+		$wpdb->suppress_errors( $suppress_errors );
+
+		if ( '' !== $last_error ) {
+			WP_CLI::error( 'Could not determine the data and index size of the database. This requires the dbstat extension, which is not available for this SQLite installation.' );
+		}
+
+		$sizes = [
+			'data'  => 0,
+			'index' => 0,
+		];
+
+		foreach ( (array) $rows as $row ) {
+			if ( ! is_array( $row ) || ! isset( $row['type'], $row['size_in_bytes'] ) || ! is_numeric( $row['size_in_bytes'] ) ) {
+				continue;
+			}
+
+			if ( 'table' === $row['type'] ) {
+				$sizes['data'] = (int) $row['size_in_bytes'];
+			} elseif ( 'index' === $row['type'] ) {
+				$sizes['index'] = (int) $row['size_in_bytes'];
+			}
+		}
+
+		return $sizes;
 	}
 
 	/**

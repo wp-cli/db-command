@@ -1301,19 +1301,10 @@ class DB_Command extends WP_CLI_Command {
 
 				// Get the table size.
 				if ( $is_sqlite ) {
-					$data_bytes = (int) $wpdb->get_var(
-						$wpdb->prepare(
-							'SELECT SUM(pgsize) as size_in_bytes FROM dbstat where name = %s LIMIT 1',
-							$table_name
-						)
-					);
+					$sqlite_sizes = $this->sqlite_size_breakdown( $table_name );
 
-					$index_bytes = (int) $wpdb->get_var(
-						$wpdb->prepare(
-							"SELECT SUM(pgsize) as size_in_bytes FROM dbstat where name IN ( SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = %s )",
-							$table_name
-						)
-					);
+					$data_bytes  = $sqlite_sizes['data'];
+					$index_bytes = $sqlite_sizes['index'];
 				} else {
 					$table_sizes = $wpdb->get_row(
 						$wpdb->prepare(
@@ -1345,9 +1336,14 @@ class DB_Command extends WP_CLI_Command {
 				$db_path  = $this->get_sqlite_db_path();
 				$db_name  = $db_path ? basename( $db_path ) : '';
 
-				// Unlike the file size, this does not cover overhead such as free pages.
-				$data_bytes  = $show_details ? $this->sqlite_type_size( 'table' ) : 0;
-				$index_bytes = $show_details ? $this->sqlite_type_size( 'index' ) : 0;
+				// Unlike the file size, these do not cover overhead such as free pages.
+				$sqlite_sizes = $show_details ? $this->sqlite_size_breakdown() : [
+					'data'  => 0,
+					'index' => 0,
+				];
+
+				$data_bytes  = $sqlite_sizes['data'];
+				$index_bytes = $sqlite_sizes['index'];
 			} else {
 				$db_sizes = $wpdb->get_row(
 					$wpdb->prepare(
