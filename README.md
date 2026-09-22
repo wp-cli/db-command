@@ -81,7 +81,7 @@ wp db create [--dbuser=<value>] [--dbpass=<value>] [--defaults]
 
 Runs `CREATE_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 `DB_USER` and `DB_PASSWORD` database credentials specified in
-wp-config.php.
+wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 
 **OPTIONS**
 
@@ -111,7 +111,7 @@ wp db drop [--dbuser=<value>] [--dbpass=<value>] [--yes] [--defaults]
 
 Runs `DROP_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 `DB_USER` and `DB_PASSWORD` database credentials specified in
-wp-config.php.
+wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 
 **OPTIONS**
 
@@ -144,7 +144,7 @@ wp db reset [--dbuser=<value>] [--dbpass=<value>] [--yes] [--defaults]
 
 Runs `DROP_DATABASE` and `CREATE_DATABASE` SQL statements using
 `DB_HOST`, `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-specified in wp-config.php.
+specified in wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 
 **OPTIONS**
 
@@ -177,7 +177,7 @@ wp db check [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--default
 
 Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
 `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-specified in wp-config.php.
+specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 
 [See docs](http://dev.mysql.com/doc/refman/5.7/en/check-table.html)
 for more details on the `CHECK TABLE` statement.
@@ -216,7 +216,7 @@ wp db optimize [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defa
 
 Runs `mysqlcheck` utility with `--optimize=true` using `DB_HOST`,
 `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-specified in wp-config.php.
+specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 
 [See docs](http://dev.mysql.com/doc/refman/5.7/en/optimize-table.html)
 for more details on the `OPTIMIZE TABLE` statement.
@@ -269,7 +269,7 @@ wp db repair [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaul
 
 Runs `mysqlcheck` utility with `--repair=true` using `DB_HOST`,
 `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-specified in wp-config.php.
+specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 
 [See docs](http://dev.mysql.com/doc/refman/5.7/en/repair-table.html) for
 more details on the `REPAIR TABLE` statement.
@@ -297,13 +297,15 @@ more details on the `REPAIR TABLE` statement.
 
 ### wp db cli
 
-Opens a MySQL console using credentials from wp-config.php
+Opens a MySQL console using credentials from wp-config.php.
 
 ~~~
 wp db cli [--database=<database>] [--default-character-set=<character-set>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults]
 ~~~
 
 **Alias:** `connect`
+
+Requires `mysql` or `mariadb` client binary to be available.
 
 **OPTIONS**
 
@@ -342,7 +344,9 @@ wp db query [<sql>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [-
 ~~~
 
 Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
- and `DB_PASSWORD` database credentials specified in wp-config.php.
+and `DB_PASSWORD` database credentials specified in wp-config.php.
+If MySQL/MariaDB client binaries are not available, falls back to
+executing queries via WordPress's `wpdb`.
 
 Use the `--skip-column-names` MySQL argument to exclude the headers
 from a SELECT query. Pipe the output to remove the ASCII table
@@ -445,6 +449,7 @@ wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] 
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 `DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid [`mysqldump` flags](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
+Requires `mysqldump` or `mariadb-dump` client binary to be available.
 
 **OPTIONS**
 
@@ -536,7 +541,8 @@ wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] 
 Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
 `DB_PASSWORD` database credentials specified in wp-config.php. This
 does not create database by itself and only performs whatever tasks are
-defined in the SQL.
+defined in the SQL. If MySQL/MariaDB client binaries are not available,
+falls back to importing via WordPress's `wpdb`.
 
 **OPTIONS**
 
