@@ -30,7 +30,7 @@ Feature: Select the configured SQLite database for file operations
     And I try `wp eval 'echo "ready";'`
     Then the return code should be 0
 
-    When I run `php -r 'echo md5_file( "other.sqlite" );'`
+    When I run `php -r "echo md5_file( 'other.sqlite' );"`
     Then save STDOUT as {OTHER_HASH}
 
     When I try `wp db export selected.sql`
@@ -48,7 +48,7 @@ Feature: Select the configured SQLite database for file operations
     Then the return code should be 0
     And the selected.sqlite file should not exist
 
-    When I run `php -r 'echo md5_file( "other.sqlite" );'`
+    When I run `php -r "echo md5_file( 'other.sqlite' );"`
     Then STDOUT should be:
       """
       {OTHER_HASH}
