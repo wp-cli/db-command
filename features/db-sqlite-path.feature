@@ -60,3 +60,37 @@ Feature: Select the configured SQLite database for file operations
       | selected.sqlite | selected.sqlite | /      | selected.sqlite | /       |
       |                 | selected.sqlite |        |                 |         |
       |                 |                 |        | selected.sqlite | /       |
+
+  Scenario Outline: Reject file operations on an in-memory SQLite database
+    Given a WP install
+    And an input.sql file:
+      """
+      SELECT 1;
+      """
+    When I run `wp config set <constant> :memory:`
+    And I run `wp db query "SELECT 1 AS value" --skip-column-names`
+    Then STDOUT should be:
+      """
+      1
+      """
+
+    When I try `wp db <command>`
+    Then the return code should be 1
+    And STDERR should be:
+      """
+      Error: This command does not support in-memory SQLite databases.
+      """
+    And STDOUT should be empty
+
+    Examples:
+      | constant | command           |
+      | DB_PATH  | create            |
+      | DB_PATH  | drop --yes        |
+      | DB_PATH  | reset --yes       |
+      | DB_PATH  | export output.sql |
+      | DB_PATH  | import input.sql  |
+      | FQDB     | create            |
+      | FQDB     | drop --yes        |
+      | FQDB     | reset --yes       |
+      | FQDB     | export output.sql |
+      | FQDB     | import input.sql  |
