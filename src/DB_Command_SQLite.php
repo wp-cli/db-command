@@ -63,8 +63,20 @@ trait DB_Command_SQLite {
 	 * @return string|false Path to SQLite database file, or false if not found.
 	 */
 	protected function get_sqlite_db_path() {
+		if ( defined( 'DB_PATH' ) ) {
+			if ( ':memory:' === DB_PATH ) {
+				WP_CLI::error( 'This command does not support in-memory SQLite databases.' );
+			}
+
+			return DB_PATH;
+		}
+
 		// Check for FQDB constant (fully qualified database path).
 		if ( defined( 'FQDB' ) ) {
+			if ( ':memory:' === FQDB ) {
+				WP_CLI::error( 'This command does not support in-memory SQLite databases.' );
+			}
+
 			return FQDB;
 		}
 
