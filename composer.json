@@ -50,7 +50,8 @@
             "db search",
             "db tables",
             "db size",
-            "db columns"
+            "db columns",
+            "db status"
         ]
     },
     "autoload": {
