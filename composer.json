@@ -50,7 +50,9 @@
             "db search",
             "db tables",
             "db size",
-            "db columns"
+            "db columns",
+            "db users",
+            "db users create"
         ]
     },
     "autoload": {
