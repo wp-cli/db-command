@@ -1102,6 +1102,11 @@ class DB_Command extends WP_CLI_Command {
 	 * Display the database name and size for `DB_NAME` specified in wp-config.php.
 	 * The size defaults to a human-readable number.
 	 *
+	 * The reported size is the sum of the data and the index size. Both can be
+	 * displayed separately by adding them to `--fields`. For SQLite, the database
+	 * size is the size of the database file, which also includes overhead such as
+	 * free pages.
+	 *
 	 * Available size formats include:
 	 * * b (bytes)
 	 * * kb (kilobytes)
@@ -1146,6 +1151,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--human-readable]
 	 * : Display database sizes in human readable formats.
 	 *
+	 * [--fields=<fields>]
+	 * : Get a specific subset of the fields.
+	 *
 	 * [--format=<format>]
 	 * : Render output in a particular format.
 	 * ---
@@ -1163,7 +1171,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : List all the tables in a multisite install.
 	 *
 	 * [--decimals=<decimals>]
-	 * : Number of digits after decimal point. Defaults to 0.
+	 * : Number of digits after decimal point. Defaults to 0, or 2 when using --human-readable.
 	 *
 	 * [--all-tables-with-prefix]
 	 * : List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
@@ -1188,6 +1196,18 @@ class DB_Command extends WP_CLI_Command {
 	 *   - name
 	 *   - size
 	 * ---
+	 *
+	 * ## AVAILABLE FIELDS
+	 *
+	 * These fields will be displayed by default:
+	 *
+	 * * Name
+	 * * Size
+	 *
+	 * These fields are optionally available:
+	 *
+	 * * Data
+	 * * Index
 	 *
 	 * ## EXAMPLES
 	 *
@@ -1216,6 +1236,13 @@ class DB_Command extends WP_CLI_Command {
 	 *     | wp_commentmeta        | 48 KB |
 	 *     +-----------------------+-------+
 	 *
+	 *     $ wp db size --fields=Name,Data,Index,Size --human-readable
+	 *     +-------------------+---------+--------+---------+
+	 *     | Name              |    Data |  Index |    Size |
+	 *     +-------------------+---------+--------+---------+
+	 *     | wordpress_default | 3.43 GB | 2.8 GB | 6.23 GB |
+	 *     +-------------------+---------+--------+---------+
+	 *
 	 *     $ wp db size --size_format=b
 	 *     5865472
 	 *
@@ -1228,7 +1255,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @when after_wp_load
 	 *
 	 * @param array $args Positional arguments. Unused.
-	 * @param array{size_format?: string, tables?: bool, 'human-readable'?: bool, format?: string, scope?: string, network?: bool, decimals?: string, 'all-tables-with-prefix'?: bool, 'all-tables'?: bool, order: string, orderby: string} $assoc_args Associative arguments.
+	 * @param array{size_format?: string, tables?: bool, 'human-readable'?: bool, fields?: string, format?: string, scope?: string, network?: bool, decimals?: string, 'all-tables-with-prefix'?: bool, 'all-tables'?: bool, order: string, orderby: string} $assoc_args Associative arguments.
 	 */
 	public function size( $args, $assoc_args ) {
 		global $wpdb;
@@ -1242,25 +1269,28 @@ class DB_Command extends WP_CLI_Command {
 		$all_tables_with_prefix = Utils\get_flag_value( $assoc_args, 'all-tables-with-prefix' );
 		$order                  = Utils\get_flag_value( $assoc_args, 'order', 'asc' );
 		$orderby                = Utils\get_flag_value( $assoc_args, 'orderby', null );
+		$fields                 = Utils\get_flag_value( $assoc_args, 'fields', '' );
 
 		if ( ! is_null( $size_format ) && $human_readable ) {
 			WP_CLI::error( 'Cannot use --size_format and --human-readable arguments at the same time.' );
 		}
 
+		$custom_fields = '' !== $fields;
+		$fields        = $custom_fields ? array_map( 'trim', explode( ',', (string) $fields ) ) : [ 'Name', 'Size' ];
+		$show_details  = (bool) array_intersect( [ 'Data', 'Index' ], $fields );
+
 		unset( $assoc_args['format'] );
 		unset( $assoc_args['size_format'] );
 		unset( $assoc_args['human-readable'] );
 		unset( $assoc_args['tables'] );
+		unset( $assoc_args['fields'] );
 
 		if ( empty( $args ) && empty( $assoc_args ) ) {
 			$assoc_args['scope'] = 'all';
 		}
 
 		// Build rows for the formatter.
-		$rows   = [];
-		$fields = [ 'Name', 'Size' ];
-
-		$default_unit = ( empty( $size_format ) && ! $human_readable ) ? ' B' : '';
+		$rows = [];
 
 		$is_sqlite = $this->is_sqlite();
 
@@ -1271,27 +1301,31 @@ class DB_Command extends WP_CLI_Command {
 
 				// Get the table size.
 				if ( $is_sqlite ) {
-					$table_bytes = $wpdb->get_var(
-						$wpdb->prepare(
-							'SELECT SUM(pgsize) as size_in_bytes FROM dbstat where name = %s LIMIT 1',
-							$table_name
-						)
-					);
+					$sqlite_sizes = $this->sqlite_size_breakdown( $table_name );
+
+					$data_bytes  = $sqlite_sizes['data'];
+					$index_bytes = $sqlite_sizes['index'];
 				} else {
-					$table_bytes = $wpdb->get_var(
+					$table_sizes = $wpdb->get_row(
 						$wpdb->prepare(
-							'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s and Table_Name = %s GROUP BY Table_Name LIMIT 1',
+							'SELECT SUM(data_length) AS data_length, SUM(index_length) AS index_length FROM information_schema.TABLES where table_schema = %s and Table_Name = %s GROUP BY Table_Name LIMIT 1',
 							DB_NAME,
 							$table_name
-						)
+						),
+						ARRAY_A
 					);
+
+					$data_bytes  = self::get_size_value( $table_sizes, 'data_length' );
+					$index_bytes = self::get_size_value( $table_sizes, 'index_length' );
 				}
 
 				// Add the table size to the list.
 				$rows[] = [
 					'Name'  => $table_name,
-					'Size'  => strtoupper( $table_bytes ) . $default_unit,
-					'Bytes' => strtoupper( $table_bytes ),
+					'Data'  => $data_bytes,
+					'Index' => $index_bytes,
+					'Size'  => $data_bytes + $index_bytes,
+					'Bytes' => $data_bytes + $index_bytes,
 				];
 			}
 		} else {
@@ -1301,136 +1335,170 @@ class DB_Command extends WP_CLI_Command {
 				$db_bytes = $this->sqlite_size();
 				$db_path  = $this->get_sqlite_db_path();
 				$db_name  = $db_path ? basename( $db_path ) : '';
+
+				// Unlike the file size, these do not cover overhead such as free pages.
+				$sqlite_sizes = $show_details ? $this->sqlite_size_breakdown() : [
+					'data'  => 0,
+					'index' => 0,
+				];
+
+				$data_bytes  = $sqlite_sizes['data'];
+				$index_bytes = $sqlite_sizes['index'];
 			} else {
-				$db_bytes = $wpdb->get_var(
+				$db_sizes = $wpdb->get_row(
 					$wpdb->prepare(
-						'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
+						'SELECT SUM(data_length) AS data_length, SUM(index_length) AS index_length FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
 						DB_NAME
-					)
+					),
+					ARRAY_A
 				);
-				$db_name  = DB_NAME;
+
+				$data_bytes  = self::get_size_value( $db_sizes, 'data_length' );
+				$index_bytes = self::get_size_value( $db_sizes, 'index_length' );
+				$db_bytes    = $data_bytes + $index_bytes;
+				$db_name     = DB_NAME;
 			}
 
 			// Add the database size to the list.
 			$rows[] = [
 				'Name'  => $db_name,
-				'Size'  => strtoupper( $db_bytes ) . $default_unit,
-				'Bytes' => strtoupper( $db_bytes ),
+				'Data'  => $data_bytes,
+				'Index' => $index_bytes,
+				'Size'  => $db_bytes,
+				'Bytes' => $db_bytes,
 			];
 		}
 
-		$size_format_display = '';
+		// Human readable sizes are of little use without any precision.
+		$decimals = (int) Utils\get_flag_value( $assoc_args, 'decimals', $human_readable ? 2 : 0 );
 
-		if ( ! empty( $size_format ) || $human_readable ) {
-			foreach ( $rows as $index => $row ) {
-				// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Backfilling WP native constants.
-				if ( ! defined( 'KB_IN_BYTES' ) ) {
-					define( 'KB_IN_BYTES', 1024 );
-				}
-				if ( ! defined( 'MB_IN_BYTES' ) ) {
-					define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
-				}
-				if ( ! defined( 'GB_IN_BYTES' ) ) {
-					define( 'GB_IN_BYTES', 1024 * MB_IN_BYTES );
-				}
-				if ( ! defined( 'TB_IN_BYTES' ) ) {
-					define( 'TB_IN_BYTES', 1024 * GB_IN_BYTES );
-				}
-				// phpcs:enable
+		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && ! $custom_fields && true !== $all_tables && true !== $all_tables_with_prefix ) {
+			// Display the database size as a bare number.
+			WP_CLI::line( (string) round( (int) $rows[0]['Bytes'] / self::get_size_divisor( $size_format ), $decimals ) );
+			return;
+		}
 
-				if ( $human_readable ) {
-					$size_key = floor( log( (float) $row['Size'] ) / log( 1000 ) );
-					$sizes    = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+		foreach ( $rows as $index => $row ) {
+			foreach ( [ 'Data', 'Index', 'Size' ] as $field ) {
+				$bytes = (int) $row[ $field ];
 
-					if ( is_infinite( $size_key ) ) {
-						$size_key = 0;
-					}
-
-					$size_key = (int) $size_key;
-
-					$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
+				if ( empty( $size_format ) && ! $human_readable ) {
+					$rows[ $index ][ $field ] = $bytes . ' B';
+					continue;
 				}
 
-				// Display the database size as a number.
-				switch ( $size_format ) {
-					case 'TB':
-						$divisor = pow( 1000, 4 );
-						break;
+				$field_size_format = $human_readable ? self::get_human_readable_size_format( $bytes, $decimals ) : $size_format;
+				$size_format_label = preg_replace( '/IB$/u', 'iB', strtoupper( $field_size_format ) );
 
-					case 'GB':
-						$divisor = pow( 1000, 3 );
-						break;
-
-					case 'MB':
-						$divisor = pow( 1000, 2 );
-						break;
-
-					case 'KB':
-						$divisor = 1000;
-						break;
-
-					case 'tb':
-					case 'TiB':
-						$divisor = TB_IN_BYTES;
-						break;
-
-					case 'gb':
-					case 'GiB':
-						$divisor = GB_IN_BYTES;
-						break;
-
-					case 'mb':
-					case 'MiB':
-						$divisor = MB_IN_BYTES;
-						break;
-
-					case 'kb':
-					case 'KiB':
-						$divisor = KB_IN_BYTES;
-						break;
-
-					case 'b':
-					case 'B':
-					default:
-						$divisor = 1;
-						break;
-				}
-					$size_format_display = preg_replace( '/IB$/u', 'iB', strtoupper( $size_format ) );
-
-					$decimals               = (int) Utils\get_flag_value( $assoc_args, 'decimals', 0 );
-					$rows[ $index ]['Size'] = round( (int) $row['Bytes'] / $divisor, $decimals ) . ' ' . $size_format_display;
+				$rows[ $index ][ $field ] = round( $bytes / self::get_size_divisor( $field_size_format ), $decimals ) . ' ' . $size_format_label;
 			}
 		}
 
-		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
-			WP_CLI::line( str_replace( " {$size_format_display}", '', $rows[0]['Size'] ) );
-		} else {
-			// Sort the rows by user input
-			if ( $orderby ) {
-				usort(
-					$rows,
-					function ( $a, $b ) use ( $order, $orderby ) {
+		// Sort the rows by user input
+		if ( $orderby ) {
+			usort(
+				$rows,
+				function ( $a, $b ) use ( $order, $orderby ) {
 
-						$orderby_array          = 'asc' === $order ? array( $a, $b ) : array( $b, $a );
-						list( $first, $second ) = $orderby_array;
+					$orderby_array          = 'asc' === $order ? array( $a, $b ) : array( $b, $a );
+					list( $first, $second ) = $orderby_array;
 
-						if ( 'size' === $orderby ) {
-							return $first['Bytes'] <=> $second['Bytes'];
-						}
-
-						return strcmp( $first['Name'], $second['Name'] );
+					if ( 'size' === $orderby ) {
+						return $first['Bytes'] <=> $second['Bytes'];
 					}
-				);
-			}
 
-			// Display the rows.
-			$args = [
-				'format'     => $format,
-				'alignments' => [ 'Size' => Column::ALIGN_RIGHT ],
-			];
+					return strcmp( $first['Name'], $second['Name'] );
+				}
+			);
+		}
 
-			$formatter = new Formatter( $args, $fields );
-			$formatter->display_items( $rows );
+		// Display the rows.
+		$args = [
+			'format'     => $format,
+			'fields'     => $fields,
+			'alignments' => array_fill_keys( array_intersect( [ 'Data', 'Index', 'Size' ], $fields ), Column::ALIGN_RIGHT ),
+		];
+
+		$formatter = new Formatter( $args, $fields );
+		$formatter->display_items( $rows );
+	}
+
+	/**
+	 * Returns the size of a column of a database size query result.
+	 *
+	 * @param mixed  $result Result of a database size query.
+	 * @param string $column Name of the column holding the size.
+	 * @return int Number of bytes.
+	 */
+	private static function get_size_value( $result, $column ) {
+		if ( ! is_array( $result ) || ! isset( $result[ $column ] ) || ! is_numeric( $result[ $column ] ) ) {
+			return 0;
+		}
+
+		return (int) $result[ $column ];
+	}
+
+	/**
+	 * Returns the size format that fits the given number of bytes best.
+	 *
+	 * @param int $bytes    Number of bytes.
+	 * @param int $decimals Number of digits after the decimal point.
+	 * @return string Size format, for example `KB`.
+	 */
+	private static function get_human_readable_size_format( $bytes, $decimals ) {
+		$sizes = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+
+		$size_key = $bytes > 0 ? (int) floor( log( $bytes ) / log( 1000 ) ) : 0;
+		$size_key = min( $size_key, count( $sizes ) - 1 );
+
+		// Rounding can tip the value into the next size format, for example 999.95 KB.
+		if ( $size_key < count( $sizes ) - 1 && round( $bytes / pow( 1000, $size_key ), $decimals ) >= 1000 ) {
+			++$size_key;
+		}
+
+		return $sizes[ $size_key ];
+	}
+
+	/**
+	 * Returns the number of bytes a given size format holds.
+	 *
+	 * @param string $size_format Size format, for example `mb` or `KiB`.
+	 * @return int Number of bytes.
+	 */
+	private static function get_size_divisor( $size_format ) {
+		switch ( $size_format ) {
+			case 'TB':
+				return (int) pow( 1000, 4 );
+
+			case 'GB':
+				return (int) pow( 1000, 3 );
+
+			case 'MB':
+				return (int) pow( 1000, 2 );
+
+			case 'KB':
+				return 1000;
+
+			case 'tb':
+			case 'TiB':
+				return (int) pow( 1024, 4 );
+
+			case 'gb':
+			case 'GiB':
+				return (int) pow( 1024, 3 );
+
+			case 'mb':
+			case 'MiB':
+				return (int) pow( 1024, 2 );
+
+			case 'kb':
+			case 'KiB':
+				return 1024;
+
+			case 'b':
+			case 'B':
+			default:
+				return 1;
 		}
 	}
 
