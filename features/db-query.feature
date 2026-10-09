@@ -5,7 +5,7 @@ Feature: Query the database with WordPress' MySQL config
     And a wp-content/mu-plugins/error.php file:
       """
       <?php
-      WP_CLI::error( "Plugin loaded." );
+      WP_CLI::error( 'Plugin loaded.' );
       """
 
     When I try `wp option get home`
