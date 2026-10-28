@@ -100,6 +100,39 @@ Feature: Select the configured SQLite database for file operations
       {OTHER_HASH}
       """
 
+  @require-sqlite
+  Scenario: Resolve the recorded secret path without loading the drop-in
+    Given a WP install
+    When I run `wp eval 'mkdir( "recorded" ); copy( defined( "DB_PATH" ) ? DB_PATH : FQDB, "recorded/selected.sqlite" ); copy( "recorded/selected.sqlite", ".ht.sqlite" ); file_put_contents( "recorded/db-path.php", "<?php return " . var_export( getcwd() . "/recorded/selected.sqlite", true ) . ";" );'`
+    And I run `sqlite3 recorded/selected.sqlite "CREATE TABLE path_marker (value TEXT); INSERT INTO path_marker VALUES ('selected');"`
+    And I run `sqlite3 .ht.sqlite "CREATE TABLE path_marker (value TEXT); INSERT INTO path_marker VALUES ('other');"`
+
+    Given a paths.php file:
+      """
+      <?php
+      define( 'DB_ENGINE', 'sqlite' );
+      define( 'FQDBDIR', __DIR__ . '/recorded/' );
+      """
+    When I run `wp config set path_constants "require __DIR__ . '/paths.php'" --type=variable --raw`
+    And I try `wp eval 'echo "ready";'`
+    Then the return code should be 0
+
+    # Remove the drop-in so no DB_PATH or FQDB constant can be defined
+    # before get_sqlite_db_path() runs. Only the recorded-path branch can
+    # resolve this database.
+    When I run `rm wp-content/db.php`
+
+    And I try `wp db export selected.sql`
+    Then the return code should be 0
+    And the selected.sql file should contain:
+      """
+      INSERT INTO path_marker VALUES('selected');
+      """
+    And the selected.sql file should not contain:
+      """
+      INSERT INTO path_marker VALUES('other');
+      """
+
   Scenario Outline: Reject file operations on an in-memory SQLite database
     Given a WP install
     And an input.sql file:
