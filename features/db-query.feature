@@ -26,7 +26,7 @@ Feature: Query the database with WordPress' MySQL config
   Scenario: Database querying with passed-in options
     Given a WP install
 
-    When I run `wp db query "SELECT COUNT(ID) FROM wp_posts;" --dbuser=wp_cli_test --html`
+    When I run `wp db query "SELECT COUNT(ID) FROM wp_posts;" --dbuser={DB_USER} --html`
     Then STDOUT should contain:
       """
       <TABLE
@@ -45,7 +45,7 @@ Feature: Query the database with WordPress' MySQL config
   Scenario: Database querying with MySQL defaults and passed-in options
     Given a WP install
 
-    When I run `wp db query --defaults "SELECT COUNT(ID) FROM wp_posts;" --dbuser=wp_cli_test --html`
+    When I run `wp db query --defaults "SELECT COUNT(ID) FROM wp_posts;" --dbuser={DB_USER} --html`
     Then STDOUT should contain:
       """
       <TABLE
@@ -64,7 +64,7 @@ Feature: Query the database with WordPress' MySQL config
   Scenario: Database querying with --nodefaults and passed-in options
     Given a WP install
 
-    When I run `wp db query --no-defaults "SELECT COUNT(ID) FROM wp_posts;" --dbuser=wp_cli_test --html`
+    When I run `wp db query --no-defaults "SELECT COUNT(ID) FROM wp_posts;" --dbuser={DB_USER} --html`
     Then STDOUT should contain:
       """
       <TABLE

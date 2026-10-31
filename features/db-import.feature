@@ -3,37 +3,37 @@ Feature: Import a WordPress database
   Scenario: Import from database name path by default
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql`
-    Then the wp_cli_test.sql file should exist
+    When I run `wp db export {DB_NAME}.sql`
+    Then the {DB_NAME}.sql file should exist
 
     When I run `wp db import`
     Then STDOUT should be:
       """
-      Success: Imported from 'wp_cli_test.sql'.
+      Success: Imported from '{DB_NAME}.sql'.
       """
 
   Scenario: Import from database name path by default with mysql defaults
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql`
-    Then the wp_cli_test.sql file should exist
+    When I run `wp db export {DB_NAME}.sql`
+    Then the {DB_NAME}.sql file should exist
 
     When I run `wp db import --defaults`
     Then STDOUT should be:
       """
-      Success: Imported from 'wp_cli_test.sql'.
+      Success: Imported from '{DB_NAME}.sql'.
       """
 
   Scenario: Import from database name path by default with --no-defaults
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql`
-    Then the wp_cli_test.sql file should exist
+    When I run `wp db export {DB_NAME}.sql`
+    Then the {DB_NAME}.sql file should exist
 
     When I run `wp db import --no-defaults`
     Then STDOUT should be:
       """
-      Success: Imported from 'wp_cli_test.sql'.
+      Success: Imported from '{DB_NAME}.sql'.
       """
 
   @require-mysql-or-mariadb
@@ -60,13 +60,13 @@ Feature: Import a WordPress database
   Scenario: Import from database name path by default and skip speed optimization
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql`
-    Then the wp_cli_test.sql file should exist
+    When I run `wp db export {DB_NAME}.sql`
+    Then the {DB_NAME}.sql file should exist
 
     When I run `wp db import --skip-optimization`
     Then STDOUT should be:
       """
-      Success: Imported from 'wp_cli_test.sql'.
+      Success: Imported from '{DB_NAME}.sql'.
       """
 
   # SQLite doesn't support the --dbuser flag.
@@ -74,16 +74,16 @@ Feature: Import a WordPress database
   Scenario: Import from database name path by default with passed-in dbuser/dbpass
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql`
-    Then the wp_cli_test.sql file should exist
+    When I run `wp db export {DB_NAME}.sql`
+    Then the {DB_NAME}.sql file should exist
 
-    When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
+    When I run `wp db import --dbuser={DB_USER} --dbpass=password1`
     Then STDOUT should be:
       """
-      Success: Imported from 'wp_cli_test.sql'.
+      Success: Imported from '{DB_NAME}.sql'.
       """
 
-    When I try `wp db import --dbuser=wp_cli_test --dbpass=no_such_pass`
+    When I try `wp db import --dbuser={DB_USER} --dbpass=no_such_pass`
     Then the return code should not be 0
     And STDERR should contain:
       """
@@ -116,10 +116,10 @@ Feature: Import a WordPress database
   Scenario: Import forwards the --ssl flag to the MySQL client
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql`
-    Then the wp_cli_test.sql file should exist
+    When I run `wp db export {DB_NAME}.sql`
+    Then the {DB_NAME}.sql file should exist
 
-    When I try `wp db import wp_cli_test.sql --ssl --debug`
+    When I try `wp db import {DB_NAME}.sql --ssl --debug`
     Then STDERR should contain:
       """
       --ssl
@@ -170,8 +170,8 @@ Feature: Import a WordPress database
   Scenario: MySQL defaults are available as appropriate with --defaults flag
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql`
-    Then the wp_cli_test.sql file should exist
+    When I run `wp db export {DB_NAME}.sql`
+    Then the {DB_NAME}.sql file should exist
 
     When I try `wp db import --defaults --debug`
     Then STDERR should match #Debug \(db\): Running shell command: /([^/]+/)+(mysql|mariadb) --no-auto-rehash#
@@ -194,9 +194,9 @@ Feature: Import a WordPress database
       🍣
       """
 
-    When I try `wp db export wp_cli_test.sql --debug`
+    When I try `wp db export {DB_NAME}.sql --debug`
     Then the return code should be 0
-    And the wp_cli_test.sql file should exist
+    And the {DB_NAME}.sql file should exist
     And STDERR should contain:
       """
       Detected character set of the posts table: utf8mb4
@@ -206,10 +206,10 @@ Feature: Import a WordPress database
       Setting missing default character set to utf8mb4
       """
 
-    When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
+    When I run `wp db import --dbuser={DB_USER} --dbpass=password1`
     Then STDOUT should be:
       """
-      Success: Imported from 'wp_cli_test.sql'.
+      Success: Imported from '{DB_NAME}.sql'.
       """
 
     When I run `wp post list`
@@ -231,14 +231,14 @@ Feature: Import a WordPress database
       🍣
       """
 
-    When I try `wp db export wp_cli_test.sql --debug`
+    When I try `wp db export {DB_NAME}.sql --debug`
     Then the return code should be 0
-    And the wp_cli_test.sql file should exist
+    And the {DB_NAME}.sql file should exist
 
-    When I run `wp db import --dbuser=wp_cli_test --dbpass=password1`
+    When I run `wp db import --dbuser={DB_USER} --dbpass=password1`
     Then STDOUT should be:
       """
-      Success: Imported from 'wp_cli_test.sql'.
+      Success: Imported from '{DB_NAME}.sql'.
       """
 
     When I run `wp post list`
@@ -316,14 +316,14 @@ Feature: Import a WordPress database
   Scenario: `wp db import` adapts the SQL mode via --init-command by default
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql`
-    Then the wp_cli_test.sql file should exist
+    When I run `wp db export {DB_NAME}.sql`
+    Then the {DB_NAME}.sql file should exist
 
     # The WordPress-compatibility mode adaptation runs on the same import
     # connection via --init-command, so it is visible in the debug output and no
     # separate mode probe runs (which is what used to break with custom connection
     # options).
-    When I try `wp db import wp_cli_test.sql --debug`
+    When I try `wp db import {DB_NAME}.sql --debug`
     Then the return code should be 0
     And STDERR should contain:
       """
@@ -338,10 +338,10 @@ Feature: Import a WordPress database
   Scenario: `wp db import --skip-sql-mode-compat` imports under the server's own SQL modes
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql`
-    Then the wp_cli_test.sql file should exist
+    When I run `wp db export {DB_NAME}.sql`
+    Then the {DB_NAME}.sql file should exist
 
-    When I try `wp db import wp_cli_test.sql --skip-sql-mode-compat --debug`
+    When I try `wp db import {DB_NAME}.sql --skip-sql-mode-compat --debug`
     Then the return code should be 0
     And STDERR should not contain:
       """
