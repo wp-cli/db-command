@@ -83,10 +83,28 @@ trait DB_Command_SQLite {
 		$wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content';
 
 		// Check for FQDBDIR and construct path.
-		$db_dir  = defined( 'FQDBDIR' ) ? FQDBDIR : $wp_content_dir . '/database';
-		$db_file = defined( 'DB_FILE' ) ? DB_FILE : '.ht.sqlite';
+		$db_dir = defined( 'FQDBDIR' ) ? FQDBDIR : $wp_content_dir . '/database';
 
-		$db_path = rtrim( $db_dir, '/' ) . '/' . ltrim( $db_file, '/' );
+		// DB_FILE selects a file inside FQDBDIR (sqlite-database-integration 3.1+).
+		if ( defined( 'DB_FILE' ) ) {
+			return rtrim( $db_dir, '/' ) . '/' . ltrim( DB_FILE, '/' );
+		}
+
+		// Check for the recorded secret path (sqlite-database-integration 3.1+).
+		$path_file = rtrim( $db_dir, '/\\' ) . '/db-path.php';
+		if ( file_exists( $path_file ) ) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Failure is checked below.
+			$recorded_path = @include $path_file;
+			if ( is_string( $recorded_path ) && '' !== $recorded_path ) {
+				if ( ':memory:' === $recorded_path ) {
+					WP_CLI::error( 'This command does not support in-memory SQLite databases.' );
+				}
+
+				return $recorded_path;
+			}
+		}
+
+		$db_path = rtrim( $db_dir, '/' ) . '/.ht.sqlite';
 
 		// If the file exists, return it.
 		if ( file_exists( $db_path ) ) {
