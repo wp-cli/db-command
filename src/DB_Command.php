@@ -1807,23 +1807,22 @@ class DB_Command extends WP_CLI_Command {
 				$primary_key_sql = self::esc_sql_ident( $primary_key ) . ', ';
 			}
 
+			// Skip revisions in any posts table (including other sites' tables in a multisite network).
+			$revisions_sql = '';
+			if ( $exclude_revisions && preg_match( '/posts$/', $table ) && in_array( 'post_type', $all_columns, true ) ) {
+				$revisions_sql = ' ' . self::esc_sql_ident( 'post_type' ) . " <> 'revision'";
+			}
+
 			foreach ( $text_columns as $column ) {
-				$column_sql    = self::esc_sql_ident( $column );
-				$post_type_sql = self::esc_sql_ident( 'post_type' );
+				$column_sql = self::esc_sql_ident( $column );
 				if ( $regex ) {
-					if ( $exclude_revisions && $wpdb->posts === $table ) {
-						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-						$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$post_type_sql} NOT IN ( 'revision' )" );
-					} else {
-						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-						$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}" );
-					}
-				} elseif ( $exclude_revisions && $wpdb->posts === $table ) {
+					$where_sql = $revisions_sql ? " WHERE{$revisions_sql}" : '';
 					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s AND {$post_type_sql} NOT IN ( 'revision' )", $esc_like_search ) );
+					$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}{$where_sql}" );
 				} else {
+					$where_sql = $revisions_sql ? " AND{$revisions_sql}" : '';
 					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s;", $esc_like_search ) );
+					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s{$where_sql};", $esc_like_search ) );
 				}
 				if ( $results ) {
 					$row_count                  += count( $results );
