@@ -117,7 +117,7 @@ Feature: Display database size
     Given a WP install
 
     When I run `wp db size --fields=Name,Data,Index,Size`
-    Then STDOUT should match /wp_cli_test\s+\d+ B\s+\d+ B\s+\d+ B/
+    Then STDOUT should match /{DB_NAME}\s+\d+ B\s+\d+ B\s+\d+ B/
 
     When I run `wp db size --fields=Name,Data,Index,Size --format=csv`
     Then STDOUT should contain:
