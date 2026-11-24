@@ -936,7 +936,9 @@ class DB_Command extends WP_CLI_Command {
 	 * `DB_PASSWORD` database credentials specified in wp-config.php. This
 	 * does not create database by itself and only performs whatever tasks are
 	 * defined in the SQL. If MySQL/MariaDB client binaries are not available,
-	 * falls back to importing via WordPress's `wpdb`.
+	 * falls back to importing via WordPress's `wpdb`. The fallback reads the
+	 * whole file into memory, so it is slower and needs more memory than the
+	 * client binaries for large imports.
 	 *
 	 * ## OPTIONS
 	 *
@@ -2514,6 +2516,7 @@ class DB_Command extends WP_CLI_Command {
 		$db_pass = Utils\get_flag_value( $assoc_args, 'dbpass', Utils\get_flag_value( $assoc_args, 'password', Utils\get_flag_value( $assoc_args, 'pass', $default_pass ) ) );
 		$db_name = Utils\get_flag_value( $assoc_args, 'dbname', Utils\get_flag_value( $assoc_args, 'database', $default_name ) );
 		$db_host = Utils\get_flag_value( $assoc_args, 'dbhost', Utils\get_flag_value( $assoc_args, 'host', $default_host ) );
+		$db_host = self::apply_port_and_socket( is_string( $db_host ) ? $db_host : '', $assoc_args );
 
 		$has_custom_credentials = (
 			( $default_user !== $db_user ) ||
@@ -2571,6 +2574,67 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
+	 * Applies the `--port` and `--socket` arguments to a database host.
+	 *
+	 * wpdb only takes a host string, so a port or socket passed as an argument
+	 * replaces the one in DB_HOST, in the `host:port:/socket` form wpdb parses.
+	 *
+	 * @param string $host       Database host, e.g. from DB_HOST.
+	 * @param array  $assoc_args Associative arguments.
+	 * @return string Database host with the port and socket applied.
+	 */
+	private static function apply_port_and_socket( $host, $assoc_args ) {
+		$port   = Utils\get_flag_value( $assoc_args, 'port', null );
+		$socket = Utils\get_flag_value( $assoc_args, 'socket', null );
+
+		if ( ( null === $port || true === $port ) && ( null === $socket || true === $socket ) ) {
+			return $host;
+		}
+
+		// Strip any port and socket from the host, keeping IPv6 addresses in brackets intact.
+		if ( preg_match( '/^(\[[^\]]*\])/', $host, $matches ) ) {
+			$host = $matches[1];
+		} else {
+			$host = (string) preg_replace( '/:.*$/', '', $host );
+		}
+
+		if ( '' === $host ) {
+			$host = 'localhost';
+		}
+
+		if ( is_scalar( $port ) && true !== $port && '' !== (string) $port ) {
+			$host .= ':' . $port;
+		}
+
+		if ( is_scalar( $socket ) && true !== $socket && '' !== (string) $socket ) {
+			$host .= ':' . $socket;
+		}
+
+		return $host;
+	}
+
+	/**
+	 * Escapes a value for the tab-separated output of the query fallback.
+	 *
+	 * Mirrors the mysql client's batch output: tabs, newlines, NUL bytes and
+	 * backslashes are escaped, so a value can't break up fields or rows.
+	 *
+	 * @param string $value Value to escape.
+	 * @return string Escaped value.
+	 */
+	private static function escape_tsv_value( $value ) {
+		return strtr(
+			$value,
+			[
+				'\\' => '\\\\',
+				"\t" => '\\t',
+				"\n" => '\\n',
+				"\0" => '\\0',
+			]
+		);
+	}
+
+	/**
 	 * Execute a query against the database using wpdb.
 	 *
 	 * Used as a fallback when the mysql/mariadb binary is not available.
@@ -2602,14 +2666,16 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$skip_column_names = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
-		$statements        = $this->split_sql_statements( $query );
+		$raw               = Utils\get_flag_value( $assoc_args, 'raw', false );
+		$format_value      = static function ( $v ) use ( $raw ) {
+			if ( null === $v ) {
+				return 'NULL';
+			}
+			$v = is_scalar( $v ) ? (string) $v : '';
+			return $raw ? $v : self::escape_tsv_value( $v );
+		};
 
-		if ( empty( $statements ) ) {
-			$wpdb->suppress_errors( $suppress );
-			return;
-		}
-
-		foreach ( $statements as $statement ) {
+		foreach ( $this->split_sql_statements( $query ) as $statement ) {
 			$statement = trim( $statement );
 			if ( '' === $statement ) {
 				continue;
@@ -2637,24 +2703,11 @@ class DB_Command extends WP_CLI_Command {
 			}
 
 			if ( ! $skip_column_names ) {
-				WP_CLI::line( implode( "\t", array_keys( get_object_vars( $results[0] ) ) ) );
+				WP_CLI::line( implode( "\t", array_map( $format_value, array_keys( get_object_vars( $results[0] ) ) ) ) );
 			}
 
 			foreach ( $results as $row ) {
-				WP_CLI::line(
-					implode(
-						"\t",
-						array_map(
-							static function ( $v ) {
-								if ( null === $v ) {
-									return 'NULL';
-								}
-								return is_scalar( $v ) ? (string) $v : '';
-							},
-							array_values( get_object_vars( $row ) )
-						)
-					)
-				);
+				WP_CLI::line( implode( "\t", array_map( $format_value, array_values( get_object_vars( $row ) ) ) ) );
 			}
 		}
 
@@ -2702,9 +2755,7 @@ class DB_Command extends WP_CLI_Command {
 			$wpdb->query( 'SET foreign_key_checks = 0' );
 		}
 
-		$statements = $this->split_sql_statements( $sql_content );
-
-		foreach ( $statements as $statement ) {
+		foreach ( $this->split_sql_statements( $sql_content ) as $statement ) {
 			$statement = trim( $statement );
 			if ( '' === $statement ) {
 				continue;
@@ -2756,11 +2807,13 @@ class DB_Command extends WP_CLI_Command {
 	 * so that delimiters inside them do not end a statement. Comments are dropped,
 	 * except for MySQL conditional comments and optimizer hints.
 	 *
+	 * Statements are yielded one at a time, so that they don't all have to be
+	 * held in memory alongside the SQL string.
+	 *
 	 * @param string $sql SQL string to split.
-	 * @return string[] Array of individual SQL statements.
+	 * @return \Generator<int, string> Individual SQL statements.
 	 */
 	private function split_sql_statements( $sql ) {
-		$statements      = [];
 		$current         = '';
 		$in_single_quote = false;
 		$in_double_quote = false;
@@ -2775,8 +2828,8 @@ class DB_Command extends WP_CLI_Command {
 
 			// Check for DELIMITER directive at line boundary / statement start
 			if ( ! $in_single_quote && ! $in_double_quote && ! $in_backtick && ! $in_line_comment ) {
-				$trimmed_current = trim( $current );
-				if ( '' === $trimmed_current && 0 === stripos( substr( $sql, $i, 9 ), 'DELIMITER' ) ) {
+				// strspn() stops at the first non-whitespace byte, unlike trim(), which copies the whole statement.
+				if ( strspn( $current, " \t\n\r\0\x0B" ) === strlen( $current ) && 0 === substr_compare( $sql, 'DELIMITER', $i, 9, true ) ) {
 					$char_after = ( $i + 9 < $length ) ? $sql[ $i + 9 ] : "\n";
 					if ( ' ' === $char_after || "\t" === $char_after || "\r" === $char_after || "\n" === $char_after ) {
 						$line_end = strpos( $sql, "\n", $i );
@@ -2853,7 +2906,7 @@ class DB_Command extends WP_CLI_Command {
 			if ( ! $in_single_quote && ! $in_double_quote && ! $in_backtick && substr( $sql, $i, $delim_len ) === $delimiter ) {
 				$trimmed = trim( $current );
 				if ( '' !== $trimmed ) {
-					$statements[] = $trimmed;
+					yield $trimmed;
 				}
 				$current = '';
 				$i      += $delim_len - 1;
@@ -2864,9 +2917,7 @@ class DB_Command extends WP_CLI_Command {
 
 		$trimmed = trim( $current );
 		if ( '' !== $trimmed ) {
-			$statements[] = $trimmed;
+			yield $trimmed;
 		}
-
-		return $statements;
 	}
 }

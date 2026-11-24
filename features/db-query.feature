@@ -276,3 +276,55 @@ Feature: Query the database with WordPress' MySQL config
       Error: Could not connect to the database.
       """
     And the return code should be 1
+
+  @require-mysql-or-mariadb
+  Scenario: Database querying falls back to wpdb and escapes tabs and newlines like the mysql client
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT CONCAT('a', CHAR(9), 'b', CHAR(10), 'c', CHAR(92), 'd')" --skip-column-names`
+    Then STDOUT should be:
+      """
+      a\tb\nc\\d
+      """
+    And the return code should be 0
+
+    When I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT CONCAT('a', CHAR(10), 'b')" --skip-column-names --raw`
+    Then STDOUT should be:
+      """
+      a
+      b
+      """
+    And the return code should be 0
+
+  @require-mysql-or-mariadb
+  Scenario: Database querying falls back to wpdb and honors the port argument
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT 1" --host=127.0.0.1 --port=1`
+    Then STDERR should contain:
+      """
+      Error: Could not connect to the database.
+      """
+    And the return code should be 1
