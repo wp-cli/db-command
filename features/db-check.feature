@@ -7,7 +7,7 @@ Feature: Check the database
     When I run `wp db check`
     Then STDOUT should contain:
       """
-      wp_cli_test.wp_users
+      {DB_NAME}.wp_users
       """
     And STDOUT should contain:
       """
@@ -28,7 +28,7 @@ Feature: Check the database
     When I run `wp db check --silent`
     Then STDOUT should not contain:
       """
-      wp_cli_test.wp_users
+      {DB_NAME}.wp_users
       """
     And STDOUT should contain:
       """
@@ -42,7 +42,7 @@ Feature: Check the database
     When I run `wp db check --defaults`
     Then STDOUT should contain:
       """
-      wp_cli_test.wp_users
+      {DB_NAME}.wp_users
       """
     And STDOUT should contain:
       """
@@ -56,7 +56,7 @@ Feature: Check the database
     When I run `wp db check --no-defaults`
     Then STDOUT should contain:
       """
-      wp_cli_test.wp_users
+      {DB_NAME}.wp_users
       """
     And STDOUT should contain:
       """
@@ -67,7 +67,7 @@ Feature: Check the database
   Scenario: Run db check with passed-in options
     Given a WP install
 
-    When I run `wp db check --dbuser=wp_cli_test`
+    When I run `wp db check --dbuser={DB_USER}`
     Then STDOUT should contain:
       """
       Success: Database checked.
@@ -79,7 +79,7 @@ Feature: Check the database
       Success: Database checked.
       """
 
-    When I run `wp db check --dbuser=wp_cli_test --dbpass=password1`
+    When I run `wp db check --dbuser={DB_USER} --dbpass=password1`
     Then STDOUT should contain:
       """
       Success: Database checked.
@@ -101,7 +101,7 @@ Feature: Check the database
       """
     And STDOUT should be empty
 
-    When I try `wp db check --dbuser=wp_cli_test --verbose`
+    When I try `wp db check --dbuser={DB_USER} --verbose`
     Then the return code should be 0
     And STDOUT should contain:
       """

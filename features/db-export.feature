@@ -6,59 +6,59 @@ Feature: Export a WordPress database
     When I run `wp db export --porcelain`
     Then STDOUT should contain:
       """
-      wp_cli_test-
+      {DB_NAME}-
       """
-    And the wp_cli_test.sql file should not exist
+    And the {DB_NAME}.sql file should not exist
 
   Scenario: Database export to a specified file path
     Given a WP install
 
-    When I run `wp db export wp_cli_test.sql --porcelain`
+    When I run `wp db export {DB_NAME}.sql --porcelain`
     Then STDOUT should contain:
       """
-      wp_cli_test.sql
+      {DB_NAME}.sql
       """
-    And the wp_cli_test.sql file should exist
+    And the {DB_NAME}.sql file should exist
 
   @skip-sqlite
   Scenario: Exclude tables when exporting the database
     Given a WP install
 
-    When I try `wp db export wp_cli_test.sql --exclude_tables=wp_users --porcelain`
-    Then the wp_cli_test.sql file should exist
-    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_users["`]?/
-    And the contents of the wp_cli_test.sql file should match /CREATE TABLE ["`]?wp_options["`]?/
+    When I try `wp db export {DB_NAME}.sql --exclude_tables=wp_users --porcelain`
+    Then the {DB_NAME}.sql file should exist
+    And the contents of the {DB_NAME}.sql file should not match /CREATE TABLE ["`]?wp_users["`]?/
+    And the contents of the {DB_NAME}.sql file should match /CREATE TABLE ["`]?wp_options["`]?/
 
   @skip-sqlite
   Scenario: Include only specific tables when exporting the database
     Given a WP install
 
-    When I try `wp db export wp_cli_test.sql --tables=wp_users --porcelain`
-    Then the wp_cli_test.sql file should exist
-    And the contents of the wp_cli_test.sql file should match /CREATE TABLE ["`]?wp_users["`]?/
-    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_posts["`]?/
-    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_options["`]?/
+    When I try `wp db export {DB_NAME}.sql --tables=wp_users --porcelain`
+    Then the {DB_NAME}.sql file should exist
+    And the contents of the {DB_NAME}.sql file should match /CREATE TABLE ["`]?wp_users["`]?/
+    And the contents of the {DB_NAME}.sql file should not match /CREATE TABLE ["`]?wp_posts["`]?/
+    And the contents of the {DB_NAME}.sql file should not match /CREATE TABLE ["`]?wp_options["`]?/
 
   @require-sqlite
   Scenario: Exclude tables when exporting the database
     Given a WP install
 
-    When I try `wp db export wp_cli_test.sql --exclude_tables=wp_users --porcelain`
-    Then the wp_cli_test.sql file should exist
-    And the contents of the wp_cli_test.sql file should not match /_mysql_data_types_cache/
-    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_users["`]?/
-    And the contents of the wp_cli_test.sql file should match /CREATE TABLE ["`]?wp_options["`]?/
+    When I try `wp db export {DB_NAME}.sql --exclude_tables=wp_users --porcelain`
+    Then the {DB_NAME}.sql file should exist
+    And the contents of the {DB_NAME}.sql file should not match /_mysql_data_types_cache/
+    And the contents of the {DB_NAME}.sql file should not match /CREATE TABLE ["`]?wp_users["`]?/
+    And the contents of the {DB_NAME}.sql file should match /CREATE TABLE ["`]?wp_options["`]?/
 
   @require-sqlite
   Scenario: Include only specific tables when exporting the database
     Given a WP install
 
-    When I try `wp db export wp_cli_test.sql --tables=wp_users --porcelain`
-    Then the wp_cli_test.sql file should exist
-    And the contents of the wp_cli_test.sql file should not match /_mysql_data_types_cache/
-    And the contents of the wp_cli_test.sql file should match /CREATE TABLE ["`]?wp_users["`]?/
-    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_posts["`]?/
-    And the contents of the wp_cli_test.sql file should not match /CREATE TABLE ["`]?wp_options["`]?/
+    When I try `wp db export {DB_NAME}.sql --tables=wp_users --porcelain`
+    Then the {DB_NAME}.sql file should exist
+    And the contents of the {DB_NAME}.sql file should not match /_mysql_data_types_cache/
+    And the contents of the {DB_NAME}.sql file should match /CREATE TABLE ["`]?wp_users["`]?/
+    And the contents of the {DB_NAME}.sql file should not match /CREATE TABLE ["`]?wp_posts["`]?/
+    And the contents of the {DB_NAME}.sql file should not match /CREATE TABLE ["`]?wp_options["`]?/
 
   @require-sqlite
   Scenario: Export database to STDOUT
@@ -153,10 +153,10 @@ Feature: Export a WordPress database
   Scenario: Export database when PHP exec() is disabled
     Given a WP install
 
-    When I try `{INVOKE_WP_CLI_WITH_PHP_ARGS--ddisable_functions=exec} db export wp_cli_test.sql --porcelain`
+    When I try `{INVOKE_WP_CLI_WITH_PHP_ARGS--ddisable_functions=exec} db export {DB_NAME}.sql --porcelain`
     Then the return code should be 0
     And STDOUT should contain:
       """
-      wp_cli_test.sql
+      {DB_NAME}.sql
       """
-    And the wp_cli_test.sql file should exist
+    And the {DB_NAME}.sql file should exist

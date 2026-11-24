@@ -44,13 +44,13 @@ Feature: Perform database operations
     # Check for contains only, as the string contains a trailing space.
     Then STDOUT should contain:
       """
-      Are you sure you want to drop the 'wp_cli_test' database? [y/n]
+      Are you sure you want to drop the '{DB_NAME}' database? [y/n]
       """
 
     When I run `wp db reset < session_yes`
     Then STDOUT should be:
       """
-      Are you sure you want to reset the 'wp_cli_test' database? [y/n] Success: Database reset.
+      Are you sure you want to reset the '{DB_NAME}' database? [y/n] Success: Database reset.
       """
 
   @skip-sqlite
@@ -67,7 +67,7 @@ Feature: Perform database operations
       (which means your username and password is okay)
       """
 
-    When I run `wp db create --dbuser=wp_cli_test`
+    When I run `wp db create --dbuser={DB_USER}`
     Then STDOUT should be:
       """
       Success: Database created.
@@ -95,7 +95,7 @@ Feature: Perform database operations
       """
     And STDOUT should be empty
 
-    When I run `wp db reset --yes --dbuser=wp_cli_test --dbpass=password1`
+    When I run `wp db reset --yes --dbuser={DB_USER} --dbpass=password1`
     Then STDOUT should be:
       """
       Success: Database reset.
@@ -117,7 +117,7 @@ Feature: Perform database operations
     Then STDOUT should be empty
     And the return code should be 0
 
-    When I run `wp db clean --yes --dbuser=wp_cli_test --dbpass=password1`
+    When I run `wp db clean --yes --dbuser={DB_USER} --dbpass=password1`
     Then STDOUT should be:
       """
       Success: Tables dropped.
@@ -155,7 +155,7 @@ Feature: Perform database operations
   Scenario: DB Operations with passed-in options
     Given a WP install
 
-    When I run `wp db optimize --dbuser=wp_cli_test`
+    When I run `wp db optimize --dbuser={DB_USER}`
     Then STDOUT should not be empty
 
     When I try `wp db optimize --dbuser=no_such_user`
@@ -387,8 +387,7 @@ Feature: Perform database operations
       Query succeeded. Rows affected: 1
       """
 
-  @require-sqlite @skip-windows
-  # Skipped on Windows due to persistent file locking issues when run via Behat.
+  @require-sqlite
   Scenario: SQLite DB CRUD operations
     Given a WP install
     And a session_yes file:
@@ -425,8 +424,7 @@ Feature: Perform database operations
       total
       """
 
-  @require-sqlite @skip-windows
-  # Skipped on Windows due to persistent file locking issues when run via Behat.
+  @require-sqlite
   Scenario: SQLite DB export/import
     Given a WP install
     And a session_yes file:
