@@ -2828,8 +2828,8 @@ class DB_Command extends WP_CLI_Command {
 
 			// Check for DELIMITER directive at line boundary / statement start
 			if ( ! $in_single_quote && ! $in_double_quote && ! $in_backtick && ! $in_line_comment ) {
-				// strspn() stops at the first non-whitespace byte, unlike trim(), which copies the whole statement.
-				if ( strspn( $current, " \t\n\r\0\x0B" ) === strlen( $current ) && 0 === substr_compare( $sql, 'DELIMITER', $i, 9, true ) ) {
+				// Compare the keyword first, so the whitespace scan only runs where DELIMITER appears. strspn() also stops at the first non-whitespace byte, unlike trim(), which copies the whole statement.
+				if ( 0 === substr_compare( $sql, 'DELIMITER', $i, 9, true ) && strspn( $current, " \t\n\r\0\x0B" ) === strlen( $current ) ) {
 					$char_after = ( $i + 9 < $length ) ? $sql[ $i + 9 ] : "\n";
 					if ( ' ' === $char_after || "\t" === $char_after || "\r" === $char_after || "\n" === $char_after ) {
 						$line_end = strpos( $sql, "\n", $i );
