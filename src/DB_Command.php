@@ -686,7 +686,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--exclude_tables_data=<tables>]
 	 * : The comma separated list of specific tables for which only the structure will be exported. Excluding this parameter will export data for all tables in the export.
-	 *   Note: currently only supported by MariaDB.
+	 *   Requires a dump client that supports --ignore-table-data (mariadb-dump from MariaDB 10.1.45, 10.2.32, 10.3.23, 10.4.13, 10.5.3 or later); MySQL's mysqldump does not. Cannot be combined with --tables.
 	 *
 	 * [--include-tablespaces]
 	 * : Skips adding the default --no-tablespaces option to mysqldump.
@@ -822,6 +822,8 @@ class DB_Command extends WP_CLI_Command {
 
 		$command_esc_args = [ DB_NAME ];
 
+		$has_tables = isset( $assoc_args['tables'] );
+
 		if ( isset( $assoc_args['tables'] ) ) {
 			$tables = explode( ',', trim( $assoc_args['tables'], ',' ) );
 			unset( $assoc_args['tables'] );
@@ -844,11 +846,16 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$exclude_tables_data = Utils\get_flag_value( $assoc_args, 'exclude_tables_data', '' );
-		if ( ! empty( $exclude_tables_data ) ) {
-			unset( $assoc_args['exclude_tables_data'] );
+		unset( $assoc_args['exclude_tables_data'] );
+		if ( is_string( $exclude_tables_data ) && '' !== trim( $exclude_tables_data, ', ' ) ) {
+			// The dump client ignores --ignore-table-data for tables named with --tables.
+			if ( $has_tables ) {
+				WP_CLI::error( 'The --exclude_tables_data option cannot be combined with --tables.' );
+			}
 
-			if ( 'mariadb' !== Utils\get_db_type() ) {
-				WP_CLI::error( 'The --exclude_tables_data option is only supported by MariaDB.' );
+			// --ignore-table-data is a dump client option, so check the client rather than the server.
+			if ( ! $this->command_supports_option( $mysqldump_binary, 'ignore-table-data' ) ) {
+				WP_CLI::error( sprintf( 'The --exclude_tables_data option requires a dump client that supports --ignore-table-data (mariadb-dump from MariaDB 10.4.13, 10.5.3 or later). "%s" does not.', $mysqldump_binary ) );
 			}
 
 			$tables = explode( ',', trim( $exclude_tables_data, ',' ) );

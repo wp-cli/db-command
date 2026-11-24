@@ -469,7 +469,7 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
 	[--exclude_tables_data=<tables>]
 		The comma separated list of specific tables for which only the structure will be exported. Excluding this parameter will export data for all tables in the export.
-		  Note: currently only supported by MariaDB.
+		  Requires a dump client that supports --ignore-table-data (mariadb-dump from MariaDB 10.1.45, 10.2.32, 10.3.23, 10.4.13, 10.5.3 or later); MySQL's mysqldump does not. Cannot be combined with --tables.
 
 	[--include-tablespaces]
 		Skips adding the default --no-tablespaces option to mysqldump.
