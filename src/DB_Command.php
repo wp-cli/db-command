@@ -1453,24 +1453,38 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Displays a quick database status overview.
+	 * Displays an overview of the database.
 	 *
-	 * Shows key database information including name, table count, size,
-	 * prefix, engine, charset, collation, and health check status. This
-	 * command is useful for getting a quick snapshot of database health
-	 * without needing to run multiple separate commands.
+	 * Shows the database name, the number of tables and their total size, the
+	 * table prefix, the storage engine, character set and collation of the
+	 * tables, and whether `mysqlcheck` reports any problems. Engine, charset
+	 * and collation read "Mixed" when the tables don't all share the same one.
 	 *
-	 * This command works even when WordPress is not fully installed,
-	 * providing minimal information. If WordPress is installed, additional
-	 * details are included.
+	 * Unlike `wp db size` or `wp db prefix`, this doesn't load WordPress, so it
+	 * also works before WordPress is installed.
+	 *
+	 * For SQLite databases, the engine is reported as SQLite, and charset,
+	 * collation and check status are not available.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [--dbuser=<value>]
-	 * : Username to pass to mysql. Defaults to DB_USER.
+	 * : Username to pass to mysql and mysqlcheck. Defaults to DB_USER.
 	 *
 	 * [--dbpass=<value>]
-	 * : Password to pass to mysql. Defaults to DB_PASSWORD.
+	 * : Password to pass to mysql and mysqlcheck. Defaults to DB_PASSWORD.
+	 *
+	 * [--skip-check]
+	 * : Don't run `mysqlcheck`, which reads every table and can take a while on large databases.
+	 *
+	 * [--format=<format>]
+	 * : Render output in a particular format. The JSON output lists the total size in bytes.
+	 * ---
+	 * default: list
+	 * options:
+	 *   - list
+	 *   - json
+	 * ---
 	 *
 	 * [--defaults]
 	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
@@ -1478,146 +1492,147 @@ class DB_Command extends WP_CLI_Command {
 	 * ## EXAMPLES
 	 *
 	 *     $ wp db status
-	 *     Database Name:     wp_cli_test
-	 *     Tables:            54
-	 *     Total Size:        312 KB
+	 *     Database Name:     wordpress_dbase
+	 *     Tables:            12
+	 *     Total Size:        868.35 KB
 	 *     Prefix:            wp_
 	 *     Engine:            InnoDB
 	 *     Charset:           utf8mb4
-	 *     Collation:         utf8mb4_unicode_ci
+	 *     Collation:         utf8mb4_unicode_520_ci
 	 *     Check Status:      OK
+	 *
+	 *     $ wp db status --skip-check --format=json
+	 *     {"database":"wordpress_dbase","tables":12,"size":868352,"prefix":"wp_","engine":"InnoDB","charset":"utf8mb4","collation":"utf8mb4_unicode_520_ci","check":"Skipped"}
 	 */
 	public function status( $_, $assoc_args ) {
 		global $table_prefix;
 
-		// Get database name from constants (available after wp-config loads).
-		$db_name = DB_NAME;
+		$format     = Utils\get_flag_value( $assoc_args, 'format', 'list' );
+		$skip_check = Utils\get_flag_value( $assoc_args, 'skip-check', false );
 
-		// Get table prefix from wp-config.php (available after wp-config loads).
-		$prefix = isset( $table_prefix ) ? $table_prefix : 'wp_';
-
-		// Escape prefix for SQL: first addslashes, then escape LIKE special characters.
-		$escaped_prefix = str_replace( [ '%', '_' ], [ '\\%', '\\_' ], addslashes( $prefix ) );
-
-		// Prepare command for executing queries.
-		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash --batch --skip-column-names',
-			$this->get_mysql_command(),
-			$this->get_defaults_flag_string( $assoc_args )
-		);
-
-		// Get table count using raw SQL query.
-		$table_count_query                   = sprintf(
-			"SELECT COUNT(*) FROM information_schema.TABLES WHERE table_schema = '%s' AND table_name LIKE '%s%%'",
-			addslashes( DB_NAME ),
-			$escaped_prefix
-		);
-		list( $stdout, $stderr, $exit_code ) = self::run(
-			$command,
-			array_merge( [ 'execute' => $table_count_query ], $assoc_args ),
-			false
-		);
-		$table_count                         = (int) trim( $stdout );
-
-		// Get total database size using raw SQL query.
-		$db_size_query                       = sprintf(
-			"SELECT SUM(data_length + index_length) FROM information_schema.TABLES WHERE table_schema = '%s'",
-			addslashes( DB_NAME )
-		);
-		list( $stdout, $stderr, $exit_code ) = self::run(
-			$command,
-			array_merge( [ 'execute' => $db_size_query ], $assoc_args ),
-			false
-		);
-		$db_size_bytes                       = trim( $stdout );
-
-		// Format size to human-readable.
-		if ( ! empty( $db_size_bytes ) && $db_size_bytes > 0 ) {
-			$size_key    = floor( log( (float) $db_size_bytes ) / log( 1000 ) );
-			$sizes       = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
-			$size_format = $sizes[ (int) $size_key ] ?? $sizes[0];
-			$divisor     = pow( 1000, $size_key );
-			$db_size     = round( (int) $db_size_bytes / $divisor, 2 ) . ' ' . $size_format;
-		} else {
-			$db_size = '0 B';
-		}
-
-		// Get engine, charset, and collation from information_schema across all tables with the prefix.
-		$table_info_query                    = sprintf(
-			'SELECT '
-			. 'COUNT(DISTINCT ENGINE) AS engine_count, '
-			. 'MIN(ENGINE) AS engine, '
-			. 'COUNT(DISTINCT CCSA.character_set_name) AS charset_count, '
-			. 'MIN(CCSA.character_set_name) AS charset, '
-			. 'COUNT(DISTINCT TABLE_COLLATION) AS collation_count, '
-			. 'MIN(TABLE_COLLATION) AS collation '
-			. 'FROM information_schema.TABLES T '
-			. 'LEFT JOIN information_schema.COLLATION_CHARACTER_SET_APPLICABILITY CCSA '
-			. 'ON CCSA.collation_name = T.table_collation '
-			. "WHERE T.table_schema = '%s' "
-			. "AND T.table_name LIKE '%s%%'",
-			addslashes( DB_NAME ),
-			$escaped_prefix
-		);
-		list( $stdout, $stderr, $exit_code ) = self::run(
-			$command,
-			array_merge( [ 'execute' => $table_info_query ], $assoc_args ),
-			false
-		);
-
-		// Parse the tab-separated output.
-		$table_info_parts = explode( "\t", trim( $stdout ) );
-
-		if ( count( $table_info_parts ) >= 6 ) {
-			$engine_count    = (int) $table_info_parts[0];
-			$engine_value    = $table_info_parts[1];
-			$charset_count   = (int) $table_info_parts[2];
-			$charset_value   = $table_info_parts[3];
-			$collation_count = (int) $table_info_parts[4];
-			$collation_value = $table_info_parts[5];
-
-			$engine    = $engine_count > 1 ? 'Mixed' : ( ! empty( $engine_value ) && 'NULL' !== $engine_value ? $engine_value : 'N/A' );
-			$charset   = $charset_count > 1 ? 'Mixed' : ( ! empty( $charset_value ) && 'NULL' !== $charset_value ? $charset_value : 'N/A' );
-			$collation = $collation_count > 1 ? 'Mixed' : ( ! empty( $collation_value ) && 'NULL' !== $collation_value ? $collation_value : 'N/A' );
-		} else {
-			$engine    = 'N/A';
-			$charset   = 'N/A';
-			$collation = 'N/A';
-		}
-
-		// Run database check silently to get status.
-		if ( $table_count > 0 ) {
-			$check_command                       = sprintf(
-				'/usr/bin/env %s%s %s',
-				Utils\get_sql_check_command(),
-				$this->get_defaults_flag_string( $assoc_args ),
-				'%s'
-			);
-			list( $stdout, $stderr, $exit_code ) = self::run(
-				Utils\esc_cmd( $check_command, DB_NAME ),
-				array_merge( [ 'check' => true ], $assoc_args ),
-				false
-			);
-			$check_status                        = ( 0 === $exit_code ) ? 'OK' : 'Error';
-		} else {
-			// No tables to check; mark status as not applicable.
-			$check_status = 'N/A';
-		}
-
-		$status_items = [
-			'Database Name' => $db_name,
-			'Tables'        => $table_count,
-			'Total Size'    => $db_size,
-			'Prefix'        => $prefix,
-			'Engine'        => $engine,
-			'Charset'       => $charset,
-			'Collation'     => $collation,
-			'Check Status'  => $check_status,
+		$status = [
+			'database'  => DB_NAME,
+			'tables'    => 0,
+			'size'      => 0,
+			'prefix'    => isset( $table_prefix ) && is_string( $table_prefix ) ? $table_prefix : '',
+			'engine'    => 'N/A',
+			'charset'   => 'N/A',
+			'collation' => 'N/A',
+			'check'     => $skip_check ? 'Skipped' : 'N/A',
 		];
 
-		foreach ( $status_items as $label => $value ) {
-			WP_CLI::log( sprintf( '%-18s %s', $label . ':', $value ) );
+		$this->maybe_load_sqlite_dropin();
+
+		if ( $this->is_sqlite() ) {
+			global $wpdb;
+
+			$db_path            = $this->get_sqlite_db_path();
+			$status['database'] = $db_path ? basename( $db_path ) : '';
+			$status['size']     = $this->sqlite_size();
+			$status['engine']   = 'SQLite';
+
+			if ( isset( $wpdb ) && $wpdb instanceof \WP_SQLite_DB ) {
+				$status['tables'] = count( $wpdb->get_col( 'SHOW TABLES' ) );
+			}
+		} else {
+			$defaults_flag = $this->get_defaults_flag_string( $assoc_args );
+			$mysql_args    = self::get_dbuser_dbpass_args( $assoc_args );
+
+			$query = 'SELECT COUNT(*), COALESCE(SUM(DATA_LENGTH + INDEX_LENGTH), 0), '
+				. 'COUNT(DISTINCT ENGINE), MIN(ENGINE), '
+				. "COUNT(DISTINCT SUBSTRING_INDEX(TABLE_COLLATION, '_', 1)), MIN(SUBSTRING_INDEX(TABLE_COLLATION, '_', 1)), "
+				. 'COUNT(DISTINCT TABLE_COLLATION), MIN(TABLE_COLLATION) '
+				. "FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'";
+
+			list( $stdout, $stderr, $exit_code ) = self::run(
+				sprintf(
+					'%s%s --no-auto-rehash --batch --skip-column-names',
+					Utils\get_mysql_binary_path(),
+					$defaults_flag
+				),
+				array_merge(
+					$mysql_args,
+					[
+						'database' => DB_NAME,
+						'execute'  => $query,
+					]
+				),
+				false
+			);
+
+			if ( $exit_code ) {
+				WP_CLI::error( 'Could not query the database: ' . trim( $stderr ) );
+			}
+
+			$row = array_pad( explode( "\t", trim( $stdout ) ), 8, 'NULL' );
+
+			$status['tables'] = (int) $row[0];
+			$status['size']   = (int) $row[1];
+
+			$columns = [
+				'engine'    => 2,
+				'charset'   => 4,
+				'collation' => 6,
+			];
+			foreach ( $columns as $key => $index ) {
+				if ( (int) $row[ $index ] > 1 ) {
+					$status[ $key ] = 'Mixed';
+				} elseif ( '' !== $row[ $index + 1 ] && 'NULL' !== $row[ $index + 1 ] ) {
+					$status[ $key ] = $row[ $index + 1 ];
+				}
+			}
+
+			$check_command = Utils\get_sql_check_command();
+			if ( ! $skip_check && '' !== $check_command && $status['tables'] > 0 ) {
+				list( $stdout, , $exit_code ) = self::run(
+					Utils\esc_cmd( sprintf( '%s%s %s', $check_command, $defaults_flag, '%s' ), DB_NAME ),
+					array_merge(
+						$mysql_args,
+						[
+							'check'  => true,
+							'silent' => true,
+						]
+					),
+					false
+				);
+
+				$status['check'] = ( 0 === $exit_code && ! preg_match( '/^error\s*:/mi', $stdout ) ) ? 'OK' : 'Error';
+			}
 		}
+
+		if ( 'json' === $format ) {
+			WP_CLI::line( (string) json_encode( $status ) );
+			return;
+		}
+
+		$status['size'] = self::format_size_si( $status['size'] );
+
+		$labels = [
+			'database'  => 'Database Name',
+			'tables'    => 'Tables',
+			'size'      => 'Total Size',
+			'prefix'    => 'Prefix',
+			'engine'    => 'Engine',
+			'charset'   => 'Charset',
+			'collation' => 'Collation',
+			'check'     => 'Check Status',
+		];
+		foreach ( $labels as $key => $label ) {
+			WP_CLI::line( sprintf( '%-18s %s', $label . ':', $status[ $key ] ) );
+		}
+	}
+
+	/**
+	 * Formats a number of bytes with SI units, like `wp db size --human-readable`.
+	 *
+	 * @param int $bytes Number of bytes.
+	 * @return string
+	 */
+	private static function format_size_si( $bytes ) {
+		$sizes = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+		$key   = $bytes > 0 ? (int) min( floor( log( $bytes, 1000 ) ), count( $sizes ) - 1 ) : 0;
+
+		return round( $bytes / pow( 1000, $key ), 2 ) . ' ' . $sizes[ $key ];
 	}
 
 	/**
