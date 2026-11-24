@@ -7,7 +7,7 @@ Feature: Check the database
     When I run `wp db check`
     Then STDOUT should contain:
       """
-      wp_cli_test.wp_users
+      {DB_NAME}.wp_users
       """
     And STDOUT should contain:
       """
@@ -28,7 +28,7 @@ Feature: Check the database
     When I run `wp db check --silent`
     Then STDOUT should not contain:
       """
-      wp_cli_test.wp_users
+      {DB_NAME}.wp_users
       """
     And STDOUT should contain:
       """
@@ -42,7 +42,7 @@ Feature: Check the database
     When I run `wp db check --defaults`
     Then STDOUT should contain:
       """
-      wp_cli_test.wp_users
+      {DB_NAME}.wp_users
       """
     And STDOUT should contain:
       """
@@ -56,7 +56,7 @@ Feature: Check the database
     When I run `wp db check --no-defaults`
     Then STDOUT should contain:
       """
-      wp_cli_test.wp_users
+      {DB_NAME}.wp_users
       """
     And STDOUT should contain:
       """
@@ -67,7 +67,7 @@ Feature: Check the database
   Scenario: Run db check with passed-in options
     Given a WP install
 
-    When I run `wp db check --dbuser=wp_cli_test`
+    When I run `wp db check --dbuser={DB_USER}`
     Then STDOUT should contain:
       """
       Success: Database checked.
@@ -79,7 +79,7 @@ Feature: Check the database
       Success: Database checked.
       """
 
-    When I run `wp db check --dbuser=wp_cli_test --dbpass=password1`
+    When I run `wp db check --dbuser={DB_USER} --dbpass=password1`
     Then STDOUT should contain:
       """
       Success: Database checked.
@@ -101,7 +101,7 @@ Feature: Check the database
       """
     And STDOUT should be empty
 
-    When I try `wp db check --dbuser=wp_cli_test --verbose`
+    When I try `wp db check --dbuser={DB_USER} --verbose`
     Then the return code should be 0
     And STDOUT should contain:
       """
@@ -154,13 +154,45 @@ Feature: Check the database
     Given a WP install
 
     When I try `wp db check --defaults --debug`
-    Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysqlcheck|mariadb-check) %s#
+    Then STDERR should match #Debug \(db\): Running shell command: /([^/]+/)+(mysqlcheck|mariadb-check) %s#
 
     When I try `wp db check --debug`
-    Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysqlcheck|mariadb-check) --no-defaults %s#
+    Then STDERR should match #Debug \(db\): Running shell command: /([^/]+/)+(mysqlcheck|mariadb-check) --no-defaults %s#
 
     When I try `wp db check --no-defaults --debug`
-    Then STDERR should match #Debug \(db\): Running shell command: /usr/bin/env (mysqlcheck|mariadb-check) --no-defaults %s#
+    Then STDERR should match #Debug \(db\): Running shell command: /([^/]+/)+(mysqlcheck|mariadb-check) --no-defaults %s#
+
+  @require-mysql-or-mariadb
+  Scenario: Empty DB credentials should not cause empty parameter errors
+    Given an empty directory
+    And WP files
+
+    When I run `wp config create {CORE_CONFIG_SETTINGS} --dbcharset="" --skip-check`
+    Then STDOUT should not be empty
+
+    When I run `cat wp-config.php`
+    Then STDOUT should contain:
+      """
+      define( 'DB_CHARSET', '' );
+      """
+
+    When I run `wp db create`
+    Then STDOUT should not be empty
+
+    When I try `wp db check --debug`
+    Then the return code should be 0
+    And STDOUT should contain:
+      """
+      Success: Database checked.
+      """
+    And STDERR should not contain:
+      """
+      --default-character-set=''
+      """
+    And STDERR should not contain:
+      """
+      --default-character-set=
+      """
 
   @require-sqlite
   Scenario: SQLite commands that show warnings

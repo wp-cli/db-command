@@ -1,6 +1,7 @@
 <?php
 
 use WP_CLI\Formatter;
+use WP_CLI\Process;
 use WP_CLI\Utils;
 use cli\table\Column;
 
@@ -285,9 +286,14 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		$check_command = Utils\get_sql_check_command();
+		if ( '' === $check_command ) {
+			WP_CLI::error( 'The mysqlcheck or mariadb-check binary is not available.' );
+		}
+
 		$command = sprintf(
-			'/usr/bin/env %s%s %s',
-			Utils\get_sql_check_command(),
+			'%s%s %s',
+			$check_command,
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -346,9 +352,14 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		$check_command = Utils\get_sql_check_command();
+		if ( '' === $check_command ) {
+			WP_CLI::error( 'The mysqlcheck or mariadb-check binary is not available.' );
+		}
+
 		$command = sprintf(
-			'/usr/bin/env %s%s %s',
-			Utils\get_sql_check_command(),
+			'%s%s %s',
+			$check_command,
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -407,9 +418,14 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		$check_command = Utils\get_sql_check_command();
+		if ( '' === $check_command ) {
+			WP_CLI::error( 'The mysqlcheck or mariadb-check binary is not available.' );
+		}
+
 		$command = sprintf(
-			'/usr/bin/env %s%s %s',
-			Utils\get_sql_check_command(),
+			'%s%s %s',
+			$check_command,
 			$this->get_defaults_flag_string( $assoc_args ),
 			'%s'
 		);
@@ -471,8 +487,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -511,6 +527,13 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * [--defaults]
 	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+	 *
+	 * [--skip-sql-mode-compat]
+	 * : Run the query under the server's own SQL modes instead of adapting them to
+	 * be WordPress-compatible. By default, the incompatible modes that WordPress
+	 * disables in `wpdb` (such as `NO_ZERO_DATE` and `STRICT_TRANS_TABLES`) are
+	 * stripped for the session, so statements against WordPress's zero-date schema
+	 * behave the same as they do in WordPress itself.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -592,8 +615,8 @@ class DB_Command extends WP_CLI_Command {
 		}
 
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
@@ -605,10 +628,13 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['execute'] = $args[0];
 		}
 
-		if ( isset( $assoc_args['execute'] ) ) {
-			// Ensure that the SQL mode is compatible with WPDB.
-			$assoc_args['execute'] = $this->get_sql_mode_query( $assoc_args ) . $assoc_args['execute'];
-		}
+		// Adapt the session SQL mode to be WordPress-compatible via --init-command,
+		// so it runs on connect before the query -- exactly like `wp db import` and
+		// WordPress Core's own wpdb -- and composes with any caller-provided
+		// --init-command. No separate probe connection is needed. Pass
+		// --skip-sql-mode-compat to run under the server's own SQL modes instead.
+		$this->apply_sql_mode_compat_init_command( $assoc_args, $assoc_args );
+		unset( $assoc_args['skip-sql-mode-compat'] );
 
 		$is_row_modifying_query = isset( $assoc_args['execute'] ) && preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $assoc_args['execute'] );
 
@@ -635,7 +661,7 @@ class DB_Command extends WP_CLI_Command {
 	 * Exports the database to a file or to STDOUT.
 	 *
 	 * Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
-	 * `DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid `mysqldump` flags.
+	 * `DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid [`mysqldump` flags](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
 	 *
 	 * ## OPTIONS
 	 *
@@ -664,16 +690,13 @@ class DB_Command extends WP_CLI_Command {
 	 * [--porcelain]
 	 * : Output filename for the exported database.
 	 *
-	 * [--add-drop-table]
-	 * : Include a `DROP TABLE IF EXISTS` statement before each `CREATE TABLE` statement.
-	 *
 	 * [--defaults]
 	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     # Export database with drop query included
-	 *     $ wp db export --add-drop-table
+	 *     # Export database with `--skip-opt` and `--add-drop-table` mysqldump flags
+	 *     $ wp db export --skip-opt --add-drop-table
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export certain tables
@@ -748,9 +771,14 @@ class DB_Command extends WP_CLI_Command {
 			$assoc_args['result-file'] = $result_file;
 		}
 
-		$mysqldump_binary = Utils\force_env_on_nix_systems( Utils\get_sql_dump_command() );
+		$dump_command = Utils\get_sql_dump_command();
+		if ( '' === $dump_command ) {
+			WP_CLI::error( 'The mysqldump or mariadb-dump binary is not available.' );
+		}
 
-		$support_column_statistics = exec( $mysqldump_binary . ' --help | grep "column-statistics"' );
+		$mysqldump_binary = $dump_command;
+
+		$support_column_statistics = $this->command_supports_option( $mysqldump_binary, 'column-statistics' );
 
 		/*
 		 * In case that `--default-character-set` is not given and `DB_CHARSET` is `utf8`,
@@ -839,7 +867,7 @@ class DB_Command extends WP_CLI_Command {
 		list( $stdout, $stderr, $exit_code ) = self::run(
 			sprintf(
 				'%s%s --no-auto-rehash --batch --skip-column-names',
-				$this->get_mysql_command(),
+				Utils\get_mysql_binary_path(),
 				$this->get_defaults_flag_string( $assoc_args )
 			),
 			[ 'execute' => $query ],
@@ -860,6 +888,19 @@ class DB_Command extends WP_CLI_Command {
 		WP_CLI::debug( "Detected character set of the posts table: {$stdout}.", 'db' );
 
 		return $stdout;
+	}
+
+	/**
+	 * Check whether a shell command advertises support for a specific option in `--help`.
+	 *
+	 * @param string $command Base shell command to inspect.
+	 * @param string $option  Option name to look for.
+	 * @return bool Whether the option is listed in help output.
+	 */
+	private function command_supports_option( $command, $option ) {
+		$result = Process::create( "{$command} --help" )->run();
+
+		return false !== strpos( $result->stdout . $result->stderr, $option );
 	}
 
 	/**
@@ -885,7 +926,10 @@ class DB_Command extends WP_CLI_Command {
 	 * : Extra arguments to pass to mysql. [Refer to mysql binary docs](https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html).
 	 *
 	 * [--skip-optimization]
-	 * : When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
+	 * : Do not disable unique checks and foreign key checks during import.
+	 *
+	 * [--skip-sql-mode-compat]
+	 * : Do not adapt the session SQL mode for WordPress compatibility. By default, `wp db import` strips the SQL modes that WordPress Core disables (such as `STRICT_TRANS_TABLES` and `NO_ZERO_DATE`) so that dumps containing legacy values like `0000-00-00` import cleanly. Pass this flag to import under the server's own SQL modes instead.
 	 *
 	 * [--defaults]
 	 * : Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
@@ -899,8 +943,10 @@ class DB_Command extends WP_CLI_Command {
 	public function import( $args, $assoc_args ) {
 		$this->maybe_load_sqlite_dropin();
 
+		$is_stdin = false;
 		if ( ! empty( $args[0] ) ) {
 			$result_file = $args[0];
+			$is_stdin    = '-' === $result_file;
 		} else {
 			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
@@ -912,32 +958,47 @@ class DB_Command extends WP_CLI_Command {
 
 		// Process options to MySQL.
 		$mysql_args = array_merge(
-			[ 'database' => DB_NAME ],
+			[
+				'database'    => DB_NAME,
+				'binary-mode' => true,
+			],
 			self::get_dbuser_dbpass_args( $assoc_args ),
 			self::get_mysql_args( $assoc_args )
 		);
 
-		if ( '-' !== $result_file ) {
+		// Adapt the session SQL mode to be WordPress-compatible via --init-command,
+		// so it runs on connect before any SQL is read. This covers both file and
+		// STDIN imports, composes with any caller-provided --init-command, and needs
+		// no separate probe connection.
+		$this->apply_sql_mode_compat_init_command( $mysql_args, $assoc_args );
+
+		if ( ! $is_stdin ) {
 			if ( ! is_readable( $result_file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
 			}
-
-			$query = Utils\get_flag_value( $assoc_args, 'skip-optimization' )
-				? 'SOURCE %s;'
-				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
-
-			$query = $this->get_sql_mode_query( $assoc_args ) . $query;
-
-			$mysql_args['execute'] = sprintf( $query, $result_file );
 		} else {
 			$result_file = 'STDIN';
 		}
 
+		if ( ! Utils\get_flag_value( $assoc_args, 'skip-optimization' ) ) {
+			$optimization_sql = 'SET unique_checks = 0; SET foreign_key_checks = 0;';
+			if ( isset( $mysql_args['init-command'] ) && '' !== trim( (string) $mysql_args['init-command'] ) ) {
+				$mysql_args['init-command'] .= '; ' . $optimization_sql;
+			} else {
+				$mysql_args['init-command'] = $optimization_sql;
+			}
+		}
+
 		$command = sprintf(
-			'/usr/bin/env %s%s --no-auto-rehash',
-			$this->get_mysql_command(),
+			'%s%s --no-auto-rehash',
+			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
+
+		if ( ! $is_stdin ) {
+			$command .= ' < ' . escapeshellarg( $result_file );
+		}
+
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
@@ -957,7 +1018,22 @@ class DB_Command extends WP_CLI_Command {
 	 * : List tables based on wildcard search, e.g. 'wp_*_options' or 'wp_post?'.
 	 *
 	 * [--scope=<scope>]
-	 * : Can be all, global, ms_global, blog, or old tables. Defaults to all.
+	 * : List tables based on the scope.
+	 *
+	 * - all: returns 'all' and 'global' tables. No old tables are returned.
+	 * - blog: returns the blog-level tables for the queried blog.
+	 * - global: returns the global tables for the installation, returning multisite tables only on multisite.
+	 * - ms_global: returns the multisite global tables, regardless if current installation is multisite.
+	 * - old: returns tables which are deprecated.
+	 * ---
+	 * default: all
+	 * options:
+	 *   - all
+	 *   - blog
+	 *   - global
+	 *   - ms_global
+	 *   - old
+	 * ---
 	 *
 	 * [--network]
 	 * : List all the tables in a multisite install.
@@ -1026,6 +1102,11 @@ class DB_Command extends WP_CLI_Command {
 	 * Display the database name and size for `DB_NAME` specified in wp-config.php.
 	 * The size defaults to a human-readable number.
 	 *
+	 * The reported size is the sum of the data and the index size. Both can be
+	 * displayed separately by adding them to `--fields`. For SQLite, the database
+	 * size is the size of the database file, which also includes overhead such as
+	 * free pages.
+	 *
 	 * Available size formats include:
 	 * * b (bytes)
 	 * * kb (kilobytes)
@@ -1070,6 +1151,9 @@ class DB_Command extends WP_CLI_Command {
 	 * [--human-readable]
 	 * : Display database sizes in human readable formats.
 	 *
+	 * [--fields=<fields>]
+	 * : Get a specific subset of the fields.
+	 *
 	 * [--format=<format>]
 	 * : Render output in a particular format.
 	 * ---
@@ -1087,7 +1171,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : List all the tables in a multisite install.
 	 *
 	 * [--decimals=<decimals>]
-	 * : Number of digits after decimal point. Defaults to 0.
+	 * : Number of digits after decimal point. Defaults to 0, or 2 when using --human-readable.
 	 *
 	 * [--all-tables-with-prefix]
 	 * : List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
@@ -1112,6 +1196,18 @@ class DB_Command extends WP_CLI_Command {
 	 *   - name
 	 *   - size
 	 * ---
+	 *
+	 * ## AVAILABLE FIELDS
+	 *
+	 * These fields will be displayed by default:
+	 *
+	 * * Name
+	 * * Size
+	 *
+	 * These fields are optionally available:
+	 *
+	 * * Data
+	 * * Index
 	 *
 	 * ## EXAMPLES
 	 *
@@ -1140,6 +1236,13 @@ class DB_Command extends WP_CLI_Command {
 	 *     | wp_commentmeta        | 48 KB |
 	 *     +-----------------------+-------+
 	 *
+	 *     $ wp db size --fields=Name,Data,Index,Size --human-readable
+	 *     +-------------------+---------+--------+---------+
+	 *     | Name              |    Data |  Index |    Size |
+	 *     +-------------------+---------+--------+---------+
+	 *     | wordpress_default | 3.43 GB | 2.8 GB | 6.23 GB |
+	 *     +-------------------+---------+--------+---------+
+	 *
 	 *     $ wp db size --size_format=b
 	 *     5865472
 	 *
@@ -1152,7 +1255,7 @@ class DB_Command extends WP_CLI_Command {
 	 * @when after_wp_load
 	 *
 	 * @param array $args Positional arguments. Unused.
-	 * @param array{size_format?: string, tables?: bool, 'human-readable'?: bool, format?: string, scope?: string, network?: bool, decimals?: string, 'all-tables-with-prefix'?: bool, 'all-tables'?: bool, order: string, orderby: string} $assoc_args Associative arguments.
+	 * @param array{size_format?: string, tables?: bool, 'human-readable'?: bool, fields?: string, format?: string, scope?: string, network?: bool, decimals?: string, 'all-tables-with-prefix'?: bool, 'all-tables'?: bool, order: string, orderby: string} $assoc_args Associative arguments.
 	 */
 	public function size( $args, $assoc_args ) {
 		global $wpdb;
@@ -1166,25 +1269,28 @@ class DB_Command extends WP_CLI_Command {
 		$all_tables_with_prefix = Utils\get_flag_value( $assoc_args, 'all-tables-with-prefix' );
 		$order                  = Utils\get_flag_value( $assoc_args, 'order', 'asc' );
 		$orderby                = Utils\get_flag_value( $assoc_args, 'orderby', null );
+		$fields                 = Utils\get_flag_value( $assoc_args, 'fields', '' );
 
 		if ( ! is_null( $size_format ) && $human_readable ) {
 			WP_CLI::error( 'Cannot use --size_format and --human-readable arguments at the same time.' );
 		}
 
+		$custom_fields = '' !== $fields;
+		$fields        = $custom_fields ? array_map( 'trim', explode( ',', (string) $fields ) ) : [ 'Name', 'Size' ];
+		$show_details  = (bool) array_intersect( [ 'Data', 'Index' ], $fields );
+
 		unset( $assoc_args['format'] );
 		unset( $assoc_args['size_format'] );
 		unset( $assoc_args['human-readable'] );
 		unset( $assoc_args['tables'] );
+		unset( $assoc_args['fields'] );
 
 		if ( empty( $args ) && empty( $assoc_args ) ) {
 			$assoc_args['scope'] = 'all';
 		}
 
 		// Build rows for the formatter.
-		$rows   = [];
-		$fields = [ 'Name', 'Size' ];
-
-		$default_unit = ( empty( $size_format ) && ! $human_readable ) ? ' B' : '';
+		$rows = [];
 
 		$is_sqlite = $this->is_sqlite();
 
@@ -1195,27 +1301,31 @@ class DB_Command extends WP_CLI_Command {
 
 				// Get the table size.
 				if ( $is_sqlite ) {
-					$table_bytes = $wpdb->get_var(
-						$wpdb->prepare(
-							'SELECT SUM(pgsize) as size_in_bytes FROM dbstat where name = %s LIMIT 1',
-							$table_name
-						)
-					);
+					$sqlite_sizes = $this->sqlite_size_breakdown( $table_name );
+
+					$data_bytes  = $sqlite_sizes['data'];
+					$index_bytes = $sqlite_sizes['index'];
 				} else {
-					$table_bytes = $wpdb->get_var(
+					$table_sizes = $wpdb->get_row(
 						$wpdb->prepare(
-							'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s and Table_Name = %s GROUP BY Table_Name LIMIT 1',
+							'SELECT SUM(data_length) AS data_length, SUM(index_length) AS index_length FROM information_schema.TABLES where table_schema = %s and Table_Name = %s GROUP BY Table_Name LIMIT 1',
 							DB_NAME,
 							$table_name
-						)
+						),
+						ARRAY_A
 					);
+
+					$data_bytes  = self::get_size_value( $table_sizes, 'data_length' );
+					$index_bytes = self::get_size_value( $table_sizes, 'index_length' );
 				}
 
 				// Add the table size to the list.
 				$rows[] = [
 					'Name'  => $table_name,
-					'Size'  => strtoupper( $table_bytes ) . $default_unit,
-					'Bytes' => strtoupper( $table_bytes ),
+					'Data'  => $data_bytes,
+					'Index' => $index_bytes,
+					'Size'  => $data_bytes + $index_bytes,
+					'Bytes' => $data_bytes + $index_bytes,
 				];
 			}
 		} else {
@@ -1225,136 +1335,170 @@ class DB_Command extends WP_CLI_Command {
 				$db_bytes = $this->sqlite_size();
 				$db_path  = $this->get_sqlite_db_path();
 				$db_name  = $db_path ? basename( $db_path ) : '';
+
+				// Unlike the file size, these do not cover overhead such as free pages.
+				$sqlite_sizes = $show_details ? $this->sqlite_size_breakdown() : [
+					'data'  => 0,
+					'index' => 0,
+				];
+
+				$data_bytes  = $sqlite_sizes['data'];
+				$index_bytes = $sqlite_sizes['index'];
 			} else {
-				$db_bytes = $wpdb->get_var(
+				$db_sizes = $wpdb->get_row(
 					$wpdb->prepare(
-						'SELECT SUM(data_length + index_length) FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
+						'SELECT SUM(data_length) AS data_length, SUM(index_length) AS index_length FROM information_schema.TABLES where table_schema = %s GROUP BY table_schema;',
 						DB_NAME
-					)
+					),
+					ARRAY_A
 				);
-				$db_name  = DB_NAME;
+
+				$data_bytes  = self::get_size_value( $db_sizes, 'data_length' );
+				$index_bytes = self::get_size_value( $db_sizes, 'index_length' );
+				$db_bytes    = $data_bytes + $index_bytes;
+				$db_name     = DB_NAME;
 			}
 
 			// Add the database size to the list.
 			$rows[] = [
 				'Name'  => $db_name,
-				'Size'  => strtoupper( $db_bytes ) . $default_unit,
-				'Bytes' => strtoupper( $db_bytes ),
+				'Data'  => $data_bytes,
+				'Index' => $index_bytes,
+				'Size'  => $db_bytes,
+				'Bytes' => $db_bytes,
 			];
 		}
 
-		$size_format_display = '';
+		// Human readable sizes are of little use without any precision.
+		$decimals = (int) Utils\get_flag_value( $assoc_args, 'decimals', $human_readable ? 2 : 0 );
 
-		if ( ! empty( $size_format ) || $human_readable ) {
-			foreach ( $rows as $index => $row ) {
-				// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Backfilling WP native constants.
-				if ( ! defined( 'KB_IN_BYTES' ) ) {
-					define( 'KB_IN_BYTES', 1024 );
-				}
-				if ( ! defined( 'MB_IN_BYTES' ) ) {
-					define( 'MB_IN_BYTES', 1024 * KB_IN_BYTES );
-				}
-				if ( ! defined( 'GB_IN_BYTES' ) ) {
-					define( 'GB_IN_BYTES', 1024 * MB_IN_BYTES );
-				}
-				if ( ! defined( 'TB_IN_BYTES' ) ) {
-					define( 'TB_IN_BYTES', 1024 * GB_IN_BYTES );
-				}
-				// phpcs:enable
+		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && ! $custom_fields && true !== $all_tables && true !== $all_tables_with_prefix ) {
+			// Display the database size as a bare number.
+			WP_CLI::line( (string) round( (int) $rows[0]['Bytes'] / self::get_size_divisor( $size_format ), $decimals ) );
+			return;
+		}
 
-				if ( $human_readable ) {
-					$size_key = floor( log( (float) $row['Size'] ) / log( 1000 ) );
-					$sizes    = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+		foreach ( $rows as $index => $row ) {
+			foreach ( [ 'Data', 'Index', 'Size' ] as $field ) {
+				$bytes = (int) $row[ $field ];
 
-					if ( is_infinite( $size_key ) ) {
-						$size_key = 0;
-					}
-
-					$size_key = (int) $size_key;
-
-					$size_format = isset( $sizes[ $size_key ] ) ? $sizes[ $size_key ] : $sizes[0];
+				if ( empty( $size_format ) && ! $human_readable ) {
+					$rows[ $index ][ $field ] = $bytes . ' B';
+					continue;
 				}
 
-				// Display the database size as a number.
-				switch ( $size_format ) {
-					case 'TB':
-						$divisor = pow( 1000, 4 );
-						break;
+				$field_size_format = $human_readable ? self::get_human_readable_size_format( $bytes, $decimals ) : $size_format;
+				$size_format_label = preg_replace( '/IB$/u', 'iB', strtoupper( $field_size_format ) );
 
-					case 'GB':
-						$divisor = pow( 1000, 3 );
-						break;
-
-					case 'MB':
-						$divisor = pow( 1000, 2 );
-						break;
-
-					case 'KB':
-						$divisor = 1000;
-						break;
-
-					case 'tb':
-					case 'TiB':
-						$divisor = TB_IN_BYTES;
-						break;
-
-					case 'gb':
-					case 'GiB':
-						$divisor = GB_IN_BYTES;
-						break;
-
-					case 'mb':
-					case 'MiB':
-						$divisor = MB_IN_BYTES;
-						break;
-
-					case 'kb':
-					case 'KiB':
-						$divisor = KB_IN_BYTES;
-						break;
-
-					case 'b':
-					case 'B':
-					default:
-						$divisor = 1;
-						break;
-				}
-					$size_format_display = preg_replace( '/IB$/u', 'iB', strtoupper( $size_format ) );
-
-					$decimals               = (int) Utils\get_flag_value( $assoc_args, 'decimals', 0 );
-					$rows[ $index ]['Size'] = round( (int) $row['Bytes'] / $divisor, $decimals ) . ' ' . $size_format_display;
+				$rows[ $index ][ $field ] = round( $bytes / self::get_size_divisor( $field_size_format ), $decimals ) . ' ' . $size_format_label;
 			}
 		}
 
-		if ( ! empty( $size_format ) && ! $tables && ! $format && ! $human_readable && true !== $all_tables && true !== $all_tables_with_prefix ) {
-			WP_CLI::line( str_replace( " {$size_format_display}", '', $rows[0]['Size'] ) );
-		} else {
-			// Sort the rows by user input
-			if ( $orderby ) {
-				usort(
-					$rows,
-					function ( $a, $b ) use ( $order, $orderby ) {
+		// Sort the rows by user input
+		if ( $orderby ) {
+			usort(
+				$rows,
+				function ( $a, $b ) use ( $order, $orderby ) {
 
-						$orderby_array          = 'asc' === $order ? array( $a, $b ) : array( $b, $a );
-						list( $first, $second ) = $orderby_array;
+					$orderby_array          = 'asc' === $order ? array( $a, $b ) : array( $b, $a );
+					list( $first, $second ) = $orderby_array;
 
-						if ( 'size' === $orderby ) {
-							return $first['Bytes'] <=> $second['Bytes'];
-						}
-
-						return strcmp( $first['Name'], $second['Name'] );
+					if ( 'size' === $orderby ) {
+						return $first['Bytes'] <=> $second['Bytes'];
 					}
-				);
-			}
 
-			// Display the rows.
-			$args = [
-				'format'     => $format,
-				'alignments' => [ 'Size' => Column::ALIGN_RIGHT ],
-			];
+					return strcmp( $first['Name'], $second['Name'] );
+				}
+			);
+		}
 
-			$formatter = new Formatter( $args, $fields );
-			$formatter->display_items( $rows );
+		// Display the rows.
+		$args = [
+			'format'     => $format,
+			'fields'     => $fields,
+			'alignments' => array_fill_keys( array_intersect( [ 'Data', 'Index', 'Size' ], $fields ), Column::ALIGN_RIGHT ),
+		];
+
+		$formatter = new Formatter( $args, $fields );
+		$formatter->display_items( $rows );
+	}
+
+	/**
+	 * Returns the size of a column of a database size query result.
+	 *
+	 * @param mixed  $result Result of a database size query.
+	 * @param string $column Name of the column holding the size.
+	 * @return int Number of bytes.
+	 */
+	private static function get_size_value( $result, $column ) {
+		if ( ! is_array( $result ) || ! isset( $result[ $column ] ) || ! is_numeric( $result[ $column ] ) ) {
+			return 0;
+		}
+
+		return (int) $result[ $column ];
+	}
+
+	/**
+	 * Returns the size format that fits the given number of bytes best.
+	 *
+	 * @param int $bytes    Number of bytes.
+	 * @param int $decimals Number of digits after the decimal point.
+	 * @return string Size format, for example `KB`.
+	 */
+	private static function get_human_readable_size_format( $bytes, $decimals ) {
+		$sizes = [ 'B', 'KB', 'MB', 'GB', 'TB' ];
+
+		$size_key = $bytes > 0 ? (int) floor( log( $bytes ) / log( 1000 ) ) : 0;
+		$size_key = min( $size_key, count( $sizes ) - 1 );
+
+		// Rounding can tip the value into the next size format, for example 999.95 KB.
+		if ( $size_key < count( $sizes ) - 1 && round( $bytes / pow( 1000, $size_key ), $decimals ) >= 1000 ) {
+			++$size_key;
+		}
+
+		return $sizes[ $size_key ];
+	}
+
+	/**
+	 * Returns the number of bytes a given size format holds.
+	 *
+	 * @param string $size_format Size format, for example `mb` or `KiB`.
+	 * @return int Number of bytes.
+	 */
+	private static function get_size_divisor( $size_format ) {
+		switch ( $size_format ) {
+			case 'TB':
+				return (int) pow( 1000, 4 );
+
+			case 'GB':
+				return (int) pow( 1000, 3 );
+
+			case 'MB':
+				return (int) pow( 1000, 2 );
+
+			case 'KB':
+				return 1000;
+
+			case 'tb':
+			case 'TiB':
+				return (int) pow( 1024, 4 );
+
+			case 'gb':
+			case 'GiB':
+				return (int) pow( 1024, 3 );
+
+			case 'mb':
+			case 'MiB':
+				return (int) pow( 1024, 2 );
+
+			case 'kb':
+			case 'KiB':
+				return 1024;
+
+			case 'b':
+			case 'B':
+			default:
+				return 1;
 		}
 	}
 
@@ -1879,10 +2023,6 @@ class DB_Command extends WP_CLI_Command {
 
 		$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' ];
 
-		if ( $this->is_sqlite() ) {
-			$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default' ];
-		}
-
 		$formatter_args = [
 			'format' => $format,
 		];
@@ -1913,9 +2053,6 @@ class DB_Command extends WP_CLI_Command {
 	 * @param array  $assoc_args Optional. Associative array of arguments.
 	 */
 	protected function run_query( $query, $assoc_args = [] ) {
-		// Ensure that the SQL mode is compatible with WPDB.
-		$query = $this->get_sql_mode_query( $assoc_args ) . $query;
-
 		WP_CLI::debug( "Query: {$query}", 'db' );
 
 		$mysql_args = array_merge(
@@ -1923,10 +2060,15 @@ class DB_Command extends WP_CLI_Command {
 			self::get_mysql_args( $assoc_args )
 		);
 
+		// Adapt the session SQL mode to be WordPress-compatible via --init-command,
+		// so it runs on connect before the query, composes with any caller-provided
+		// --init-command, and needs no separate probe connection.
+		$this->apply_sql_mode_compat_init_command( $mysql_args, $assoc_args );
+
 		self::run(
 			sprintf(
 				'%s%s --no-auto-rehash',
-				$this->get_mysql_command(),
+				Utils\get_mysql_binary_path(),
 				$this->get_defaults_flag_string( $assoc_args )
 			),
 			array_merge( [ 'execute' => $query ], $mysql_args )
@@ -1975,7 +2117,41 @@ class DB_Command extends WP_CLI_Command {
 			unset( $assoc_args['dbpass'], $assoc_args['password'] );
 		}
 
+		// MariaDB 11.4 enables TLS server certificate verification by default. WP-CLI
+		// connects the same way WordPress does, which does not verify the certificate,
+		// and against MariaDB's auto-generated self-signed certificate verification
+		// either just warns on STDERR that it disabled itself or fails outright. Opt out
+		// explicitly to keep the previous behaviour, unless the user asked to verify.
+		if ( 'mariadb' === Utils\get_db_type()
+			&& ! isset( $assoc_args['ssl-verify-server-cert'] )
+			&& ! isset( $assoc_args['skip-ssl-verify-server-cert'] ) ) {
+			$required['skip-ssl-verify-server-cert'] = true;
+		}
+
 		$final_args = array_merge( $required, $assoc_args );
+
+		// Filter out empty string values to avoid passing empty parameters to MySQL commands
+		// which can cause errors like "Character set '' is not a compiled character set".
+		// However, keep empty strings for credential options like 'user' and 'pass' so that
+		// an explicitly empty value is not silently converted into an omitted parameter.
+		$final_args = array_filter(
+			$final_args,
+			static function ( $value, $key ) {
+				// Always drop null values.
+				if ( null === $value ) {
+					return false;
+				}
+
+				// Preserve explicitly empty credential arguments.
+				if ( '' === $value && in_array( $key, [ 'user', 'pass' ], true ) ) {
+					return true;
+				}
+
+				// For all other options, filter out empty strings.
+				return '' !== $value;
+			},
+			ARRAY_FILTER_USE_BOTH
+		);
 
 		// Adapt ordering of arguments.
 		uksort(
@@ -2195,7 +2371,10 @@ class DB_Command extends WP_CLI_Command {
 			'skip-named-commands',
 			'skip-pager',
 			'skip-reconnect',
+			'skip-ssl',
+			'skip-ssl-verify-server-cert',
 			'socket',
+			'ssl',
 			'ssl-ca',
 			'ssl-capath',
 			'ssl-cert',
@@ -2205,6 +2384,7 @@ class DB_Command extends WP_CLI_Command {
 			'ssl-fips-mode',
 			'ssl-key',
 			'ssl-mode',
+			'ssl-verify-server-cert',
 			'syslog',
 			'table',
 			'tee',
@@ -2253,112 +2433,74 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Get the query to change the current SQL mode, and ensure its WordPress compatibility.
+	 * Get the statement that strips the SQL modes incompatible with WordPress
+	 * from the current session.
 	 *
-	 * If no modes are passed, it will ensure the current MySQL server modes are
-	 * compatible.
+	 * The statement is applied on the same connection as the import or query via
+	 * the MySQL client's `--init-command`, so it runs on connect before any SQL is
+	 * read. Imports and queries therefore behave like WordPress Core (which
+	 * disables these modes in `wpdb`), including when a dump is streamed from
+	 * STDIN. Unlike the previous implementation, no separate connection is opened
+	 * to first discover the current modes, so it works regardless of the
+	 * connection options in play (custom `--host`, `--defaults`, SSL/TLS,
+	 * sockets, ...).
 	 *
-	 * Copied and adapted from WordPress Core code.
+	 * Returns an empty string when the `--skip-sql-mode-compat` flag is set.
 	 *
-	 * @see https://github.com/WordPress/wordpress-develop/blob/5.4.0/src/wp-includes/wp-db.php#L817-L880
+	 * @see https://github.com/WordPress/wordpress-develop/blob/5.4.0/src/wp-includes/wp-db.php#L559-L572
 	 *
 	 * @param array $assoc_args The associative argument array passed to the command.
-	 * @param array $modes      Optional. A list of SQL modes to set.
-	 * @return string Query string to use for setting the SQL modes to a
-	 *                compatible state.
+	 * @return string SQL statement that sets a WordPress-compatible SQL mode, or an
+	 *                empty string.
 	 */
-	protected function get_sql_mode_query( $assoc_args, $modes = [] ) {
-		if ( empty( $modes ) ) {
-			$modes = $this->get_current_sql_modes( $assoc_args );
-		}
-
-		$modes = array_change_key_case( $modes, CASE_UPPER );
-
-		$is_mode_adaptation_needed = false;
-		foreach ( $modes as $i => $mode ) {
-			if ( in_array( $mode, $this->sql_incompatible_modes, true ) ) {
-				unset( $modes[ $i ] );
-				$is_mode_adaptation_needed = true;
-			}
-		}
-
-		if ( ! $is_mode_adaptation_needed ) {
-			WP_CLI::debug(
-				sprintf(
-					'SQL modes look fine: %s',
-					json_encode( $modes )
-				)
-			);
+	protected function get_sql_mode_compat_statement( $assoc_args = [] ) {
+		if ( Utils\get_flag_value( $assoc_args, 'skip-sql-mode-compat', false ) ) {
 			return '';
 		}
 
-		WP_CLI::debug(
-			sprintf(
-				'SQL mode adaptation is needed: %s => %s',
-				json_encode( $this->get_current_sql_modes( $assoc_args ) ),
-				json_encode( $modes )
-			)
-		);
-
-		$modes_str = implode( ',', $modes );
-
-		return "SET SESSION sql_mode='{$modes_str}';";
-	}
-
-	/**
-	 * Get the list of current SQL modes.
-	 *
-	 * @param array $assoc_args The associative argument array passed to the command.
-	 * @return string[] Array of SQL modes.
-	 */
-	protected function get_current_sql_modes( $assoc_args ) {
-		static $modes = null;
-
-		// Make sure the provided arguments don't interfere with the expected
-		// output here.
-		$args = [];
-
-		if ( null === $modes ) {
-			$modes = [];
-
-			list( $stdout, $stderr, $exit_code ) = self::run(
-				sprintf(
-					'%s%s --no-auto-rehash --batch --skip-column-names',
-					$this->get_mysql_command(),
-					$this->get_defaults_flag_string( $assoc_args )
-				),
-				array_merge( $args, [ 'execute' => 'SELECT @@SESSION.sql_mode' ] ),
-				false
-			);
-
-			if ( $exit_code ) {
-				WP_CLI::error(
-					'Failed to get current SQL modes.'
-					. ( ! empty( $stderr ) ? " Reason: {$stderr}" : '' ),
-					$exit_code
-				);
-			}
-
-			if ( ! empty( $stdout ) ) {
-				$lines = preg_split( "/\r\n|\n|\r|,/", $stdout );
-				$modes = array_filter(
-					array_map(
-						'trim',
-						$lines ? $lines : []
-					)
-				);
-			}
+		// Strip the incompatible modes from the session mode list. Each mode is
+		// wrapped in commas so that it only matches as a whole token and never as
+		// a substring -- stripping `ANSI` must not turn `ANSI_QUOTES` into
+		// `_QUOTES`, for example.
+		$expression = "CONCAT( ',', @@SESSION.sql_mode, ',' )";
+		foreach ( $this->sql_incompatible_modes as $mode ) {
+			$expression = sprintf( "REPLACE( %s, ',%s,', ',' )", $expression, $mode );
 		}
 
-		return $modes;
+		return sprintf( "SET SESSION sql_mode = TRIM( BOTH ',' FROM %s )", $expression );
 	}
 
 	/**
-	 * Returns the correct `mysql` command based on the detected database type.
+	 * Applies the WordPress SQL-mode compatibility statement to the MySQL client
+	 * arguments via `--init-command`, so it runs on connect before any SQL is read.
 	 *
-	 * @return string The appropriate check command.
+	 * If the caller already supplied their own `--init-command` (via the CLI or an
+	 * option file), the compatibility statement is composed with it as a single
+	 * multi-statement `--init-command` value -- the compatibility statement first,
+	 * the caller's command second -- rather than dropping either one. A caller that
+	 * re-sets `sql_mode` in their own command therefore still wins (last statement
+	 * takes effect), while the compatibility statement is guaranteed to run.
+	 *
+	 * Running both statements from a single `--init-command` value works across
+	 * every targeted client (mysql 5.6/5.7/8.0/8.4 and mariadb). The newer
+	 * `--init-command-add` option is only available on mysql 8.4+, so it is not
+	 * used here.
+	 *
+	 * Does nothing when compatibility is disabled via `--skip-sql-mode-compat`.
+	 *
+	 * @param array $mysql_args MySQL client arguments, passed by reference.
+	 * @param array $assoc_args The associative argument array passed to the command.
 	 */
-	private function get_mysql_command() {
-		return 'mariadb' === Utils\get_db_type() ? 'mariadb' : 'mysql';
+	protected function apply_sql_mode_compat_init_command( &$mysql_args, $assoc_args ) {
+		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
+		if ( '' === $sql_mode_compat ) {
+			return;
+		}
+
+		if ( isset( $mysql_args['init-command'] ) && '' !== trim( (string) $mysql_args['init-command'] ) ) {
+			$mysql_args['init-command'] = $sql_mode_compat . '; ' . $mysql_args['init-command'];
+		} else {
+			$mysql_args['init-command'] = $sql_mode_compat;
+		}
 	}
 }

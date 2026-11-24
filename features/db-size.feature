@@ -1,4 +1,4 @@
-# Assumes wp_cli_test has a database size of around 655,360 bytes.
+# Assumes {DB_NAME} has a database size of around 655,360 bytes.
 
 Feature: Display database size
 
@@ -9,7 +9,7 @@ Feature: Display database size
     When I run `wp db size`
     Then STDOUT should contain:
       """
-      wp_cli_test
+      {DB_NAME}
       """
 
     And STDOUT should contain:
@@ -32,6 +32,8 @@ Feature: Display database size
       B
       """
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display only table sizes for a WordPress install
     Given a WP install
 
@@ -40,7 +42,7 @@ Feature: Display database size
 
     But STDOUT should not contain:
       """
-      wp_cli_test
+      {DB_NAME}
       """
 
   @require-mysql-or-mariadb
@@ -50,7 +52,7 @@ Feature: Display database size
     When I run `wp db size --human-readable`
     Then STDOUT should contain:
       """
-      wp_cli_test
+      {DB_NAME}
       """
 
     And STDOUT should contain:
@@ -81,6 +83,8 @@ Feature: Display database size
       KB
       """
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display only table sizes in a human readable format for a WordPress install
     Given a WP install
 
@@ -97,7 +101,7 @@ Feature: Display database size
 
     But STDOUT should not contain:
       """
-      wp_cli_test
+      {DB_NAME}
       """
 
     When I try `wp db size --tables --human-readable --size_format=b`
@@ -107,6 +111,41 @@ Feature: Display database size
       Cannot use --size_format and --human-readable arguments at the same time.
       """
     And STDOUT should be empty
+
+  @require-mysql-or-mariadb
+  Scenario: Display data and index size of a database for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --fields=Name,Data,Index,Size`
+    Then STDOUT should match /{DB_NAME}\s+\d+ B\s+\d+ B\s+\d+ B/
+
+    When I run `wp db size --fields=Name,Data,Index,Size --format=csv`
+    Then STDOUT should contain:
+      """
+      Name,Data,Index,Size
+      """
+
+  @require-sqlite @skip-windows
+  Scenario: Display data and index size of a database for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --fields=Name,Data,Index,Size`
+    Then STDOUT should match /\.ht\.sqlite(\.php)?\s+\d+ B\s+\d+ B\s+\d+ B/
+
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
+  Scenario: Display data and index size of each table for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --tables --fields=Name,Data,Index,Size`
+    Then STDOUT should match /wp_posts\s+\d+ B\s+\d+ B\s+\d+ B/
+
+    When I run `wp db size --tables --fields=Name,Index --human-readable`
+    Then STDOUT should match /wp_posts\s+[\d.]+ (B|KB)/
+    But STDOUT should not contain:
+      """
+      Size
+      """
 
   Scenario: Display only database size in bytes for a WordPress install
     Given a WP install
@@ -188,6 +227,17 @@ Feature: Display database size
       """
 
   @require-mysql-or-mariadb
+  Scenario: Display database size in a human readable format with specific precision for a WordPress install
+    Given a WP install
+
+    When I run `wp db size --human-readable`
+    Then STDOUT should match /\d+\.\d+ (KB|MB)/
+
+    When I run `wp db size --human-readable --decimals=0`
+    Then STDOUT should match /\d+ (KB|MB)/
+    And STDOUT should not match /\d+\.\d+ (KB|MB)/
+
+  @require-mysql-or-mariadb
   Scenario: Display database size in bytes with specific format for a WordPress install
     Given a WP install
 
@@ -195,7 +245,7 @@ Feature: Display database size
     Then STDOUT should contain:
       """
       Name,Size
-      wp_cli_test,"
+      {DB_NAME},"
       """
 
     But STDOUT should not be a number
@@ -203,7 +253,7 @@ Feature: Display database size
     When I run `wp db size --size_format=b --format=json`
     Then STDOUT should contain:
       """
-      [{"Name":"wp_cli_test","Size":"
+      [{"Name":"{DB_NAME}","Size":"
       """
 
     But STDOUT should not be a number
@@ -213,22 +263,17 @@ Feature: Display database size
     Given a WP install
 
     When I run `wp db size --size_format=b --format=csv`
-    Then STDOUT should contain:
-      """
-      Name,Size
-      .ht.sqlite,"
-      """
+    Then STDOUT should match /Name,Size\n\.ht\.sqlite(\.php)?,"/
 
     But STDOUT should not be a number
 
     When I run `wp db size --size_format=b --format=json`
-    Then STDOUT should contain:
-      """
-      [{"Name":".ht.sqlite","Size":"
-      """
+    Then STDOUT should match /^\[\{"Name":"\.ht\.sqlite(\.php)?","Size":"/
 
     But STDOUT should not be a number
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display all table sizes for a WordPress install
     Given a WP install
 
@@ -289,6 +334,8 @@ Feature: Display database size
       [{"Name":"wp_posts",
       """
 
+  # On CI, SQLite on Windows is missing the dbstat extension.
+  @skip-windows
   Scenario: Display ordered table sizes for a WordPress install
     Given a WP install
 

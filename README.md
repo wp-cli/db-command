@@ -3,7 +3,7 @@ wp-cli/db-command
 
 Performs basic database operations using credentials stored in wp-config.php.
 
-[![Testing](https://github.com/wp-cli/db-command/actions/workflows/testing.yml/badge.svg)](https://github.com/wp-cli/db-command/actions/workflows/testing.yml)
+[![Testing](https://github.com/wp-cli/db-command/actions/workflows/testing.yml/badge.svg)](https://github.com/wp-cli/db-command/actions/workflows/testing.yml) [![Code Coverage](https://codecov.io/gh/wp-cli/db-command/branch/main/graph/badge.svg)](https://codecov.io/gh/wp-cli/db-command/tree/main)
 
 Quick links: [Using](#using) | [Installing](#installing) | [Contributing](#contributing) | [Support](#support)
 
@@ -338,7 +338,7 @@ wp db cli [--database=<database>] [--default-character-set=<character-set>] [--d
 Executes a SQL query against the database.
 
 ~~~
-wp db query [<sql>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults]
+wp db query [<sql>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults] [--skip-sql-mode-compat]
 ~~~
 
 Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
@@ -364,6 +364,13 @@ entirely.
 
 	[--defaults]
 		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
+	[--skip-sql-mode-compat]
+		Run the query under the server's own SQL modes instead of adapting them to
+		be WordPress-compatible. By default, the incompatible modes that WordPress
+		disables in `wpdb` (such as `NO_ZERO_DATE` and `STRICT_TRANS_TABLES`) are
+		stripped for the session, so statements against WordPress's zero-date schema
+		behave the same as they do in WordPress itself.
 
 **EXAMPLES**
 
@@ -431,13 +438,13 @@ To confirm the ID for the site you want to query, you can use the `wp site list`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--add-drop-table] [--defaults]
+wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--defaults]
 ~~~
 
 **Alias:** `dump`
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
-`DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid `mysqldump` flags.
+`DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid [`mysqldump` flags](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
 
 **OPTIONS**
 
@@ -466,16 +473,13 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 	[--porcelain]
 		Output filename for the exported database.
 
-	[--add-drop-table]
-		Include a `DROP TABLE IF EXISTS` statement before each `CREATE TABLE` statement.
-
 	[--defaults]
 		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
 
 **EXAMPLES**
 
-    # Export database with drop query included
-    $ wp db export --add-drop-table
+    # Export database with `--skip-opt` and `--add-drop-table` mysqldump flags
+    $ wp db export --skip-opt --add-drop-table
     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Export certain tables
@@ -526,7 +530,7 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 Imports a database from a file or from STDIN.
 
 ~~~
-wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--skip-optimization] [--defaults]
+wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--skip-optimization] [--skip-sql-mode-compat] [--defaults]
 ~~~
 
 Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
@@ -549,7 +553,10 @@ defined in the SQL.
 		Extra arguments to pass to mysql. [Refer to mysql binary docs](https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html).
 
 	[--skip-optimization]
-		When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
+		Do not disable unique checks and foreign key checks during import.
+
+	[--skip-sql-mode-compat]
+		Do not adapt the session SQL mode for WordPress compatibility. By default, `wp db import` strips the SQL modes that WordPress Core disables (such as `STRICT_TRANS_TABLES` and `NO_ZERO_DATE`) so that dumps containing legacy values like `0000-00-00` import cleanly. Pass this flag to import under the server's own SQL modes instead.
 
 	[--defaults]
 		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
@@ -648,39 +655,39 @@ Defaults to searching through all tables registered to $wpdb. On multisite, this
 		  - count
 		---
 
-The percent color codes available are:
+		The percent color codes available are:
 
-| Code | Color
-| ---- | -----
-|  %y  | Yellow (dark) (mustard)
-|  %g  | Green (dark)
-|  %b  | Blue (dark)
-|  %r  | Red (dark)
-|  %m  | Magenta (dark)
-|  %c  | Cyan (dark)
-|  %w  | White (dark) (light gray)
-|  %k  | Black
-|  %Y  | Yellow (bright)
-|  %G  | Green (bright)
-|  %B  | Blue (bright)
-|  %R  | Red (bright)
-|  %M  | Magenta (bright)
-|  %C  | Cyan (bright)
-|  %W  | White
-|  %K  | Black (bright) (dark gray)
-|  %3  | Yellow background (dark) (mustard)
-|  %2  | Green background (dark)
-|  %4  | Blue background (dark)
-|  %1  | Red background (dark)
-|  %5  | Magenta background (dark)
-|  %6  | Cyan background (dark)
-|  %7  | White background (dark) (light gray)
-|  %0  | Black background
-|  %8  | Reverse
-|  %U  | Underline
-|  %F  | Blink (unlikely to work)
+		| Code | Color
+		| ---- | -----
+		|  %y  | Yellow (dark) (mustard)
+		|  %g  | Green (dark)
+		|  %b  | Blue (dark)
+		|  %r  | Red (dark)
+		|  %m  | Magenta (dark)
+		|  %c  | Cyan (dark)
+		|  %w  | White (dark) (light gray)
+		|  %k  | Black
+		|  %Y  | Yellow (bright)
+		|  %G  | Green (bright)
+		|  %B  | Blue (bright)
+		|  %R  | Red (bright)
+		|  %M  | Magenta (bright)
+		|  %C  | Cyan (bright)
+		|  %W  | White
+		|  %K  | Black (bright) (dark gray)
+		|  %3  | Yellow background (dark) (mustard)
+		|  %2  | Green background (dark)
+		|  %4  | Blue background (dark)
+		|  %1  | Red background (dark)
+		|  %5  | Magenta background (dark)
+		|  %6  | Cyan background (dark)
+		|  %7  | White background (dark) (light gray)
+		|  %0  | Black background
+		|  %8  | Reverse
+		|  %U  | Underline
+		|  %F  | Blink (unlikely to work)
 
-They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background `%3%k` can be made black on a bright yellow background with `%Y%0%8`.
+		They can be concatenated. For instance, the default match color of black on a mustard (dark yellow) background `%3%k` can be made black on a bright yellow background with `%Y%0%8`.
 
 **AVAILABLE FIELDS**
 
@@ -759,7 +766,22 @@ Defaults to all tables registered to the $wpdb database handler.
 		List tables based on wildcard search, e.g. 'wp_*_options' or 'wp_post?'.
 
 	[--scope=<scope>]
-		Can be all, global, ms_global, blog, or old tables. Defaults to all.
+		List tables based on the scope.
+
+		- all: returns 'all' and 'global' tables. No old tables are returned.
+		- blog: returns the blog-level tables for the queried blog.
+		- global: returns the global tables for the installation, returning multisite tables only on multisite.
+		- ms_global: returns the multisite global tables, regardless if current installation is multisite.
+		- old: returns tables which are deprecated.
+		---
+		default: all
+		options:
+		  - all
+		  - blog
+		  - global
+		  - ms_global
+		  - old
+		---
 
 	[--network]
 		List all the tables in a multisite install.
@@ -804,11 +826,16 @@ Defaults to all tables registered to the $wpdb database handler.
 Displays the database name and size.
 
 ~~~
-wp db size [--size_format=<format>] [--tables] [--human-readable] [--format=<format>] [--scope=<scope>] [--network] [--decimals=<decimals>] [--all-tables-with-prefix] [--all-tables] [--order=<order>] [--orderby=<orderby>]
+wp db size [--size_format=<format>] [--tables] [--human-readable] [--fields=<fields>] [--format=<format>] [--scope=<scope>] [--network] [--decimals=<decimals>] [--all-tables-with-prefix] [--all-tables] [--order=<order>] [--orderby=<orderby>]
 ~~~
 
 Display the database name and size for `DB_NAME` specified in wp-config.php.
 The size defaults to a human-readable number.
+
+The reported size is the sum of the data and the index size. Both can be
+displayed separately by adding them to `--fields`. For SQLite, the database
+size is the size of the database file, which also includes overhead such as
+free pages.
 
 Available size formats include:
 * b (bytes)
@@ -854,6 +881,9 @@ Available size formats include:
 	[--human-readable]
 		Display database sizes in human readable formats.
 
+	[--fields=<fields>]
+		Get a specific subset of the fields.
+
 	[--format=<format>]
 		Render output in a particular format.
 		---
@@ -871,7 +901,7 @@ Available size formats include:
 		List all the tables in a multisite install.
 
 	[--decimals=<decimals>]
-		Number of digits after decimal point. Defaults to 0.
+		Number of digits after decimal point. Defaults to 0, or 2 when using --human-readable.
 
 	[--all-tables-with-prefix]
 		List all tables that match the table prefix even if not registered on $wpdb. Overrides --network.
@@ -896,6 +926,18 @@ Available size formats include:
 		  - name
 		  - size
 		---
+
+**AVAILABLE FIELDS**
+
+These fields will be displayed by default:
+
+* Name
+* Size
+
+These fields are optionally available:
+
+* Data
+* Index
 
 **EXAMPLES**
 
@@ -923,6 +965,13 @@ Available size formats include:
     | wp_termmeta           | 48 KB |
     | wp_commentmeta        | 48 KB |
     +-----------------------+-------+
+
+    $ wp db size --fields=Name,Data,Index,Size --human-readable
+    +-------------------+---------+--------+---------+
+    | Name              |    Data |  Index |    Size |
+    +-------------------+---------+--------+---------+
+    | wordpress_default | 3.43 GB | 2.8 GB | 6.23 GB |
+    +-------------------+---------+--------+---------+
 
     $ wp db size --size_format=b
     5865472
@@ -1020,9 +1069,13 @@ Want to contribute a new feature? Please first [open a new issue](https://github
 
 Once you've decided to commit the time to seeing your pull request through, [please follow our guidelines for creating a pull request](https://make.wordpress.org/cli/handbook/pull-requests/) to make sure it's a pleasant experience. See "[Setting up](https://make.wordpress.org/cli/handbook/pull-requests/#setting-up)" for details specific to working on this package locally.
 
+### License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
 ## Support
 
-GitHub issues aren't for general support questions, but there are other venues you can try: https://wp-cli.org/#support
+GitHub issues aren't for general support questions. For support resources and next steps, see the WP-CLI Support page: https://make.wordpress.org/cli/handbook/support/
 
 
 *This README.md is generated dynamically from the project's codebase using `wp scaffold package-readme` ([doc](https://github.com/wp-cli/scaffold-package-command#wp-scaffold-package-readme)). To suggest changes, please submit a pull request against the corresponding part of the codebase.*

@@ -20,7 +20,7 @@ trait DB_Command_SQLite {
 		static $available = null;
 
 		if ( null === $available ) {
-			$result    = \WP_CLI\Process::create( '/usr/bin/env sqlite3 --version', null, null )->run();
+			$result    = \WP_CLI\Process::create( Utils\force_env_on_nix_systems( 'sqlite3' ) . ' --version', null, null )->run();
 			$available = 0 === $result->return_code;
 		}
 
@@ -63,18 +63,48 @@ trait DB_Command_SQLite {
 	 * @return string|false Path to SQLite database file, or false if not found.
 	 */
 	protected function get_sqlite_db_path() {
+		if ( defined( 'DB_PATH' ) ) {
+			if ( ':memory:' === DB_PATH ) {
+				WP_CLI::error( 'This command does not support in-memory SQLite databases.' );
+			}
+
+			return DB_PATH;
+		}
+
 		// Check for FQDB constant (fully qualified database path).
 		if ( defined( 'FQDB' ) ) {
+			if ( ':memory:' === FQDB ) {
+				WP_CLI::error( 'This command does not support in-memory SQLite databases.' );
+			}
+
 			return FQDB;
 		}
 
 		$wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content';
 
 		// Check for FQDBDIR and construct path.
-		$db_dir  = defined( 'FQDBDIR' ) ? FQDBDIR : $wp_content_dir . '/database';
-		$db_file = defined( 'DB_FILE' ) ? DB_FILE : '.ht.sqlite';
+		$db_dir = defined( 'FQDBDIR' ) ? FQDBDIR : $wp_content_dir . '/database';
 
-		$db_path = rtrim( $db_dir, '/' ) . '/' . ltrim( $db_file, '/' );
+		// DB_FILE selects a file inside FQDBDIR (sqlite-database-integration 3.1+).
+		if ( defined( 'DB_FILE' ) ) {
+			return rtrim( $db_dir, '/' ) . '/' . ltrim( DB_FILE, '/' );
+		}
+
+		// Check for the recorded secret path (sqlite-database-integration 3.1+).
+		$path_file = rtrim( $db_dir, '/\\' ) . '/db-path.php';
+		if ( file_exists( $path_file ) ) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Failure is checked below.
+			$recorded_path = @include $path_file;
+			if ( is_string( $recorded_path ) && '' !== $recorded_path ) {
+				if ( ':memory:' === $recorded_path ) {
+					WP_CLI::error( 'This command does not support in-memory SQLite databases.' );
+				}
+
+				return $recorded_path;
+			}
+		}
+
+		$db_path = rtrim( $db_dir, '/' ) . '/.ht.sqlite';
 
 		// If the file exists, return it.
 		if ( file_exists( $db_path ) ) {
@@ -149,7 +179,12 @@ trait DB_Command_SQLite {
 			WP_CLI::error( 'Database does not exist.' );
 		}
 
-		if ( ! unlink( $db_path ) ) {
+		global $wpdb;
+		if ( $wpdb instanceof \wpdb ) {
+			$wpdb->close();
+		}
+
+		if ( ! @unlink( $db_path ) ) {
 			WP_CLI::error( "Could not delete database file: {$db_path}" );
 		}
 
@@ -168,7 +203,12 @@ trait DB_Command_SQLite {
 
 		// Delete if exists.
 		if ( file_exists( $db_path ) ) {
-			if ( ! unlink( $db_path ) ) {
+			global $wpdb;
+			if ( $wpdb instanceof \wpdb ) {
+				$wpdb->close();
+			}
+
+			if ( ! @unlink( $db_path ) ) {
 				WP_CLI::error( "Could not delete database file: {$db_path}" );
 			}
 		}
@@ -209,6 +249,19 @@ trait DB_Command_SQLite {
 
 		if ( ! isset( $wpdb ) || ! $wpdb instanceof \WP_SQLite_DB ) {
 			WP_CLI::error( 'SQLite database not available.' );
+		}
+
+		/*
+		 * Strip redundant trailing semicolons and whitespace.
+		 *
+		 * The MySQL client silently ignores the empty statements they produce,
+		 * whereas the SQLite drop-in parses them as a multi-query and bails out
+		 * with "Multi-query is not supported.". Trim them for parity.
+		 */
+		$query = rtrim( $query, "; \t\n\r\0\x0B" );
+
+		if ( '' === $query ) {
+			WP_CLI::error( 'No query specified.' );
 		}
 
 		$skip_column_names = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
@@ -292,6 +345,7 @@ trait DB_Command_SQLite {
 		if ( false === $temp_db ) {
 			WP_CLI::error( 'Could not create temporary database file for export.' );
 		}
+		$temp_db = str_replace( '\\', '/', $temp_db );
 
 		if ( ! copy( $db_path, $temp_db ) ) {
 			// Clean up temporary file if the copy operation fails.
@@ -320,7 +374,8 @@ trait DB_Command_SQLite {
 				WP_CLI::error( 'Could not export database' );
 			}
 
-			$all_tables = explode( "\n", $result->stdout );
+			$all_tables = array_map( 'trim', explode( "\n", $result->stdout ) );
+			$all_tables = array_filter( $all_tables );
 
 			$exclude_tables = array_diff( $all_tables, $include_tables );
 		}
@@ -342,27 +397,46 @@ trait DB_Command_SQLite {
 			$drop_statements[]  = sprintf( 'DROP TABLE %s;', $escaped_identifier );
 		}
 
-		if ( ! empty( $drop_statements ) ) {
-			$args         = array_merge( array( 'sqlite3', $temp_db ), $drop_statements );
-			$placeholders = array_fill( 0, count( $args ), '%s' );
-			$command      = Utils\esc_cmd( implode( ' ', $placeholders ), ...$args );
-
-			WP_CLI::debug( "Running shell command: {$command}", 'db' );
-
-			$result = \WP_CLI\Process::create( $command, null, null )->run();
-
-			if ( 0 !== $result->return_code ) {
-				WP_CLI::error( 'Could not export database' );
+		$init_file = tempnam( sys_get_temp_dir(), 'export_init' );
+		if ( false === $init_file ) {
+			if ( file_exists( $temp_db ) ) {
+				unlink( $temp_db );
 			}
+
+			WP_CLI::error( 'Failed to create temporary SQLite init file for export.' );
+		}
+		$init_file = str_replace( '\\', '/', $init_file );
+
+		$init_contents = '';
+		if ( ! empty( $drop_statements ) ) {
+			$init_contents .= implode( "\n", $drop_statements ) . "\n";
+		}
+		$init_contents .= ".dump\n";
+
+		$bytes_written = file_put_contents( $init_file, $init_contents );
+		if ( false === $bytes_written ) {
+			if ( file_exists( $init_file ) ) {
+				unlink( $init_file );
+			}
+			if ( file_exists( $temp_db ) ) {
+				unlink( $temp_db );
+			}
+			WP_CLI::error( 'Could not export database' );
 		}
 
-		$command = Utils\esc_cmd( 'sqlite3 %s .dump', $temp_db );
+		$command = Utils\esc_cmd( 'sqlite3 -init %s %s .exit', $init_file, $temp_db );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
 		$result = \WP_CLI\Process::create( $command, null, null )->run();
+		if ( file_exists( $init_file ) ) {
+			unlink( $init_file );
+		}
 
 		if ( 0 !== $result->return_code ) {
+			if ( file_exists( $temp_db ) ) {
+				unlink( $temp_db );
+			}
 			WP_CLI::error( 'Could not export database' );
 		}
 
@@ -401,6 +475,7 @@ trait DB_Command_SQLite {
 		if ( ! $db_path ) {
 			WP_CLI::error( 'Could not determine the database path.' );
 		}
+		$db_path = str_replace( '\\', '/', $db_path );
 
 		if ( ! file_exists( $db_path ) ) {
 			WP_CLI::error( 'Database does not exist.' );
@@ -422,6 +497,10 @@ trait DB_Command_SQLite {
 			$contents = (string) file_get_contents( $file );
 		}
 
+		if ( preg_match( '/^[ \t]*\.(?![0-9])/m', $contents ) ) {
+			WP_CLI::error( 'SQLite dot-commands are not allowed in import files.' );
+		}
+
 		// Ignore errors about unique constraints and existing indexes.
 		$contents = str_replace( 'INSERT INTO', 'INSERT OR IGNORE INTO', $contents );
 		$contents = preg_replace( '/\bCREATE TABLE (?!IF NOT EXISTS\b)/i', 'CREATE TABLE IF NOT EXISTS ', $contents );
@@ -431,7 +510,18 @@ trait DB_Command_SQLite {
 		$contents = preg_replace( '/\bCREATE UNIQUE INDEX (?!IF NOT EXISTS\b)/i', 'CREATE UNIQUE INDEX IF NOT EXISTS ', (string) $contents );
 
 		$import_file = tempnam( sys_get_temp_dir(), 'temp.db' );
-		file_put_contents( $import_file, $contents );
+		if ( false === $import_file ) {
+			WP_CLI::error( 'Failed to create a temporary file for SQLite import.' );
+		}
+
+		$import_file   = str_replace( '\\', '/', $import_file );
+		$bytes_written = file_put_contents( $import_file, $contents );
+		if ( false === $bytes_written ) {
+			if ( file_exists( $import_file ) ) {
+				unlink( $import_file );
+			}
+			WP_CLI::error( sprintf( 'Failed to write SQLite import data to temporary file: %s', $import_file ) );
+		}
 
 		// Build sqlite3 command.
 		$command_parts = [ 'sqlite3' ];
@@ -447,6 +537,8 @@ trait DB_Command_SQLite {
 			$command_parts[] = 'PRAGMA journal_mode=MEMORY;';
 		}
 
+		$command_parts[] = '-init';
+		$command_parts[] = $import_file;
 		$command_parts[] = $db_path;
 
 		// Build a properly escaped string command. Process::create() requires a string, not an array.
@@ -455,8 +547,8 @@ trait DB_Command_SQLite {
 			...$command_parts
 		);
 
-		// Pass the .read dot-command as a single quoted argument (sqlite3 reads it as SQL input).
-		$command .= ' ' . escapeshellarg( '.read ' . $import_file );
+		// Pass .exit to quit interactive mode after running -init.
+		$command .= ' ' . escapeshellarg( '.exit' );
 
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 
@@ -488,6 +580,65 @@ trait DB_Command_SQLite {
 		}
 
 		return $size;
+	}
+
+	/**
+	 * Get the data and the index size of the SQLite database, or of a single table.
+	 *
+	 * Both sizes are collected in a single pass over `dbstat`, which walks every
+	 * page of the database file.
+	 *
+	 * @param string $table_name Optional. Table to limit the sizes to. Defaults to the whole database.
+	 * @return array{data: int, index: int} Sizes in bytes.
+	 */
+	protected function sqlite_size_breakdown( $table_name = '' ) {
+		global $wpdb;
+
+		// The dbstat virtual table is not part of every SQLite build.
+		$suppress_errors = $wpdb->suppress_errors( true );
+
+		if ( '' !== $table_name ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT sqlite_master.type as type, SUM(dbstat.pgsize) as size_in_bytes FROM dbstat JOIN sqlite_master ON sqlite_master.name = dbstat.name WHERE sqlite_master.name = %s OR ( sqlite_master.type = 'index' AND sqlite_master.tbl_name = %s ) GROUP BY sqlite_master.type",
+					$table_name,
+					$table_name
+				),
+				ARRAY_A
+			);
+		} else {
+			$rows = $wpdb->get_results(
+				'SELECT sqlite_master.type as type, SUM(dbstat.pgsize) as size_in_bytes FROM dbstat JOIN sqlite_master ON sqlite_master.name = dbstat.name GROUP BY sqlite_master.type',
+				ARRAY_A
+			);
+		}
+
+		$last_error = $wpdb->last_error;
+
+		$wpdb->suppress_errors( $suppress_errors );
+
+		if ( '' !== $last_error ) {
+			WP_CLI::error( 'Could not determine the data and index size of the database. This requires the dbstat extension, which is not available for this SQLite installation.' );
+		}
+
+		$sizes = [
+			'data'  => 0,
+			'index' => 0,
+		];
+
+		foreach ( (array) $rows as $row ) {
+			if ( ! is_array( $row ) || ! isset( $row['type'], $row['size_in_bytes'] ) || ! is_numeric( $row['size_in_bytes'] ) ) {
+				continue;
+			}
+
+			if ( 'table' === $row['type'] ) {
+				$sizes['data'] = (int) $row['size_in_bytes'];
+			} elseif ( 'index' === $row['type'] ) {
+				$sizes['index'] = (int) $row['size_in_bytes'];
+			}
+		}
+
+		return $sizes;
 	}
 
 	/**

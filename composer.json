@@ -12,10 +12,10 @@
         }
     ],
     "require": {
-        "wp-cli/wp-cli": "^2.13"
+        "wp-cli/wp-cli": "^3.0"
     },
     "require-dev": {
-        "wp-cli/entity-command": "^1.3 || ^2",
+        "wp-cli/entity-command": "^1.3 || ^2 || ^3",
         "wp-cli/wp-cli-tests": "^5"
     },
     "config": {
@@ -30,7 +30,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-main": "2.x-dev"
+            "dev-main": "3.x-dev"
         },
         "bundled": true,
         "commands": [
@@ -67,6 +67,7 @@
         "behat": "run-behat-tests",
         "behat-rerun": "rerun-behat-tests",
         "lint": "run-linter-tests",
+        "lint-gherkin": "run-gherkin-lint-tests",
         "phpcs": "run-phpcs-tests",
         "phpstan": "run-phpstan-tests",
         "phpcbf": "run-phpcbf-cleanup",
@@ -74,6 +75,7 @@
         "prepare-tests": "install-package-tests",
         "test": [
             "@lint",
+            "@lint-gherkin",
             "@phpcs",
             "@phpunit",
             "@behat"
