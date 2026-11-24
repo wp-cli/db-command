@@ -63,18 +63,48 @@ trait DB_Command_SQLite {
 	 * @return string|false Path to SQLite database file, or false if not found.
 	 */
 	protected function get_sqlite_db_path() {
+		if ( defined( 'DB_PATH' ) ) {
+			if ( ':memory:' === DB_PATH ) {
+				WP_CLI::error( 'This command does not support in-memory SQLite databases.' );
+			}
+
+			return DB_PATH;
+		}
+
 		// Check for FQDB constant (fully qualified database path).
 		if ( defined( 'FQDB' ) ) {
+			if ( ':memory:' === FQDB ) {
+				WP_CLI::error( 'This command does not support in-memory SQLite databases.' );
+			}
+
 			return FQDB;
 		}
 
 		$wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content';
 
 		// Check for FQDBDIR and construct path.
-		$db_dir  = defined( 'FQDBDIR' ) ? FQDBDIR : $wp_content_dir . '/database';
-		$db_file = defined( 'DB_FILE' ) ? DB_FILE : '.ht.sqlite';
+		$db_dir = defined( 'FQDBDIR' ) ? FQDBDIR : $wp_content_dir . '/database';
 
-		$db_path = rtrim( $db_dir, '/' ) . '/' . ltrim( $db_file, '/' );
+		// DB_FILE selects a file inside FQDBDIR (sqlite-database-integration 3.1+).
+		if ( defined( 'DB_FILE' ) ) {
+			return rtrim( $db_dir, '/' ) . '/' . ltrim( DB_FILE, '/' );
+		}
+
+		// Check for the recorded secret path (sqlite-database-integration 3.1+).
+		$path_file = rtrim( $db_dir, '/\\' ) . '/db-path.php';
+		if ( file_exists( $path_file ) ) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Failure is checked below.
+			$recorded_path = @include $path_file;
+			if ( is_string( $recorded_path ) && '' !== $recorded_path ) {
+				if ( ':memory:' === $recorded_path ) {
+					WP_CLI::error( 'This command does not support in-memory SQLite databases.' );
+				}
+
+				return $recorded_path;
+			}
+		}
+
+		$db_path = rtrim( $db_dir, '/' ) . '/.ht.sqlite';
 
 		// If the file exists, return it.
 		if ( file_exists( $db_path ) ) {
@@ -219,6 +249,19 @@ trait DB_Command_SQLite {
 
 		if ( ! isset( $wpdb ) || ! $wpdb instanceof \WP_SQLite_DB ) {
 			WP_CLI::error( 'SQLite database not available.' );
+		}
+
+		/*
+		 * Strip redundant trailing semicolons and whitespace.
+		 *
+		 * The MySQL client silently ignores the empty statements they produce,
+		 * whereas the SQLite drop-in parses them as a multi-query and bails out
+		 * with "Multi-query is not supported.". Trim them for parity.
+		 */
+		$query = rtrim( $query, "; \t\n\r\0\x0B" );
+
+		if ( '' === $query ) {
+			WP_CLI::error( 'No query specified.' );
 		}
 
 		$skip_column_names = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
@@ -452,6 +495,10 @@ trait DB_Command_SQLite {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $file ) );
 		} else {
 			$contents = (string) file_get_contents( $file );
+		}
+
+		if ( preg_match( '/^[ \t]*\.(?![0-9])/m', $contents ) ) {
+			WP_CLI::error( 'SQLite dot-commands are not allowed in import files.' );
 		}
 
 		// Ignore errors about unique constraints and existing indexes.

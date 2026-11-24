@@ -953,7 +953,7 @@ class DB_Command extends WP_CLI_Command {
 	 * : Extra arguments to pass to mysql. [Refer to mysql binary docs](https://dev.mysql.com/doc/refman/8.0/en/mysql-command-options.html).
 	 *
 	 * [--skip-optimization]
-	 * : When using an SQL file, do not include speed optimization such as disabling auto-commit and key checks.
+	 * : Do not disable unique checks and foreign key checks during import.
 	 *
 	 * [--skip-sql-mode-compat]
 	 * : Do not adapt the session SQL mode for WordPress compatibility. By default, `wp db import` strips the SQL modes that WordPress Core disables (such as `STRICT_TRANS_TABLES` and `NO_ZERO_DATE`) so that dumps containing legacy values like `0000-00-00` import cleanly. Pass this flag to import under the server's own SQL modes instead.
@@ -970,8 +970,10 @@ class DB_Command extends WP_CLI_Command {
 	public function import( $args, $assoc_args ) {
 		$this->maybe_load_sqlite_dropin();
 
+		$is_stdin = false;
 		if ( ! empty( $args[0] ) ) {
 			$result_file = $args[0];
+			$is_stdin    = '-' === $result_file;
 		} else {
 			$result_file = sprintf( '%s.sql', DB_NAME );
 		}
@@ -1006,7 +1008,10 @@ class DB_Command extends WP_CLI_Command {
 
 		// Process options to MySQL.
 		$mysql_args = array_merge(
-			[ 'database' => DB_NAME ],
+			[
+				'database'    => DB_NAME,
+				'binary-mode' => true,
+			],
 			self::get_dbuser_dbpass_args( $assoc_args ),
 			self::get_mysql_args( $assoc_args )
 		);
@@ -1017,18 +1022,21 @@ class DB_Command extends WP_CLI_Command {
 		// no separate probe connection.
 		$this->apply_sql_mode_compat_init_command( $mysql_args, $assoc_args );
 
-		if ( '-' !== $result_file ) {
+		if ( ! $is_stdin ) {
 			if ( ! is_readable( $result_file ) ) {
 				WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
 			}
-
-			$query = Utils\get_flag_value( $assoc_args, 'skip-optimization' )
-				? 'SOURCE %s;'
-				: 'SET autocommit = 0; SET unique_checks = 0; SET foreign_key_checks = 0; SOURCE %s; COMMIT;';
-
-			$mysql_args['execute'] = sprintf( $query, $result_file );
 		} else {
 			$result_file = 'STDIN';
+		}
+
+		if ( ! Utils\get_flag_value( $assoc_args, 'skip-optimization' ) ) {
+			$optimization_sql = 'SET unique_checks = 0; SET foreign_key_checks = 0;';
+			if ( isset( $mysql_args['init-command'] ) && '' !== trim( (string) $mysql_args['init-command'] ) ) {
+				$mysql_args['init-command'] .= '; ' . $optimization_sql;
+			} else {
+				$mysql_args['init-command'] = $optimization_sql;
+			}
 		}
 
 		$command = sprintf(
@@ -1036,6 +1044,11 @@ class DB_Command extends WP_CLI_Command {
 			Utils\get_mysql_binary_path(),
 			$this->get_defaults_flag_string( $assoc_args )
 		);
+
+		if ( ! $is_stdin ) {
+			$command .= ' < ' . escapeshellarg( $result_file );
+		}
+
 		WP_CLI::debug( "Running shell command: {$command}", 'db' );
 		WP_CLI::debug( 'Associative arguments: ' . json_encode( $assoc_args ), 'db' );
 
@@ -1978,10 +1991,6 @@ class DB_Command extends WP_CLI_Command {
 		);
 
 		$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default', 'Extra' ];
-
-		if ( $this->is_sqlite() ) {
-			$formatter_fields = [ 'Field', 'Type', 'Null', 'Key', 'Default' ];
-		}
 
 		$formatter_args = [
 			'format' => $format,

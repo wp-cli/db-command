@@ -1,4 +1,4 @@
-# Assumes wp_cli_test has a database size of around 655,360 bytes.
+# Assumes {DB_NAME} has a database size of around 655,360 bytes.
 
 Feature: Display database size
 
@@ -9,7 +9,7 @@ Feature: Display database size
     When I run `wp db size`
     Then STDOUT should contain:
       """
-      wp_cli_test
+      {DB_NAME}
       """
 
     And STDOUT should contain:
@@ -42,7 +42,7 @@ Feature: Display database size
 
     But STDOUT should not contain:
       """
-      wp_cli_test
+      {DB_NAME}
       """
 
   @require-mysql-or-mariadb
@@ -52,7 +52,7 @@ Feature: Display database size
     When I run `wp db size --human-readable`
     Then STDOUT should contain:
       """
-      wp_cli_test
+      {DB_NAME}
       """
 
     And STDOUT should contain:
@@ -101,7 +101,7 @@ Feature: Display database size
 
     But STDOUT should not contain:
       """
-      wp_cli_test
+      {DB_NAME}
       """
 
     When I try `wp db size --tables --human-readable --size_format=b`
@@ -199,7 +199,7 @@ Feature: Display database size
     Then STDOUT should contain:
       """
       Name,Size
-      wp_cli_test,"
+      {DB_NAME},"
       """
 
     But STDOUT should not be a number
@@ -207,7 +207,7 @@ Feature: Display database size
     When I run `wp db size --size_format=b --format=json`
     Then STDOUT should contain:
       """
-      [{"Name":"wp_cli_test","Size":"
+      [{"Name":"{DB_NAME}","Size":"
       """
 
     But STDOUT should not be a number
