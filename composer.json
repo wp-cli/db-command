@@ -51,6 +51,7 @@
             "db tables",
             "db size",
             "db columns",
+            "db status",
             "db users",
             "db users create"
         ]
