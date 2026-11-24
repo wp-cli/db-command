@@ -2587,6 +2587,12 @@ class DB_Command extends WP_CLI_Command {
 			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
 		}
 
+		if ( empty( $wpdb->ready ) ) {
+			$error = $wpdb->error instanceof \WP_Error ? $wpdb->error->get_error_message() : (string) $wpdb->error;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+			WP_CLI::error( trim( 'Could not connect to the database. ' . strip_tags( (string) $error ) ) );
+		}
+
 		$suppress = $wpdb->suppress_errors( true );
 
 		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
@@ -2609,59 +2615,46 @@ class DB_Command extends WP_CLI_Command {
 				continue;
 			}
 
-			$is_row_modifying_query = (bool) preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA|CREATE|DROP|ALTER|TRUNCATE)\b/i', $statement );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$result = $wpdb->query( $statement );
 
-			if ( $is_row_modifying_query ) {
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-				$affected_rows = $wpdb->query( $statement );
-				if ( false === $affected_rows ) {
-					$error = $wpdb->last_error;
-					$wpdb->suppress_errors( $suppress );
-					// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
-					WP_CLI::error( 'Query failed: ' . strip_tags( $error ) );
-				}
-				$is_dml = (bool) preg_match( '/\b(UPDATE|DELETE|INSERT|REPLACE(?!\s*\()|LOAD DATA)\b/i', $statement );
-				if ( $is_dml ) {
-					WP_CLI::success( "Query succeeded. Rows affected: {$affected_rows}" );
-				}
-			} else {
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-				$results = $wpdb->get_results( $statement, ARRAY_A );
+			if ( false === $result ) {
+				$error = $wpdb->last_error;
+				$wpdb->suppress_errors( $suppress );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Query failed: ' . strip_tags( $error ) );
+			}
 
-				if ( $wpdb->last_error ) {
-					$error = $wpdb->last_error;
-					$wpdb->suppress_errors( $suppress );
-					// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
-					WP_CLI::error( 'Query failed: ' . strip_tags( $error ) );
-				}
+			// Decide by the leading keyword, so that a SELECT mentioning e.g. 'update' still prints its rows.
+			if ( preg_match( '/^(UPDATE|DELETE|INSERT|REPLACE|LOAD\s+DATA)\b/i', $statement ) ) {
+				WP_CLI::success( "Query succeeded. Rows affected: {$result}" );
+				continue;
+			}
 
-				if ( empty( $results ) ) {
-					continue;
-				}
+			$results = is_array( $wpdb->last_result ) ? $wpdb->last_result : [];
+			if ( empty( $results ) ) {
+				continue;
+			}
 
-				$headers = array_keys( $results[0] );
-				if ( ! $skip_column_names && ! empty( $headers ) ) {
-					WP_CLI::line( implode( "\t", $headers ) );
-				}
-				foreach ( $results as $row ) {
-					WP_CLI::line(
-						implode(
-							"\t",
-							array_map(
-								static function ( $v ) {
-									if ( null === $v ) {
-										return 'NULL';
-									}
-									if ( is_scalar( $v ) ) {
-										return (string) $v;
-									}
-									return '';
-								},
-								array_values( $row )
-							)
+			if ( ! $skip_column_names ) {
+				WP_CLI::line( implode( "\t", array_keys( get_object_vars( $results[0] ) ) ) );
+			}
+
+			foreach ( $results as $row ) {
+				WP_CLI::line(
+					implode(
+						"\t",
+						array_map(
+							static function ( $v ) {
+								if ( null === $v ) {
+									return 'NULL';
+								}
+								return is_scalar( $v ) ? (string) $v : '';
+							},
+							array_values( get_object_vars( $row ) )
 						)
-					);
-				}
+					)
+				);
 			}
 		}
 
@@ -2682,6 +2675,12 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
 			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
+		if ( empty( $wpdb->ready ) ) {
+			$error = $wpdb->error instanceof \WP_Error ? $wpdb->error->get_error_message() : (string) $wpdb->error;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+			WP_CLI::error( trim( 'Could not connect to the database. ' . strip_tags( (string) $error ) ) );
 		}
 
 		$suppress = $wpdb->suppress_errors( true );
@@ -2716,7 +2715,7 @@ class DB_Command extends WP_CLI_Command {
 				$error = $wpdb->last_error;
 
 				// Ignore privilege/permission errors for SET statements (e.g. SQL_LOG_BIN, GTID) in dumps when user lacks SUPER admin rights.
-				if ( 0 === stripos( ltrim( $statement ), 'SET ' ) && ( false !== strpos( $error, 'Access denied' ) || false !== strpos( $error, 'privilege' ) ) ) {
+				if ( preg_match( '/^(\/\*!\d*\s*)?SET\s/i', $statement ) && ( false !== strpos( $error, 'Access denied' ) || false !== strpos( $error, 'privilege' ) ) ) {
 					continue;
 				}
 
@@ -2753,29 +2752,29 @@ class DB_Command extends WP_CLI_Command {
 	/**
 	 * Split a SQL string into individual statements.
 	 *
-	 * Handles single-quoted strings, double-quoted strings, comments,
-	 * and DELIMITER directives so that semicolons inside them are not treated as statement delimiters.
+	 * Handles quoted strings and identifiers, comments, and DELIMITER directives,
+	 * so that delimiters inside them do not end a statement. Comments are dropped,
+	 * except for MySQL conditional comments and optimizer hints.
 	 *
 	 * @param string $sql SQL string to split.
 	 * @return string[] Array of individual SQL statements.
 	 */
 	private function split_sql_statements( $sql ) {
-		$statements             = [];
-		$current                = '';
-		$in_single_quote        = false;
-		$in_double_quote        = false;
-		$in_comment             = false;
-		$in_line_comment        = false;
-		$in_conditional_comment = false;
-		$delimiter              = ';';
-		$length                 = strlen( $sql );
+		$statements      = [];
+		$current         = '';
+		$in_single_quote = false;
+		$in_double_quote = false;
+		$in_backtick     = false;
+		$in_line_comment = false;
+		$delimiter       = ';';
+		$length          = strlen( $sql );
 
 		for ( $i = 0; $i < $length; $i++ ) {
 			$char = $sql[ $i ];
 			$next = ( $i + 1 < $length ) ? $sql[ $i + 1 ] : '';
 
 			// Check for DELIMITER directive at line boundary / statement start
-			if ( ! $in_single_quote && ! $in_double_quote && ! $in_comment && ! $in_line_comment && ! $in_conditional_comment ) {
+			if ( ! $in_single_quote && ! $in_double_quote && ! $in_backtick && ! $in_line_comment ) {
 				$trimmed_current = trim( $current );
 				if ( '' === $trimmed_current && 0 === stripos( substr( $sql, $i, 9 ), 'DELIMITER' ) ) {
 					$char_after = ( $i + 9 < $length ) ? $sql[ $i + 9 ] : "\n";
@@ -2799,48 +2798,28 @@ class DB_Command extends WP_CLI_Command {
 			if ( $in_line_comment ) {
 				if ( "\n" === $char ) {
 					$in_line_comment = false;
+					$current        .= $char;
 				}
 				continue;
 			}
 
-			if ( $in_comment ) {
-				if ( '*' === $char && '/' === $next ) {
-					$in_comment = false;
-					++$i;
-				}
-				continue;
-			}
+			if ( '/' === $char && '*' === $next && ! $in_single_quote && ! $in_double_quote && ! $in_backtick ) {
+				$comment_end = strpos( $sql, '*/', $i + 2 );
+				$comment_end = false === $comment_end ? $length : $comment_end + 2;
+				$marker      = ( $i + 2 < $length ) ? $sql[ $i + 2 ] : '';
 
-			// Handle end of MySQL conditional comment (/*!...*/): resume normal parsing.
-			if ( $in_conditional_comment && ! $in_single_quote && ! $in_double_quote ) {
-				if ( '*' === $char && '/' === $next ) {
-					$in_conditional_comment = false;
-					++$i;
-					continue;
-				}
-				// Fall through: treat content as regular SQL.
-			}
-
-			if ( '/' === $char && '*' === $next && ! $in_single_quote && ! $in_double_quote ) {
-				$char_after_asterisk = ( $i + 2 < $length ) ? $sql[ $i + 2 ] : '';
-				if ( '!' === $char_after_asterisk ) {
-					// MySQL conditional comment (/*!...*/): execute its SQL content.
-					$in_conditional_comment = true;
-					$i                     += 2; // skip past /*!; $i now points at !
-					while ( $i + 1 < $length && ctype_digit( $sql[ $i + 1 ] ) ) {
-						++$i;
-					}
-					if ( $i + 1 < $length && ' ' === $sql[ $i + 1 ] ) {
-						++$i;
-					}
+				// The server evaluates conditional comments and optimizer hints itself, so they are passed on as is.
+				if ( '!' === $marker || '+' === $marker ) {
+					$current .= substr( $sql, $i, $comment_end - $i );
 				} else {
-					$in_comment = true;
-					++$i;
+					$current .= ' ';
 				}
+
+				$i = $comment_end - 1;
 				continue;
 			}
 
-			if ( '-' === $char && '-' === $next && ! $in_single_quote && ! $in_double_quote ) {
+			if ( '-' === $char && '-' === $next && ! $in_single_quote && ! $in_double_quote && ! $in_backtick ) {
 				$char_after = ( $i + 2 < $length ) ? $sql[ $i + 2 ] : "\n";
 				if ( ' ' === $char_after || "\t" === $char_after || "\r" === $char_after || "\n" === $char_after ) {
 					$in_line_comment = true;
@@ -2848,7 +2827,7 @@ class DB_Command extends WP_CLI_Command {
 				}
 			}
 
-			if ( '#' === $char && ! $in_single_quote && ! $in_double_quote ) {
+			if ( '#' === $char && ! $in_single_quote && ! $in_double_quote && ! $in_backtick ) {
 				$in_line_comment = true;
 				continue;
 			}
@@ -2862,14 +2841,16 @@ class DB_Command extends WP_CLI_Command {
 				continue;
 			}
 
-			if ( "'" === $char && ! $in_double_quote ) {
+			if ( "'" === $char && ! $in_double_quote && ! $in_backtick ) {
 				$in_single_quote = ! $in_single_quote;
-			} elseif ( '"' === $char && ! $in_single_quote ) {
+			} elseif ( '"' === $char && ! $in_single_quote && ! $in_backtick ) {
 				$in_double_quote = ! $in_double_quote;
+			} elseif ( '`' === $char && ! $in_single_quote && ! $in_double_quote ) {
+				$in_backtick = ! $in_backtick;
 			}
 
 			$delim_len = strlen( $delimiter );
-			if ( ! $in_single_quote && ! $in_double_quote && substr( $sql, $i, $delim_len ) === $delimiter ) {
+			if ( ! $in_single_quote && ! $in_double_quote && ! $in_backtick && substr( $sql, $i, $delim_len ) === $delimiter ) {
 				$trimmed = trim( $current );
 				if ( '' !== $trimmed ) {
 					$statements[] = $trimmed;

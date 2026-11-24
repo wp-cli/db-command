@@ -208,3 +208,71 @@ Feature: Query the database with WordPress' MySQL config
       num
       2
       """
+
+  @require-mysql-or-mariadb
+  Scenario: Database querying falls back to wpdb and reports results by statement type
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a queries.sql file:
+      """
+      -- Statements read from STDIN.
+      SELECT 'update; delete' AS `word;s`;
+      UPDATE wp_options SET option_value = 'Fallback' WHERE option_name = 'blogname';
+      SELECT option_value FROM wp_options WHERE option_name = 'blogname';
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query < queries.sql`
+    Then STDOUT should contain:
+      """
+      word;s
+      update; delete
+      """
+    And STDOUT should contain:
+      """
+      Success: Query succeeded. Rows affected: 1
+      """
+    And STDOUT should contain:
+      """
+      option_value
+      Fallback
+      """
+    And the return code should be 0
+
+    When I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT * FROM wp_nonexistent_table"`
+    Then STDERR should contain:
+      """
+      Error: Query failed:
+      """
+    And the return code should be 1
+
+  @require-mysql-or-mariadb
+  Scenario: Database querying falls back to wpdb and reports connection errors
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT 1" --dbpass=wrong-password`
+    Then STDERR should contain:
+      """
+      Error: Could not connect to the database.
+      """
+    And the return code should be 1
