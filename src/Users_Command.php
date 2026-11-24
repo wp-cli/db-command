@@ -62,9 +62,9 @@ class Users_Command extends WP_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     # Create a user that can connect from any host, reading the password from a file.
-	 *     $ wp db users create appuser '%' --dbuser=root --prompt=dbpass < password.txt
-	 *     1/1 [--dbpass=<value>]:
+	 *     # Create a user that can connect from any host, reading its password from a file.
+	 *     # This connects as DB_USER, which then needs the CREATE USER privilege.
+	 *     $ wp db users create appuser '%' < password.txt
 	 *     Success: Created database user 'appuser'@'%'.
 	 *
 	 *     # Create a user with full privileges on the WordPress database.
@@ -97,12 +97,12 @@ class Users_Command extends WP_CLI_Command {
 
 		$grant = (bool) Utils\get_flag_value( $assoc_args, 'grant-privileges', false );
 		if ( $grant ) {
-			$statements[] = 'GRANT ALL PRIVILEGES ON ' . self::esc_grant_database( DB_NAME ) . ".* TO {$account}";
+			$statements[] = 'GRANT ALL PRIVILEGES ON ' . self::esc_grant_database( DB_NAME, $this->has_partial_revokes( $assoc_args ) ) . ".* TO {$account}";
 		}
 
 		WP_CLI::debug( "Creating database user '{$username}'@'{$host}'" . ( $grant ? ' with all privileges on ' . DB_NAME : '' ) . '.', 'db' );
 
-		$this->run_statements( implode( ";\n", $statements ) . ";\n", $assoc_args );
+		$this->run_statements( implode( ";\n", $statements ) . ";\n", $assoc_args, $password );
 
 		if ( $grant ) {
 			WP_CLI::success( "Created database user '{$username}'@'{$host}' with all privileges on '" . DB_NAME . "'." );
@@ -136,12 +136,34 @@ class Users_Command extends WP_CLI_Command {
 	}
 
 	/**
+	 * Checks whether the server has MySQL's `partial_revokes` enabled.
+	 *
+	 * With it, `_` and `%` in GRANT database names are literal characters
+	 * instead of wildcards. Only checked when DB_NAME contains them.
+	 *
+	 * @param array $assoc_args Associative arguments.
+	 * @return bool
+	 */
+	private function has_partial_revokes( $assoc_args ) {
+		if ( false === strpbrk( DB_NAME, '_%' ) ) {
+			return false;
+		}
+
+		// MariaDB and MySQL before 8.0.16 have no such variable, which returns no rows.
+		$output = $this->run_statements( "SHOW GLOBAL VARIABLES LIKE 'partial_revokes';\n", $assoc_args );
+
+		return (bool) preg_match( '/^partial_revokes\s+(ON|1)\s*$/mi', $output );
+	}
+
+	/**
 	 * Runs SQL statements with the `mysql` client, passing them through STDIN.
 	 *
 	 * @param string $sql        SQL statements to run.
 	 * @param array  $assoc_args Associative arguments.
+	 * @param string $secret     Optional value to keep out of error messages.
+	 * @return string Output of the statements.
 	 */
-	private function run_statements( $sql, $assoc_args ) {
+	private function run_statements( $sql, $assoc_args, $secret = '' ) {
 		$mysql_args = [
 			'user' => Utils\get_flag_value( $assoc_args, 'dbuser', DB_USER ),
 		];
@@ -159,7 +181,8 @@ class Users_Command extends WP_CLI_Command {
 		}
 
 		$defaults = Utils\get_flag_value( $assoc_args, 'defaults', false ) ? '' : ' --no-defaults';
-		$command  = Utils\force_env_on_nix_systems( Utils\get_mysql_binary_path() . $defaults . ' --no-auto-rehash --batch' )
+		// --binary-mode keeps the client from turning CRLF in the statements (and so in passwords) into LF.
+		$command = Utils\force_env_on_nix_systems( Utils\get_mysql_binary_path() . $defaults . ' --no-auto-rehash --batch --binary-mode' )
 			. Utils\assoc_args_to_str( $mysql_args );
 
 		WP_CLI::debug( "Final MySQL command: {$command}", 'db' );
@@ -200,13 +223,18 @@ class Users_Command extends WP_CLI_Command {
 
 		$exit_code = proc_close( $process );
 
-		if ( '' !== trim( $stdout ) ) {
-			WP_CLI::debug( trim( $stdout ), 'db' );
+		if ( 0 !== $exit_code ) {
+			// The MariaDB client echoes a failed statement, including the new user's password,
+			// before the error. Only keep the error lines, and redact the password just in case.
+			$errors = preg_grep( '/^ERROR\b/', explode( "\n", str_replace( "\r\n", "\n", $stderr ) ) );
+			$errors = trim( implode( "\n", $errors ? $errors : [] ) );
+			if ( '' !== $secret ) {
+				$errors = str_replace( [ $secret, substr( self::esc_sql_string( $secret ), 1, -1 ) ], '***', $errors );
+			}
+			WP_CLI::error( '' !== $errors ? $errors : "The mysql client exited with code {$exit_code}." );
 		}
 
-		if ( 0 !== $exit_code ) {
-			WP_CLI::error( '' !== trim( $stderr ) ? trim( $stderr ) : "The mysql client exited with code {$exit_code}." );
-		}
+		return $stdout;
 	}
 
 	/**
@@ -225,12 +253,19 @@ class Users_Command extends WP_CLI_Command {
 	 * Quotes a database name for use in a GRANT statement.
 	 *
 	 * GRANT treats `_` and `%` in database names as wildcards, so they are
-	 * escaped to only match this one database.
+	 * escaped to only match this one database. With MySQL's `partial_revokes`
+	 * enabled they are literal characters, and escaping them would make the
+	 * name match no database.
 	 *
-	 * @param string $database Database name.
+	 * @param string $database        Database name.
+	 * @param bool   $partial_revokes Whether `partial_revokes` is enabled.
 	 * @return string Quoted database name.
 	 */
-	private static function esc_grant_database( $database ) {
-		return '`' . str_replace( [ '`', '_', '%' ], [ '``', '\\_', '\\%' ], $database ) . '`';
+	private static function esc_grant_database( $database, $partial_revokes = false ) {
+		$database = str_replace( '`', '``', $database );
+		if ( ! $partial_revokes ) {
+			$database = str_replace( [ '_', '%' ], [ '\\_', '\\%' ], $database );
+		}
+		return '`' . $database . '`';
 	}
 }

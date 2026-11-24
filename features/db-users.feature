@@ -25,11 +25,15 @@ Feature: Manage database users
       denied
       """
 
-    When I try `wp db users create wpcli_dbusers_1 '%' --password=first-Pa55 --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+    When I try `wp db users create wpcli_dbusers_1 '%' --password=dupe-Pa55-Value --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
     Then the return code should be 1
     And STDERR should contain:
       """
-      Error:
+      Error: ERROR 1396
+      """
+    And STDERR should not contain:
+      """
+      dupe-Pa55-Value
       """
 
     When I run `wp db query "DROP USER 'wpcli_dbusers_1'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
@@ -52,6 +56,32 @@ Feature: Manage database users
       """
 
     When I run `wp db query "DROP USER 'wpcli_dbusers_2'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+
+  @require-mysql-or-mariadb
+  Scenario: A password with an internal CRLF is kept as is
+    Given a WP install
+    And I try `wp db query "DROP USER 'wpcli_dbusers_5'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+
+    When I run `printf 'crlf\r\nPa55\n' | wp db users create wpcli_dbusers_5 '%' --grant-privileges --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+    Then STDOUT should contain:
+      """
+      Success:
+      """
+
+    When I run `wp db query "SELECT 'connected'" --skip-column-names --dbuser=wpcli_dbusers_5 --dbpass="$(printf 'crlf\r\nPa55')"`
+    Then STDOUT should be:
+      """
+      connected
+      """
+
+    When I try `wp db query "SELECT 'connected'" --skip-column-names --dbuser=wpcli_dbusers_5 --dbpass="$(printf 'crlf\nPa55')"`
+    Then the return code should be 1
+    And STDERR should contain:
+      """
+      ERROR 1045
+      """
+
+    When I run `wp db query "DROP USER 'wpcli_dbusers_5'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
 
   @require-mysql-or-mariadb
   Scenario: The new user's password is not leaked into the debug output
