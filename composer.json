@@ -51,7 +51,9 @@
             "db tables",
             "db size",
             "db columns",
-            "db status"
+            "db status",
+            "db users",
+            "db users create"
         ]
     },
     "autoload": {
