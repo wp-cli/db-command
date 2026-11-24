@@ -1589,8 +1589,10 @@ class DB_Command extends WP_CLI_Command {
 					array_merge(
 						$mysql_args,
 						[
-							'check'  => true,
-							'silent' => true,
+							'check'            => true,
+							'silent'           => true,
+							// A read-only status check must not repair tables, even if an option file enables auto-repair.
+							'skip-auto-repair' => true,
 						]
 					),
 					false
