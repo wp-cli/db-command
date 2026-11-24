@@ -83,10 +83,28 @@ trait DB_Command_SQLite {
 		$wp_content_dir = defined( 'WP_CONTENT_DIR' ) ? WP_CONTENT_DIR : ABSPATH . 'wp-content';
 
 		// Check for FQDBDIR and construct path.
-		$db_dir  = defined( 'FQDBDIR' ) ? FQDBDIR : $wp_content_dir . '/database';
-		$db_file = defined( 'DB_FILE' ) ? DB_FILE : '.ht.sqlite';
+		$db_dir = defined( 'FQDBDIR' ) ? FQDBDIR : $wp_content_dir . '/database';
 
-		$db_path = rtrim( $db_dir, '/' ) . '/' . ltrim( $db_file, '/' );
+		// DB_FILE selects a file inside FQDBDIR (sqlite-database-integration 3.1+).
+		if ( defined( 'DB_FILE' ) ) {
+			return rtrim( $db_dir, '/' ) . '/' . ltrim( DB_FILE, '/' );
+		}
+
+		// Check for the recorded secret path (sqlite-database-integration 3.1+).
+		$path_file = rtrim( $db_dir, '/\\' ) . '/db-path.php';
+		if ( file_exists( $path_file ) ) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Failure is checked below.
+			$recorded_path = @include $path_file;
+			if ( is_string( $recorded_path ) && '' !== $recorded_path ) {
+				if ( ':memory:' === $recorded_path ) {
+					WP_CLI::error( 'This command does not support in-memory SQLite databases.' );
+				}
+
+				return $recorded_path;
+			}
+		}
+
+		$db_path = rtrim( $db_dir, '/' ) . '/.ht.sqlite';
 
 		// If the file exists, return it.
 		if ( file_exists( $db_path ) ) {
@@ -562,6 +580,65 @@ trait DB_Command_SQLite {
 		}
 
 		return $size;
+	}
+
+	/**
+	 * Get the data and the index size of the SQLite database, or of a single table.
+	 *
+	 * Both sizes are collected in a single pass over `dbstat`, which walks every
+	 * page of the database file.
+	 *
+	 * @param string $table_name Optional. Table to limit the sizes to. Defaults to the whole database.
+	 * @return array{data: int, index: int} Sizes in bytes.
+	 */
+	protected function sqlite_size_breakdown( $table_name = '' ) {
+		global $wpdb;
+
+		// The dbstat virtual table is not part of every SQLite build.
+		$suppress_errors = $wpdb->suppress_errors( true );
+
+		if ( '' !== $table_name ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT sqlite_master.type as type, SUM(dbstat.pgsize) as size_in_bytes FROM dbstat JOIN sqlite_master ON sqlite_master.name = dbstat.name WHERE sqlite_master.name = %s OR ( sqlite_master.type = 'index' AND sqlite_master.tbl_name = %s ) GROUP BY sqlite_master.type",
+					$table_name,
+					$table_name
+				),
+				ARRAY_A
+			);
+		} else {
+			$rows = $wpdb->get_results(
+				'SELECT sqlite_master.type as type, SUM(dbstat.pgsize) as size_in_bytes FROM dbstat JOIN sqlite_master ON sqlite_master.name = dbstat.name GROUP BY sqlite_master.type',
+				ARRAY_A
+			);
+		}
+
+		$last_error = $wpdb->last_error;
+
+		$wpdb->suppress_errors( $suppress_errors );
+
+		if ( '' !== $last_error ) {
+			WP_CLI::error( 'Could not determine the data and index size of the database. This requires the dbstat extension, which is not available for this SQLite installation.' );
+		}
+
+		$sizes = [
+			'data'  => 0,
+			'index' => 0,
+		];
+
+		foreach ( (array) $rows as $row ) {
+			if ( ! is_array( $row ) || ! isset( $row['type'], $row['size_in_bytes'] ) || ! is_numeric( $row['size_in_bytes'] ) ) {
+				continue;
+			}
+
+			if ( 'table' === $row['type'] ) {
+				$sizes['data'] = (int) $row['size_in_bytes'];
+			} elseif ( 'index' === $row['type'] ) {
+				$sizes['index'] = (int) $row['size_in_bytes'];
+			}
+		}
+
+		return $sizes;
 	}
 
 	/**
