@@ -855,7 +855,7 @@ class DB_Command extends WP_CLI_Command {
 
 			// --ignore-table-data is a dump client option, so check the client rather than the server.
 			if ( ! $this->command_supports_option( $mysqldump_binary, 'ignore-table-data' ) ) {
-				WP_CLI::error( sprintf( 'The --exclude_tables_data option requires a dump client that supports --ignore-table-data (mariadb-dump from MariaDB 10.4.13, 10.5.3 or later). "%s" does not.', $mysqldump_binary ) );
+				WP_CLI::error( sprintf( 'The --exclude_tables_data option requires a dump client that supports --ignore-table-data (mariadb-dump from MariaDB 10.1.45, 10.2.32, 10.3.23, 10.4.13, 10.5.3 or later). "%s" does not.', $mysqldump_binary ) );
 			}
 
 			$tables = explode( ',', trim( $exclude_tables_data, ',' ) );

@@ -70,11 +70,32 @@ Feature: Export a WordPress database
       PRAGMA foreign_keys=OFF
       """
 
-  @skip-mariadb @skip-sqlite
-  Scenario: Exclude data of certain tables is not supported by MySQL
+  # Support depends on the dump client, not the server (e.g. mariadb-dump works against a MySQL server),
+  # so fake a dump client without --ignore-table-data, like MySQL's mysqldump.
+  @skip-sqlite
+  Scenario: Exclude data of certain tables is not supported by the dump client
     Given a WP install
+    And a fake-bin/mysqldump file:
+      """
+      #!/bin/sh
+      case "$1" in
+        --version) echo "mysqldump  Ver 8.0.40 for Linux on x86_64 (MySQL Community Server - GPL)" ;;
+        --help) echo "  --ignore-table=name Do not dump the specified table." ;;
+      esac
+      exit 0
+      """
+    And a fake-bin/mariadb-dump file:
+      """
+      #!/bin/sh
+      case "$1" in
+        --version) echo "mysqldump  Ver 8.0.40 for Linux on x86_64 (MySQL Community Server - GPL)" ;;
+        --help) echo "  --ignore-table=name Do not dump the specified table." ;;
+      esac
+      exit 0
+      """
 
-    When I try `wp db export wp_cli_test.sql --exclude_tables_data=wp_users`
+    When I run `chmod +x fake-bin/mysqldump fake-bin/mariadb-dump`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db export wp_cli_test.sql --exclude_tables_data=wp_users`
     Then the return code should be 1
     And STDERR should contain:
       """
