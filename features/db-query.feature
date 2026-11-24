@@ -155,3 +155,176 @@ Feature: Query the database with WordPress' MySQL config
       """
       skip-ssl-verify-server-cert
       """
+
+  @require-mysql-or-mariadb
+  Scenario: Database querying falls back to wpdb when mysql binary is unavailable
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT COUNT(ID) FROM wp_users;" --debug`
+    Then STDOUT should be:
+      """
+      COUNT(ID)
+      1
+      """
+    And STDERR should contain:
+      """
+      MySQL/MariaDB binary not available, falling back to wpdb.
+      """
+
+  @require-mysql-or-mariadb
+  Scenario: Database querying falls back to wpdb for multi-statement queries when mysql binary is unavailable
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT 1 as num; SELECT 2 as num;" --debug`
+    Then STDOUT should contain:
+      """
+      num
+      1
+      """
+    And STDOUT should contain:
+      """
+      num
+      2
+      """
+
+  @require-mysql-or-mariadb
+  Scenario: Database querying falls back to wpdb and reports results by statement type
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a queries.sql file:
+      """
+      -- Statements read from STDIN.
+      SELECT 'update; delete' AS `word;s`;
+      UPDATE wp_options SET option_value = 'Fallback' WHERE option_name = 'blogname';
+      SELECT option_value FROM wp_options WHERE option_name = 'blogname';
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query < queries.sql`
+    Then STDOUT should contain:
+      """
+      word;s
+      update; delete
+      """
+    And STDOUT should contain:
+      """
+      Success: Query succeeded. Rows affected: 1
+      """
+    And STDOUT should contain:
+      """
+      option_value
+      Fallback
+      """
+    And the return code should be 0
+
+    When I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT * FROM wp_nonexistent_table"`
+    Then STDERR should contain:
+      """
+      Error: Query failed:
+      """
+    And the return code should be 1
+
+  @require-mysql-or-mariadb
+  Scenario: Database querying falls back to wpdb and reports connection errors
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT 1" --dbpass=wrong-password`
+    Then STDERR should contain:
+      """
+      Error: Could not connect to the database.
+      """
+    And the return code should be 1
+
+  @require-mysql-or-mariadb
+  Scenario: Database querying falls back to wpdb and escapes tabs and newlines like the mysql client
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT CONCAT('a', CHAR(9), 'b', CHAR(10), 'c', CHAR(92), 'd')" --skip-column-names`
+    Then STDOUT should be:
+      """
+      a\tb\nc\\d
+      """
+    And the return code should be 0
+
+    When I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT CONCAT('a', CHAR(10), 'b')" --skip-column-names --raw`
+    Then STDOUT should be:
+      """
+      a
+      b
+      """
+    And the return code should be 0
+
+  @require-mysql-or-mariadb
+  Scenario: Database querying falls back to wpdb and honors the port argument
+    Given a WP install
+    And a fake-bin/mysql file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+    And a fake-bin/mariadb file:
+      """
+      #!/bin/sh
+      exit 127
+      """
+
+    When I run `chmod +x fake-bin/mysql fake-bin/mariadb`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db query "SELECT 1" --host=127.0.0.1 --port=1`
+    Then STDERR should contain:
+      """
+      Error: Could not connect to the database.
+      """
+    And the return code should be 1

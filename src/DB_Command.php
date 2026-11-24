@@ -69,7 +69,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `CREATE_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 	 * `DB_USER` and `DB_PASSWORD` database credentials specified in
-	 * wp-config.php.
+	 * wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 	 *
 	 * ## OPTIONS
 	 *
@@ -105,7 +105,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `DROP_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 	 * `DB_USER` and `DB_PASSWORD` database credentials specified in
-	 * wp-config.php.
+	 * wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 	 *
 	 * ## OPTIONS
 	 *
@@ -148,7 +148,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `DROP_DATABASE` and `CREATE_DATABASE` SQL statements using
 	 * `DB_HOST`, `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-	 * specified in wp-config.php.
+	 * specified in wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 	 *
 	 * ## OPTIONS
 	 *
@@ -251,7 +251,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-	 * specified in wp-config.php.
+	 * specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 	 *
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/check-table.html)
 	 * for more details on the `CHECK TABLE` statement.
@@ -320,7 +320,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `mysqlcheck` utility with `--optimize=true` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-	 * specified in wp-config.php.
+	 * specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 	 *
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/optimize-table.html)
 	 * for more details on the `OPTIMIZE TABLE` statement.
@@ -386,7 +386,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `mysqlcheck` utility with `--repair=true` using `DB_HOST`,
 	 * `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-	 * specified in wp-config.php.
+	 * specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 	 *
 	 * [See docs](http://dev.mysql.com/doc/refman/5.7/en/repair-table.html) for
 	 * more details on the `REPAIR TABLE` statement.
@@ -448,7 +448,8 @@ class DB_Command extends WP_CLI_Command {
 	}
 
 	/**
-	 * Opens a MySQL console using credentials from wp-config.php
+	 * Opens a MySQL console using credentials from wp-config.php.
+	 * Requires `mysql` or `mariadb` client binary to be available.
 	 *
 	 * ## OPTIONS
 	 *
@@ -486,6 +487,10 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		if ( ! $this->is_mysql_binary_available() ) {
+			WP_CLI::error( 'MySQL/MariaDB client binary is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
 		$command = sprintf(
 			'%s%s --no-auto-rehash',
 			Utils\get_mysql_binary_path(),
@@ -505,7 +510,9 @@ class DB_Command extends WP_CLI_Command {
 	 * Executes a SQL query against the database.
 	 *
 	 * Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
-	 *  and `DB_PASSWORD` database credentials specified in wp-config.php.
+	 * and `DB_PASSWORD` database credentials specified in wp-config.php.
+	 * If MySQL/MariaDB client binaries are not available, falls back to
+	 * executing queries via WordPress's `wpdb`.
 	 *
 	 * Use the `--skip-column-names` MySQL argument to exclude the headers
 	 * from a SELECT query. Pipe the output to remove the ASCII table
@@ -614,6 +621,24 @@ class DB_Command extends WP_CLI_Command {
 			return;
 		}
 
+		if ( ! $this->is_mysql_binary_available() ) {
+			// Get the query from args or STDIN.
+			$query = '';
+			if ( ! empty( $args ) ) {
+				$query = $args[0];
+			} else {
+				$query = stream_get_contents( STDIN );
+			}
+
+			if ( empty( $query ) ) {
+				WP_CLI::error( 'No query specified.' );
+			}
+
+			WP_CLI::debug( 'MySQL/MariaDB binary not available, falling back to wpdb.', 'db' );
+			$this->wpdb_query( $query, $assoc_args );
+			return;
+		}
+
 		$command = sprintf(
 			'%s%s --no-auto-rehash',
 			Utils\get_mysql_binary_path(),
@@ -662,6 +687,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 	 * `DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid [`mysqldump` flags](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
+	 * Requires `mysqldump` or `mariadb-dump` client binary to be available.
 	 *
 	 * ## OPTIONS
 	 *
@@ -909,7 +935,10 @@ class DB_Command extends WP_CLI_Command {
 	 * Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
 	 * `DB_PASSWORD` database credentials specified in wp-config.php. This
 	 * does not create database by itself and only performs whatever tasks are
-	 * defined in the SQL.
+	 * defined in the SQL. If MySQL/MariaDB client binaries are not available,
+	 * falls back to importing via WordPress's `wpdb`. The fallback reads the
+	 * whole file into memory, so it is slower and needs more memory than the
+	 * client binaries for large imports.
 	 *
 	 * ## OPTIONS
 	 *
@@ -953,6 +982,29 @@ class DB_Command extends WP_CLI_Command {
 
 		if ( $this->is_sqlite() ) {
 			$this->sqlite_import( $result_file, $assoc_args );
+			return;
+		}
+
+		if ( ! $this->is_mysql_binary_available() ) {
+			if ( '-' === $result_file ) {
+				$sql_content = stream_get_contents( STDIN );
+				if ( false === $sql_content ) {
+					WP_CLI::error( 'Failed to read from STDIN.' );
+				}
+				$result_file = 'STDIN';
+			} else {
+				if ( ! is_readable( $result_file ) ) {
+					WP_CLI::error( sprintf( 'Import file missing or not readable: %s', $result_file ) );
+				}
+				$sql_content = file_get_contents( $result_file );
+				if ( false === $sql_content ) {
+					WP_CLI::error( sprintf( 'Could not read import file: %s', $result_file ) );
+				}
+			}
+
+			WP_CLI::debug( 'MySQL/MariaDB binary not available, falling back to wpdb for import.', 'db' );
+			$this->wpdb_import( (string) $sql_content, $assoc_args );
+			WP_CLI::success( sprintf( "Imported from '%s'.", $result_file ) );
 			return;
 		}
 
@@ -2673,6 +2725,452 @@ class DB_Command extends WP_CLI_Command {
 			$mysql_args['init-command'] = $sql_mode_compat . '; ' . $mysql_args['init-command'];
 		} else {
 			$mysql_args['init-command'] = $sql_mode_compat;
+		}
+	}
+
+	/**
+	 * Check if the mysql or mariadb binary is available.
+	 *
+	 * @return bool True if the binary is available, false otherwise.
+	 */
+	protected function is_mysql_binary_available() {
+		static $available = null;
+
+		if ( null === $available ) {
+			$path = Utils\get_mysql_binary_path();
+			if ( '' === $path ) {
+				$available = false;
+			} else {
+				$result    = \WP_CLI\Process::create( escapeshellarg( $path ) . ' --version', null, null )->run();
+				$available = 0 === $result->return_code;
+			}
+		}
+
+		return $available;
+	}
+
+	/**
+	 * Load WordPress's wpdb if not already available.
+	 *
+	 * Loads the minimal required WordPress files to make $wpdb available,
+	 * including any db.php drop-in (e.g., HyperDB or other custom drivers).
+	 *
+	 * @param array $assoc_args Optional. Associative arguments containing db credentials.
+	 */
+	protected function maybe_load_wpdb( $assoc_args = [] ) {
+		global $wpdb;
+
+		$default_user = defined( 'DB_USER' ) ? DB_USER : '';
+		$default_pass = defined( 'DB_PASSWORD' ) ? DB_PASSWORD : '';
+		$default_name = defined( 'DB_NAME' ) ? DB_NAME : '';
+		$default_host = defined( 'DB_HOST' ) ? DB_HOST : '';
+
+		$db_user = Utils\get_flag_value( $assoc_args, 'dbuser', Utils\get_flag_value( $assoc_args, 'user', $default_user ) );
+		$db_pass = Utils\get_flag_value( $assoc_args, 'dbpass', Utils\get_flag_value( $assoc_args, 'password', Utils\get_flag_value( $assoc_args, 'pass', $default_pass ) ) );
+		$db_name = Utils\get_flag_value( $assoc_args, 'dbname', Utils\get_flag_value( $assoc_args, 'database', $default_name ) );
+		$db_host = Utils\get_flag_value( $assoc_args, 'dbhost', Utils\get_flag_value( $assoc_args, 'host', $default_host ) );
+		$db_host = self::apply_port_and_socket( is_string( $db_host ) ? $db_host : '', $assoc_args );
+
+		$has_custom_credentials = (
+			( $default_user !== $db_user ) ||
+			( $default_pass !== $db_pass ) ||
+			( $default_name !== $db_name ) ||
+			( $default_host !== $db_host )
+		);
+
+		if ( isset( $wpdb ) && $wpdb instanceof wpdb && ! $has_custom_credentials ) {
+			return;
+		}
+
+		if ( ! defined( 'WPINC' ) ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
+			define( 'WPINC', 'wp-includes' );
+		}
+
+		if ( ! defined( 'WP_CONTENT_DIR' ) ) {
+			define( 'WP_CONTENT_DIR', ABSPATH . 'wp-content' );
+		}
+
+		$wpdb_file = file_exists( ABSPATH . WPINC . '/class-wpdb.php' )
+			? ABSPATH . WPINC . '/class-wpdb.php'
+			: ABSPATH . WPINC . '/wp-db.php';
+
+		// Load prerequisite WordPress files if not already loaded.
+		$required_files = [
+			ABSPATH . WPINC . '/load.php',
+			ABSPATH . WPINC . '/compat.php',
+			ABSPATH . WPINC . '/functions.php',
+			ABSPATH . WPINC . '/plugin.php',
+			ABSPATH . WPINC . '/class-wp-error.php',
+			$wpdb_file,
+		];
+
+		foreach ( $required_files as $required_file ) {
+			if ( file_exists( $required_file ) ) {
+				require_once $required_file;
+			}
+		}
+
+		// Load db.php drop-in if it exists (e.g., HyperDB or other custom drivers).
+		$db_dropin_path = WP_CONTENT_DIR . '/db.php';
+		if ( file_exists( $db_dropin_path ) && ! $this->is_sqlite() && ! $has_custom_credentials ) {
+			require_once $db_dropin_path;
+		}
+
+		// If $wpdb is still not set or custom credentials were supplied, create a new instance using the DB credentials.
+		if ( ( ! isset( $GLOBALS['wpdb'] ) || ! ( $GLOBALS['wpdb'] instanceof wpdb ) || $has_custom_credentials ) && class_exists( 'wpdb' ) ) {
+			$table_prefix = isset( $GLOBALS['table_prefix'] ) && is_string( $GLOBALS['table_prefix'] ) ? $GLOBALS['table_prefix'] : 'wp_';
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			$wpdb = new wpdb( $db_user, $db_pass, $db_name, $db_host );
+			$wpdb->set_prefix( $table_prefix );
+		}
+	}
+
+	/**
+	 * Applies the `--port` and `--socket` arguments to a database host.
+	 *
+	 * wpdb only takes a host string, so a port or socket passed as an argument
+	 * replaces the one in DB_HOST, in the `host:port:/socket` form wpdb parses.
+	 *
+	 * @param string $host       Database host, e.g. from DB_HOST.
+	 * @param array  $assoc_args Associative arguments.
+	 * @return string Database host with the port and socket applied.
+	 */
+	private static function apply_port_and_socket( $host, $assoc_args ) {
+		$port   = Utils\get_flag_value( $assoc_args, 'port', null );
+		$socket = Utils\get_flag_value( $assoc_args, 'socket', null );
+
+		if ( ( null === $port || true === $port ) && ( null === $socket || true === $socket ) ) {
+			return $host;
+		}
+
+		// Strip any port and socket from the host, keeping IPv6 addresses in brackets intact.
+		if ( preg_match( '/^(\[[^\]]*\])/', $host, $matches ) ) {
+			$host = $matches[1];
+		} else {
+			$host = (string) preg_replace( '/:.*$/', '', $host );
+		}
+
+		if ( '' === $host ) {
+			$host = 'localhost';
+		}
+
+		if ( is_scalar( $port ) && true !== $port && '' !== (string) $port ) {
+			$host .= ':' . $port;
+		}
+
+		if ( is_scalar( $socket ) && true !== $socket && '' !== (string) $socket ) {
+			$host .= ':' . $socket;
+		}
+
+		return $host;
+	}
+
+	/**
+	 * Escapes a value for the tab-separated output of the query fallback.
+	 *
+	 * Mirrors the mysql client's batch output: tabs, newlines, NUL bytes and
+	 * backslashes are escaped, so a value can't break up fields or rows.
+	 *
+	 * @param string $value Value to escape.
+	 * @return string Escaped value.
+	 */
+	private static function escape_tsv_value( $value ) {
+		return strtr(
+			$value,
+			[
+				'\\' => '\\\\',
+				"\t" => '\\t',
+				"\n" => '\\n',
+				"\0" => '\\0',
+			]
+		);
+	}
+
+	/**
+	 * Execute a query against the database using wpdb.
+	 *
+	 * Used as a fallback when the mysql/mariadb binary is not available.
+	 * Outputs results in the same tab-separated format as the mysql binary.
+	 *
+	 * @param string $query      SQL query to execute.
+	 * @param array  $assoc_args Associative arguments.
+	 */
+	protected function wpdb_query( $query, $assoc_args = [] ) {
+		$this->maybe_load_wpdb( $assoc_args );
+		global $wpdb;
+
+		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
+			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
+		if ( empty( $wpdb->ready ) ) {
+			$error = $wpdb->error instanceof \WP_Error ? $wpdb->error->get_error_message() : (string) $wpdb->error;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+			WP_CLI::error( trim( 'Could not connect to the database. ' . strip_tags( (string) $error ) ) );
+		}
+
+		$suppress = $wpdb->suppress_errors( true );
+
+		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
+		if ( '' !== $sql_mode_compat ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( $sql_mode_compat );
+		}
+
+		$skip_column_names = Utils\get_flag_value( $assoc_args, 'skip-column-names', false );
+		$raw               = Utils\get_flag_value( $assoc_args, 'raw', false );
+		$format_value      = static function ( $v ) use ( $raw ) {
+			if ( null === $v ) {
+				return 'NULL';
+			}
+			$v = is_scalar( $v ) ? (string) $v : '';
+			return $raw ? $v : self::escape_tsv_value( $v );
+		};
+
+		foreach ( $this->split_sql_statements( $query ) as $statement ) {
+			$statement = trim( $statement );
+			if ( '' === $statement ) {
+				continue;
+			}
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$result = $wpdb->query( $statement );
+
+			if ( false === $result ) {
+				$error = $wpdb->last_error;
+				$wpdb->suppress_errors( $suppress );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Query failed: ' . strip_tags( $error ) );
+			}
+
+			// Decide by the leading keyword, so that a SELECT mentioning e.g. 'update' still prints its rows.
+			if ( preg_match( '/^(UPDATE|DELETE|INSERT|REPLACE|LOAD\s+DATA)\b/i', $statement ) ) {
+				WP_CLI::success( "Query succeeded. Rows affected: {$result}" );
+				continue;
+			}
+
+			$results = is_array( $wpdb->last_result ) ? $wpdb->last_result : [];
+			if ( empty( $results ) ) {
+				continue;
+			}
+
+			if ( ! $skip_column_names ) {
+				WP_CLI::line( implode( "\t", array_map( $format_value, array_keys( get_object_vars( $results[0] ) ) ) ) );
+			}
+
+			foreach ( $results as $row ) {
+				WP_CLI::line( implode( "\t", array_map( $format_value, array_values( get_object_vars( $row ) ) ) ) );
+			}
+		}
+
+		$wpdb->suppress_errors( $suppress );
+	}
+
+	/**
+	 * Import SQL content into the database using wpdb.
+	 *
+	 * Used as a fallback when the mysql/mariadb binary is not available.
+	 *
+	 * @param string $sql_content SQL content to import.
+	 * @param array  $assoc_args  Associative arguments.
+	 */
+	protected function wpdb_import( $sql_content, $assoc_args = [] ) {
+		$this->maybe_load_wpdb( $assoc_args );
+		global $wpdb;
+
+		if ( ! isset( $wpdb ) || ! ( $wpdb instanceof wpdb ) ) {
+			WP_CLI::error( 'WordPress database (wpdb) is not available. Please install MySQL or MariaDB client tools.' );
+		}
+
+		if ( empty( $wpdb->ready ) ) {
+			$error = $wpdb->error instanceof \WP_Error ? $wpdb->error->get_error_message() : (string) $wpdb->error;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+			WP_CLI::error( trim( 'Could not connect to the database. ' . strip_tags( (string) $error ) ) );
+		}
+
+		$suppress = $wpdb->suppress_errors( true );
+
+		$sql_mode_compat = $this->get_sql_mode_compat_statement( $assoc_args );
+		if ( '' !== $sql_mode_compat ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( $sql_mode_compat );
+		}
+
+		$skip_optimization = Utils\get_flag_value( $assoc_args, 'skip-optimization', false );
+
+		if ( ! $skip_optimization ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET autocommit = 0' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET unique_checks = 0' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET foreign_key_checks = 0' );
+		}
+
+		foreach ( $this->split_sql_statements( $sql_content ) as $statement ) {
+			$statement = trim( $statement );
+			if ( '' === $statement ) {
+				continue;
+			}
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$result = $wpdb->query( $statement );
+			if ( false === $result ) {
+				$error = $wpdb->last_error;
+
+				// Ignore privilege/permission errors for SET statements (e.g. SQL_LOG_BIN, GTID) in dumps when user lacks SUPER admin rights.
+				if ( preg_match( '/^(\/\*!\d*\s*)?SET\s/i', $statement ) && ( false !== strpos( $error, 'Access denied' ) || false !== strpos( $error, 'privilege' ) ) ) {
+					continue;
+				}
+
+				if ( ! $skip_optimization ) {
+					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+					$wpdb->query( 'ROLLBACK' );
+				}
+				$wpdb->suppress_errors( $suppress );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Import failed: ' . strip_tags( $error ) );
+			}
+		}
+
+		if ( ! $skip_optimization ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$commit_result = $wpdb->query( 'COMMIT' );
+			if ( false === $commit_result ) {
+				$error = $wpdb->last_error;
+				$wpdb->suppress_errors( $suppress );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+				WP_CLI::error( 'Import failed to commit: ' . strip_tags( $error ) );
+			}
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET autocommit = 1' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET unique_checks = 1' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$wpdb->query( 'SET foreign_key_checks = 1' );
+		}
+
+		$wpdb->suppress_errors( $suppress );
+	}
+
+	/**
+	 * Split a SQL string into individual statements.
+	 *
+	 * Handles quoted strings and identifiers, comments, and DELIMITER directives,
+	 * so that delimiters inside them do not end a statement. Comments are dropped,
+	 * except for MySQL conditional comments and optimizer hints.
+	 *
+	 * Statements are yielded one at a time, so that they don't all have to be
+	 * held in memory alongside the SQL string.
+	 *
+	 * @param string $sql SQL string to split.
+	 * @return \Generator<int, string> Individual SQL statements.
+	 */
+	private function split_sql_statements( $sql ) {
+		$current         = '';
+		$in_single_quote = false;
+		$in_double_quote = false;
+		$in_backtick     = false;
+		$in_line_comment = false;
+		$delimiter       = ';';
+		$length          = strlen( $sql );
+
+		for ( $i = 0; $i < $length; $i++ ) {
+			$char = $sql[ $i ];
+			$next = ( $i + 1 < $length ) ? $sql[ $i + 1 ] : '';
+
+			// Check for DELIMITER directive at line boundary / statement start
+			if ( ! $in_single_quote && ! $in_double_quote && ! $in_backtick && ! $in_line_comment ) {
+				// Compare the keyword first, so the whitespace scan only runs where DELIMITER appears. strspn() also stops at the first non-whitespace byte, unlike trim(), which copies the whole statement.
+				if ( 0 === substr_compare( $sql, 'DELIMITER', $i, 9, true ) && strspn( $current, " \t\n\r\0\x0B" ) === strlen( $current ) ) {
+					$char_after = ( $i + 9 < $length ) ? $sql[ $i + 9 ] : "\n";
+					if ( ' ' === $char_after || "\t" === $char_after || "\r" === $char_after || "\n" === $char_after ) {
+						$line_end = strpos( $sql, "\n", $i );
+						if ( false === $line_end ) {
+							$line_end = $length;
+						}
+						$delimiter_line = trim( substr( $sql, $i, $line_end - $i ) );
+						$new_delimiter  = trim( substr( $delimiter_line, 9 ) );
+						if ( '' !== $new_delimiter ) {
+							$delimiter = $new_delimiter;
+						}
+						$current = '';
+						$i       = $line_end;
+						continue;
+					}
+				}
+			}
+
+			if ( $in_line_comment ) {
+				if ( "\n" === $char ) {
+					$in_line_comment = false;
+					$current        .= $char;
+				}
+				continue;
+			}
+
+			if ( '/' === $char && '*' === $next && ! $in_single_quote && ! $in_double_quote && ! $in_backtick ) {
+				$comment_end = strpos( $sql, '*/', $i + 2 );
+				$comment_end = false === $comment_end ? $length : $comment_end + 2;
+				$marker      = ( $i + 2 < $length ) ? $sql[ $i + 2 ] : '';
+
+				// The server evaluates conditional comments and optimizer hints itself, so they are passed on as is.
+				if ( '!' === $marker || '+' === $marker ) {
+					$current .= substr( $sql, $i, $comment_end - $i );
+				} else {
+					$current .= ' ';
+				}
+
+				$i = $comment_end - 1;
+				continue;
+			}
+
+			if ( '-' === $char && '-' === $next && ! $in_single_quote && ! $in_double_quote && ! $in_backtick ) {
+				$char_after = ( $i + 2 < $length ) ? $sql[ $i + 2 ] : "\n";
+				if ( ' ' === $char_after || "\t" === $char_after || "\r" === $char_after || "\n" === $char_after ) {
+					$in_line_comment = true;
+					continue;
+				}
+			}
+
+			if ( '#' === $char && ! $in_single_quote && ! $in_double_quote && ! $in_backtick ) {
+				$in_line_comment = true;
+				continue;
+			}
+
+			// Handle backslash escaping inside quoted strings (e.g. \' or \").
+			if ( '\\' === $char && ( $in_single_quote || $in_double_quote ) ) {
+				$current .= $char;
+				if ( $i + 1 < $length ) {
+					$current .= $sql[ ++$i ];
+				}
+				continue;
+			}
+
+			if ( "'" === $char && ! $in_double_quote && ! $in_backtick ) {
+				$in_single_quote = ! $in_single_quote;
+			} elseif ( '"' === $char && ! $in_single_quote && ! $in_backtick ) {
+				$in_double_quote = ! $in_double_quote;
+			} elseif ( '`' === $char && ! $in_single_quote && ! $in_double_quote ) {
+				$in_backtick = ! $in_backtick;
+			}
+
+			$delim_len = strlen( $delimiter );
+			if ( ! $in_single_quote && ! $in_double_quote && ! $in_backtick && substr( $sql, $i, $delim_len ) === $delimiter ) {
+				$trimmed = trim( $current );
+				if ( '' !== $trimmed ) {
+					yield $trimmed;
+				}
+				$current = '';
+				$i      += $delim_len - 1;
+			} else {
+				$current .= $char;
+			}
+		}
+
+		$trimmed = trim( $current );
+		if ( '' !== $trimmed ) {
+			yield $trimmed;
 		}
 	}
 }
