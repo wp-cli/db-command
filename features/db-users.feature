@@ -1,9 +1,10 @@
 Feature: Manage database users
 
+  # The cleanup uses `I try` with a plain DROP USER, as MySQL 5.6 has no DROP USER IF EXISTS.
   @require-mysql-or-mariadb
   Scenario: Create a database user without privileges
     Given a WP install
-    And I run `wp db query "DROP USER IF EXISTS 'wpcli_dbusers_1'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+    And I try `wp db query "DROP USER 'wpcli_dbusers_1'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
 
     When I run `wp db users create wpcli_dbusers_1 '%' --password=first-Pa55 --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
     Then STDOUT should be:
@@ -36,7 +37,7 @@ Feature: Manage database users
   @require-mysql-or-mariadb
   Scenario: Create a database user with privileges on the WordPress database
     Given a WP install
-    And I run `wp db query "DROP USER IF EXISTS 'wpcli_dbusers_2'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+    And I try `wp db query "DROP USER 'wpcli_dbusers_2'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
 
     When I run `echo "it's a \"tricky\" pass\\word;" | wp db users create wpcli_dbusers_2 '%' --grant-privileges --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
     Then STDOUT should be:
@@ -55,7 +56,7 @@ Feature: Manage database users
   @require-mysql-or-mariadb
   Scenario: The new user's password is not leaked into the debug output
     Given a WP install
-    And I run `wp db query "DROP USER IF EXISTS 'wpcli_dbusers_3'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+    And I try `wp db query "DROP USER 'wpcli_dbusers_3'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
 
     When I try `wp db users create wpcli_dbusers_3 '%' --password=leak-Ch3ck-Value --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD} --debug=db`
     Then the return code should be 0
