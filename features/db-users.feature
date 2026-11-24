@@ -1,60 +1,110 @@
-@skip-sqlite
 Feature: Manage database users
 
-  Scenario: Create database user without privileges
-    Given an empty directory
-    And WP files
-    And wp-config.php
+  @require-mysql-or-mariadb
+  Scenario: Create a database user without privileges
+    Given a WP install
+    And I run `wp db query "DROP USER IF EXISTS 'wpcli_dbusers_1'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
 
-    When I try `wp db create`
-    And I run `wp db users create testuser localhost --password=testpass123`
+    When I run `wp db users create wpcli_dbusers_1 '%' --password=first-Pa55 --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+    Then STDOUT should be:
+      """
+      Success: Created database user 'wpcli_dbusers_1'@'%'.
+      """
+
+    When I run `wp db query "SELECT User FROM mysql.user WHERE User = 'wpcli_dbusers_1'" --skip-column-names --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+    Then STDOUT should be:
+      """
+      wpcli_dbusers_1
+      """
+
+    When I try `wp db query "SELECT 1" --dbuser=wpcli_dbusers_1 --dbpass=first-Pa55`
+    Then the return code should be 1
+    And STDERR should contain:
+      """
+      denied
+      """
+
+    When I try `wp db users create wpcli_dbusers_1 '%' --password=first-Pa55 --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+    Then the return code should be 1
+    And STDERR should contain:
+      """
+      Error:
+      """
+
+    When I run `wp db query "DROP USER 'wpcli_dbusers_1'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+
+  @require-mysql-or-mariadb
+  Scenario: Create a database user with privileges on the WordPress database
+    Given a WP install
+    And I run `wp db query "DROP USER IF EXISTS 'wpcli_dbusers_2'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+
+    When I run `echo "it's a \"tricky\" pass\\word;" | wp db users create wpcli_dbusers_2 '%' --grant-privileges --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+    Then STDOUT should be:
+      """
+      Success: Created database user 'wpcli_dbusers_2'@'%' with all privileges on '{DB_NAME}'.
+      """
+
+    When I run `wp db query "SELECT option_value FROM wp_options WHERE option_name = 'siteurl'" --skip-column-names --dbuser=wpcli_dbusers_2 --dbpass="it's a \"tricky\" pass\\word;"`
+    Then STDOUT should be:
+      """
+      https://example.com
+      """
+
+    When I run `wp db query "DROP USER 'wpcli_dbusers_2'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+
+  @require-mysql-or-mariadb
+  Scenario: The new user's password is not leaked into the debug output
+    Given a WP install
+    And I run `wp db query "DROP USER IF EXISTS 'wpcli_dbusers_3'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+
+    When I try `wp db users create wpcli_dbusers_3 '%' --password=leak-Ch3ck-Value --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD} --debug=db`
+    Then the return code should be 0
+    And STDERR should contain:
+      """
+      Creating database user 'wpcli_dbusers_3'@'%'.
+      """
+    And STDERR should not contain:
+      """
+      leak-Ch3ck-Value
+      """
+
+    When I run `wp db query "DROP USER 'wpcli_dbusers_3'@'%'" --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD}`
+
+  @require-mysql-or-mariadb
+  Scenario: A password is required
+    Given a WP install
+
+    When I try `wp db users create wpcli_dbusers_4 '%' --dbuser={DB_ROOT_USER} --dbpass={DB_ROOT_PASSWORD} < /dev/null`
+    Then the return code should be 1
+    And STDERR should contain:
+      """
+      Error: A password is required.
+      """
+
+  @require-mysql-or-mariadb
+  Scenario: Only the create subcommand is available
+    Given a WP install
+
+    When I try `wp db users drop --yes`
+    Then the return code should be 1
+    And STDERR should contain:
+      """
+      is not a registered subcommand of 'db users'
+      """
+
+    When I run `wp db check`
     Then STDOUT should contain:
       """
-      Success: Database user 'testuser'@'localhost' created.
+      Success: Database checked.
       """
 
-    When I run `wp db query "SELECT User, Host FROM mysql.user WHERE User='testuser'"`
-    Then STDOUT should contain:
-      """
-      testuser
-      """
+  @require-sqlite
+  Scenario: Database users are not supported with SQLite
+    Given a WP install
 
-  Scenario: Create database user with privileges
-    Given an empty directory
-    And WP files
-    And wp-config.php
-
-    When I try `wp db create`
-    And I run `wp db users create appuser localhost --password=secret123 --grant-privileges`
-    Then STDOUT should contain:
+    When I try `wp db users create someone --password=some-Pa55`
+    Then the return code should be 1
+    And STDERR should be:
       """
-      created with privileges on database
-      """
-    And STDOUT should contain:
-      """
-      appuser
-      """
-
-  Scenario: Create database user with custom host
-    Given an empty directory
-    And WP files
-    And wp-config.php
-
-    When I try `wp db create`
-    And I run `wp db users create remoteuser '%' --password=remote123`
-    Then STDOUT should contain:
-      """
-      Success: Database user 'remoteuser'@'%' created.
-      """
-
-  Scenario: Create database user with no password
-    Given an empty directory
-    And WP files
-    And wp-config.php
-
-    When I try `wp db create`
-    And I run `wp db users create nopassuser localhost`
-    Then STDOUT should contain:
-      """
-      Success: Database user 'nopassuser'@'localhost' created.
+      Error: Database users are not supported with SQLite.
       """

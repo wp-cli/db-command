@@ -4,7 +4,8 @@ use WP_CLI\Formatter;
 use WP_CLI\Process;
 use WP_CLI\Utils;
 use cli\table\Column;
-use WP_CLI\Db\DB_Command_SQLite;
+
+require_once __DIR__ . '/DB_Command_SQLite.php';
 
 /**
  * Performs basic database operations using credentials stored in wp-config.php.
@@ -2234,7 +2235,7 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 * @phpstan-return ($idents is string ? string : array)
 	 */
-	protected static function esc_sql_ident( $idents ) {
+	private static function esc_sql_ident( $idents ) {
 		$backtick = static function ( $v ) {
 			// Escape any backticks in the identifier by doubling.
 			return '`' . str_replace( '`', '``', $v ) . '`';

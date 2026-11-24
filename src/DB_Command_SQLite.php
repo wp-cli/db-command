@@ -1,11 +1,7 @@
 <?php
 
-namespace WP_CLI\Db;
-
 use WP_CLI\Formatter;
 use WP_CLI\Utils;
-use WP_CLI;
-use Exception;
 
 /**
  * SQLite-specific database operations for DB_Command.
