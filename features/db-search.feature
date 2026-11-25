@@ -982,6 +982,37 @@ Feature: Search through the database
     And STDOUT should match /\d tables? skipped:.*wp_term_relationships/
     And STDERR should be empty
 
+  Scenario: Search with exclude revisions option
+    Given a WP install
+    And I run `wp post create --post_content="This is the original post content." --post_title="Original Post" --post_status=publish --porcelain`
+    And save STDOUT as {POST_ID}
+    And I run `wp post update {POST_ID} --post_content="This is the updated post content."`
+
+    When I run `wp db search "updated post content" wp_posts --format=count`
+    Then STDOUT should be:
+      """
+      2
+      """
+
+    When I run `wp db search "updated post content" wp_posts --exclude_revisions --format=ids`
+    Then STDOUT should be:
+      """
+      {POST_ID}
+      """
+
+    When I run `wp db search "updated post content" --exclude_revisions`
+    Then STDOUT should contain:
+      """
+      {POST_ID}:This is the updated post content.
+      """
+    And STDERR should be empty
+
+    When I run `wp db search "updated post content" wp_posts --exclude_revisions --regex --format=count`
+    Then STDOUT should be:
+      """
+      1
+      """
+
   @skip-windows
   Scenario: Search with custom colors
     Given a WP install

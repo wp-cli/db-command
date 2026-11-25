@@ -1873,6 +1873,9 @@ class DB_Command extends WP_CLI_Command {
 	 *   - count
 	 * ---
 	 *
+	 * [--exclude_revisions]
+	 * : Exclude revisions from the search.
+	 *
 	 * The percent color codes available are:
 	 *
 	 * | Code | Color
@@ -2011,6 +2014,7 @@ class DB_Command extends WP_CLI_Command {
 		$stats             = Utils\get_flag_value( $assoc_args, 'stats', false );
 		$fields            = Utils\get_flag_value( $assoc_args, 'fields' );
 		$format            = Utils\get_flag_value( $assoc_args, 'format' );
+		$exclude_revisions = Utils\get_flag_value( $assoc_args, 'exclude_revisions', false );
 
 		$column_count = 0;
 		$row_count    = 0;
@@ -2075,14 +2079,22 @@ class DB_Command extends WP_CLI_Command {
 				$primary_key_sql = self::esc_sql_ident( $primary_key ) . ', ';
 			}
 
+			// Skip revisions in any posts table (including other sites' tables in a multisite network).
+			$revisions_sql = '';
+			if ( $exclude_revisions && preg_match( '/posts$/', $table ) && in_array( 'post_type', $all_columns, true ) ) {
+				$revisions_sql = ' ' . self::esc_sql_ident( 'post_type' ) . " <> 'revision'";
+			}
+
 			foreach ( $text_columns as $column ) {
 				$column_sql = self::esc_sql_ident( $column );
 				if ( $regex ) {
+					$where_sql = $revisions_sql ? " WHERE{$revisions_sql}" : '';
 					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-					$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}" );
+					$results = $wpdb->get_results( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql}{$where_sql}" );
 				} else {
+					$where_sql = $revisions_sql ? " AND{$revisions_sql}" : '';
 					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Escaped through esc_sql_ident/esc_like.
-					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s;", $esc_like_search ) );
+					$results = $wpdb->get_results( $wpdb->prepare( "SELECT {$primary_key_sql}{$column_sql} FROM {$table_sql} WHERE {$column_sql} LIKE %s{$where_sql};", $esc_like_search ) );
 				}
 				if ( $results ) {
 					$row_count                  += count( $results );
