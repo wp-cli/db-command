@@ -81,7 +81,7 @@ wp db create [--dbuser=<value>] [--dbpass=<value>] [--defaults]
 
 Runs `CREATE_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 `DB_USER` and `DB_PASSWORD` database credentials specified in
-wp-config.php.
+wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 
 **OPTIONS**
 
@@ -111,7 +111,7 @@ wp db drop [--dbuser=<value>] [--dbpass=<value>] [--yes] [--defaults]
 
 Runs `DROP_DATABASE` SQL statement using `DB_HOST`, `DB_NAME`,
 `DB_USER` and `DB_PASSWORD` database credentials specified in
-wp-config.php.
+wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 
 **OPTIONS**
 
@@ -144,7 +144,7 @@ wp db reset [--dbuser=<value>] [--dbpass=<value>] [--yes] [--defaults]
 
 Runs `DROP_DATABASE` and `CREATE_DATABASE` SQL statements using
 `DB_HOST`, `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-specified in wp-config.php.
+specified in wp-config.php. Requires MySQL/MariaDB client binaries to be available.
 
 **OPTIONS**
 
@@ -177,7 +177,7 @@ wp db check [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--default
 
 Runs `mysqlcheck` utility with `--check` using `DB_HOST`,
 `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-specified in wp-config.php.
+specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 
 [See docs](http://dev.mysql.com/doc/refman/5.7/en/check-table.html)
 for more details on the `CHECK TABLE` statement.
@@ -216,7 +216,7 @@ wp db optimize [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defa
 
 Runs `mysqlcheck` utility with `--optimize=true` using `DB_HOST`,
 `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-specified in wp-config.php.
+specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 
 [See docs](http://dev.mysql.com/doc/refman/5.7/en/optimize-table.html)
 for more details on the `OPTIMIZE TABLE` statement.
@@ -269,7 +269,7 @@ wp db repair [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaul
 
 Runs `mysqlcheck` utility with `--repair=true` using `DB_HOST`,
 `DB_NAME`, `DB_USER` and `DB_PASSWORD` database credentials
-specified in wp-config.php.
+specified in wp-config.php. Requires `mysqlcheck` or `mariadb-check` client binary.
 
 [See docs](http://dev.mysql.com/doc/refman/5.7/en/repair-table.html) for
 more details on the `REPAIR TABLE` statement.
@@ -297,13 +297,15 @@ more details on the `REPAIR TABLE` statement.
 
 ### wp db cli
 
-Opens a MySQL console using credentials from wp-config.php
+Opens a MySQL console using credentials from wp-config.php.
 
 ~~~
 wp db cli [--database=<database>] [--default-character-set=<character-set>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--defaults]
 ~~~
 
 **Alias:** `connect`
+
+Requires `mysql` or `mariadb` client binary to be available.
 
 **OPTIONS**
 
@@ -342,7 +344,9 @@ wp db query [<sql>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [-
 ~~~
 
 Executes an arbitrary SQL query using `DB_HOST`, `DB_NAME`, `DB_USER`
- and `DB_PASSWORD` database credentials specified in wp-config.php.
+and `DB_PASSWORD` database credentials specified in wp-config.php.
+If MySQL/MariaDB client binaries are not available, falls back to
+executing queries via WordPress's `wpdb`.
 
 Use the `--skip-column-names` MySQL argument to exclude the headers
 from a SELECT query. Pipe the output to remove the ASCII table
@@ -438,13 +442,14 @@ To confirm the ID for the site you want to query, you can use the `wp site list`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--defaults]
+wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--exclude_tables_data=<tables>] [--include-tablespaces] [--porcelain] [--defaults]
 ~~~
 
 **Alias:** `dump`
 
 Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 `DB_PASSWORD` database credentials specified in wp-config.php. Accepts any valid [`mysqldump` flags](https://dev.mysql.com/doc/en/mysqldump.html#mysqldump-option-summary).
+Requires `mysqldump` or `mariadb-dump` client binary to be available.
 
 **OPTIONS**
 
@@ -466,6 +471,10 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
 
 	[--exclude_tables=<tables>]
 		The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
+
+	[--exclude_tables_data=<tables>]
+		The comma separated list of specific tables for which only the structure will be exported. Excluding this parameter will export data for all tables in the export.
+		  Requires a dump client that supports --ignore-table-data (mariadb-dump from MariaDB 10.1.45, 10.2.32, 10.3.23, 10.4.13, 10.5.3 or later); MySQL's mysqldump does not. Cannot be combined with --tables.
 
 	[--include-tablespaces]
 		Skips adding the default --no-tablespaces option to mysqldump.
@@ -514,6 +523,10 @@ Runs `mysqldump` utility using `DB_HOST`, `DB_NAME`, `DB_USER` and
     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
+    # Skip data of certain tables from the exported database
+    $ wp db export --exclude_tables_data=wp_actionscheduler_logs
+    Success: Exported to 'wordpress_dbase-db72bb5.sql'.
+
     # Export database to STDOUT.
     $ wp db export -
     -- MySQL dump 10.13  Distrib 5.7.19, for osx10.12 (x86_64)
@@ -536,7 +549,10 @@ wp db import [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] 
 Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
 `DB_PASSWORD` database credentials specified in wp-config.php. This
 does not create database by itself and only performs whatever tasks are
-defined in the SQL.
+defined in the SQL. If MySQL/MariaDB client binaries are not available,
+falls back to importing via WordPress's `wpdb`. The fallback reads the
+whole file into memory, so it is slower and needs more memory than the
+client binaries for large imports.
 
 **OPTIONS**
 
@@ -1038,6 +1054,141 @@ wp db columns <table> [--format]
     | post_mime_type        | varchar(100)        | NO   |     |                     |                |
     | comment_count         | bigint(20)          | NO   |     | 0                   |                |
     +-----------------------+---------------------+------+-----+---------------------+----------------+
+
+
+
+### wp db status
+
+Displays an overview of the database.
+
+~~~
+wp db status [--dbuser=<value>] [--dbpass=<value>] [--skip-check] [--format=<format>] [--defaults]
+~~~
+
+Shows the database name, the number of tables and their total size, the
+table prefix, the storage engine, character set and collation of the
+tables, and whether `mysqlcheck` reports any problems. Engine, charset
+and collation read "Mixed" when the tables don't all share the same one.
+
+Unlike `wp db size` or `wp db prefix`, this doesn't load WordPress, so it
+also works before WordPress is installed.
+
+For SQLite databases, the engine is reported as SQLite, and charset,
+collation and check status are not available.
+
+**OPTIONS**
+
+	[--dbuser=<value>]
+		Username to pass to mysql and mysqlcheck. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysql and mysqlcheck. Defaults to DB_PASSWORD.
+
+	[--skip-check]
+		Don't run `mysqlcheck`, which reads every table and can take a while on large databases.
+
+	[--format=<format>]
+		Render output in a particular format. The JSON output lists the total size in bytes.
+		---
+		default: list
+		options:
+		  - list
+		  - json
+		---
+
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
+**EXAMPLES**
+
+    $ wp db status
+    Database Name:     wordpress_dbase
+    Tables:            12
+    Total Size:        868.35 KB
+    Prefix:            wp_
+    Engine:            InnoDB
+    Charset:           utf8mb4
+    Collation:         utf8mb4_unicode_520_ci
+    Check Status:      OK
+
+    $ wp db status --skip-check --format=json
+    {"database":"wordpress_dbase","tables":12,"size":868352,"prefix":"wp_","engine":"InnoDB","charset":"utf8mb4","collation":"utf8mb4_unicode_520_ci","check":"Skipped"}
+
+
+
+### wp db users
+
+Manages MySQL and MariaDB user accounts.
+
+~~~
+wp db users
+~~~
+
+Creating users needs a database account with the `CREATE USER` privilege
+(and `GRANT OPTION` for `--grant-privileges`), which the one in wp-config.php
+usually doesn't have. Pass a privileged account with `--dbuser` and `--dbpass`.
+
+**EXAMPLES**
+
+    # Create a user with full privileges on the WordPress database, prompting for both passwords.
+    $ wp db users create appuser localhost --grant-privileges --dbuser=root --prompt=dbpass
+    1/1 [--dbpass=<value>]:
+    Password:
+    Success: Created database user 'appuser'@'localhost' with all privileges on 'wp_database'.
+
+
+
+
+
+### wp db users create
+
+Creates a database user.
+
+~~~
+wp db users create <username> [<host>] [--password=<password>] [--grant-privileges] [--dbuser=<value>] [--dbpass=<value>] [--defaults]
+~~~
+
+The statements are sent to the `mysql` client through STDIN, so the new
+user's password doesn't show up in the process list or in `--debug` output.
+
+**OPTIONS**
+
+	<username>
+		Name of the user to create.
+
+	[<host>]
+		Host the user is allowed to connect from. Use `%` for any host.
+		---
+		default: localhost
+		---
+
+	[--password=<password>]
+		Password for the new user. If omitted, it is read from STDIN when input is piped, and prompted for otherwise. Avoid passing it here on shared systems, as it ends up in the shell history.
+
+	[--grant-privileges]
+		Grant the new user all privileges on the WordPress database (DB_NAME).
+
+	[--dbuser=<value>]
+		Username to connect as. Needs the `CREATE USER` privilege. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to connect with. Defaults to DB_PASSWORD.
+
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
+**EXAMPLES**
+
+    # Create a user that can connect from any host, reading its password from a file.
+    # This connects as DB_USER, which then needs the CREATE USER privilege.
+    $ wp db users create appuser '%' < password.txt
+    Success: Created database user 'appuser'@'%'.
+
+    # Create a user with full privileges on the WordPress database.
+    $ wp db users create appuser localhost --grant-privileges --dbuser=root --prompt=dbpass
+    1/1 [--dbpass=<value>]:
+    Password:
+    Success: Created database user 'appuser'@'localhost' with all privileges on 'wp_database'.
 
 ## Installing
 

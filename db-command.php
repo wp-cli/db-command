@@ -10,3 +10,4 @@ if ( file_exists( $wpcli_db_autoloader ) ) {
 }
 
 WP_CLI::add_command( 'db', 'DB_Command' );
+WP_CLI::add_command( 'db users', 'WP_CLI\DB\Users_Command' );

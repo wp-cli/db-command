@@ -397,6 +397,18 @@ trait DB_Command_SQLite {
 			$drop_statements[]  = sprintf( 'DROP TABLE %s;', $escaped_identifier );
 		}
 
+		// Keep the structure but not the rows of these tables. This only affects the temporary copy.
+		if ( isset( $assoc_args['exclude_tables_data'] ) && is_string( $assoc_args['exclude_tables_data'] ) ) {
+			foreach ( explode( ',', $assoc_args['exclude_tables_data'] ) as $table ) {
+				$table = trim( $table );
+				if ( '' === $table || in_array( $table, $exclude_tables, true ) ) {
+					continue;
+				}
+				$drop_statements[] = sprintf( 'DELETE FROM %s;', '"' . str_replace( '"', '""', $table ) . '"' );
+			}
+		}
+		unset( $assoc_args['exclude_tables_data'] );
+
 		$init_file = tempnam( sys_get_temp_dir(), 'export_init' );
 		if ( false === $init_file ) {
 			if ( file_exists( $temp_db ) ) {
