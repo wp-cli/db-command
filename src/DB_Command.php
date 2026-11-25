@@ -1874,7 +1874,8 @@ class DB_Command extends WP_CLI_Command {
 	 * ---
 	 *
 	 * [--exclude_revisions]
-	 * : Exclude revisions from the search.
+	 * : Exclude revisions from the search, by skipping rows of the `revision` post type in
+	 * posts tables (of every site in a network). Post meta of revisions is still searched.
 	 *
 	 * The percent color codes available are:
 	 *

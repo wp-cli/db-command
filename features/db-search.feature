@@ -1013,6 +1013,25 @@ Feature: Search through the database
       1
       """
 
+  Scenario: Search with exclude revisions option on another site's posts table
+    Given a WP multisite install
+    And I run `wp site create --slug=second --porcelain`
+    And I run `wp post create --url=example.com/second --post_content="This is the original post content." --post_title="Original Post" --post_status=publish --porcelain`
+    And save STDOUT as {POST_ID}
+    And I run `wp post update {POST_ID} --url=example.com/second --post_content="This is the updated post content."`
+
+    When I run `wp db search "updated post content" wp_2_posts --network --format=count`
+    Then STDOUT should be:
+      """
+      2
+      """
+
+    When I run `wp db search "updated post content" wp_2_posts --network --exclude_revisions --format=count`
+    Then STDOUT should be:
+      """
+      1
+      """
+
   @skip-windows
   Scenario: Search with custom colors
     Given a WP install
