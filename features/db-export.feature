@@ -70,6 +70,87 @@ Feature: Export a WordPress database
       PRAGMA foreign_keys=OFF
       """
 
+  # Support depends on the dump client, not the server (e.g. mariadb-dump works against a MySQL server),
+  # so fake a dump client without --ignore-table-data, like MySQL's mysqldump.
+  @skip-sqlite
+  Scenario: Exclude data of certain tables is not supported by the dump client
+    Given a WP install
+    And a fake-bin/mysqldump file:
+      """
+      #!/bin/sh
+      case "$1" in
+        --version) echo "mysqldump  Ver 8.0.40 for Linux on x86_64 (MySQL Community Server - GPL)" ;;
+        --help) echo "  --ignore-table=name Do not dump the specified table." ;;
+      esac
+      exit 0
+      """
+    And a fake-bin/mariadb-dump file:
+      """
+      #!/bin/sh
+      case "$1" in
+        --version) echo "mysqldump  Ver 8.0.40 for Linux on x86_64 (MySQL Community Server - GPL)" ;;
+        --help) echo "  --ignore-table=name Do not dump the specified table." ;;
+      esac
+      exit 0
+      """
+
+    When I run `chmod +x fake-bin/mysqldump fake-bin/mariadb-dump`
+    And I try `env PATH={RUN_DIR}/fake-bin:$PATH wp db export wp_cli_test.sql --exclude_tables_data=wp_users`
+    Then the return code should be 1
+    And STDERR should contain:
+      """
+      Error: The --exclude_tables_data option requires a dump client that supports --ignore-table-data
+      """
+    And the wp_cli_test.sql file should not exist
+
+  # Only the MariaDB dump client supports --ignore-table-data.
+  @require-mariadb
+  Scenario: Exclude data of certain tables when exporting the database
+    Given a WP install
+
+    When I run `wp db export wp_cli_test.sql --exclude_tables_data=wp_users,wp_options --porcelain`
+    Then the wp_cli_test.sql file should exist
+    And the wp_cli_test.sql file should contain:
+      """
+      CREATE TABLE `wp_users`
+      """
+    And the wp_cli_test.sql file should contain:
+      """
+      CREATE TABLE `wp_options`
+      """
+    And the wp_cli_test.sql file should contain:
+      """
+      INSERT INTO `wp_posts`
+      """
+    And the wp_cli_test.sql file should not contain:
+      """
+      INSERT INTO `wp_users`
+      """
+    And the wp_cli_test.sql file should not contain:
+      """
+      INSERT INTO `wp_options`
+      """
+
+  @skip-sqlite
+  Scenario: Exclude data of certain tables cannot be combined with --tables
+    Given a WP install
+
+    When I try `wp db export wp_cli_test.sql --tables=wp_users,wp_posts --exclude_tables_data=wp_users`
+    Then the return code should be 1
+    And STDERR should contain:
+      """
+      Error: The --exclude_tables_data option cannot be combined with --tables.
+      """
+
+  @require-sqlite
+  Scenario: Exclude data of certain tables when exporting a SQLite database
+    Given a WP install
+
+    When I run `wp db export wp_cli_test.sql --exclude_tables_data=wp_users --porcelain`
+    Then the contents of the wp_cli_test.sql file should match /CREATE TABLE [`"]?wp_users[`"]?/
+    And the contents of the wp_cli_test.sql file should match /INSERT INTO [`"]?wp_posts[`"]?/
+    And the contents of the wp_cli_test.sql file should not match /INSERT INTO [`"]?wp_users[`"]?/
+
   @skip-sqlite
   Scenario: Export database to STDOUT
     Given a WP install

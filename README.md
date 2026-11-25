@@ -442,7 +442,7 @@ To confirm the ID for the site you want to query, you can use the `wp site list`
 Exports the database to a file or to STDOUT.
 
 ~~~
-wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--include-tablespaces] [--porcelain] [--defaults]
+wp db export [<file>] [--dbuser=<value>] [--dbpass=<value>] [--<field>=<value>] [--tables=<tables>] [--exclude_tables=<tables>] [--exclude_tables_data=<tables>] [--include-tablespaces] [--porcelain] [--defaults]
 ~~~
 
 **Alias:** `dump`
@@ -471,6 +471,10 @@ Requires `mysqldump` or `mariadb-dump` client binary to be available.
 
 	[--exclude_tables=<tables>]
 		The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
+
+	[--exclude_tables_data=<tables>]
+		The comma separated list of specific tables for which only the structure will be exported. Excluding this parameter will export data for all tables in the export.
+		  Requires a dump client that supports --ignore-table-data (mariadb-dump from MariaDB 10.1.45, 10.2.32, 10.3.23, 10.4.13, 10.5.3 or later); MySQL's mysqldump does not. Cannot be combined with --tables.
 
 	[--include-tablespaces]
 		Skips adding the default --no-tablespaces option to mysqldump.
@@ -517,6 +521,10 @@ Requires `mysqldump` or `mariadb-dump` client binary to be available.
 
     # Skip all tables matching prefix from the exported database
     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
+    Success: Exported to 'wordpress_dbase-db72bb5.sql'.
+
+    # Skip data of certain tables from the exported database
+    $ wp db export --exclude_tables_data=wp_actionscheduler_logs
     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 
     # Export database to STDOUT.

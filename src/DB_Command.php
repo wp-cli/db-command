@@ -710,6 +710,10 @@ class DB_Command extends WP_CLI_Command {
 	 * [--exclude_tables=<tables>]
 	 * : The comma separated list of specific tables that should be skipped from exporting. Excluding this parameter will export all tables in the database.
 	 *
+	 * [--exclude_tables_data=<tables>]
+	 * : The comma separated list of specific tables for which only the structure will be exported. Excluding this parameter will export data for all tables in the export.
+	 *   Requires a dump client that supports --ignore-table-data (mariadb-dump from MariaDB 10.1.45, 10.2.32, 10.3.23, 10.4.13, 10.5.3 or later); MySQL's mysqldump does not. Cannot be combined with --tables.
+	 *
 	 * [--include-tablespaces]
 	 * : Skips adding the default --no-tablespaces option to mysqldump.
 	 *
@@ -755,6 +759,10 @@ class DB_Command extends WP_CLI_Command {
 	 *
 	 *     # Skip all tables matching prefix from the exported database
 	 *     $ wp db export --exclude_tables=$(wp db tables --all-tables-with-prefix --format=csv)
+	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
+	 *
+	 *     # Skip data of certain tables from the exported database
+	 *     $ wp db export --exclude_tables_data=wp_actionscheduler_logs
 	 *     Success: Exported to 'wordpress_dbase-db72bb5.sql'.
 	 *
 	 *     # Export database to STDOUT.
@@ -840,6 +848,8 @@ class DB_Command extends WP_CLI_Command {
 
 		$command_esc_args = [ DB_NAME ];
 
+		$has_tables = isset( $assoc_args['tables'] );
+
 		if ( isset( $assoc_args['tables'] ) ) {
 			$tables = explode( ',', trim( $assoc_args['tables'], ',' ) );
 			unset( $assoc_args['tables'] );
@@ -858,6 +868,31 @@ class DB_Command extends WP_CLI_Command {
 				$command           .= ' --ignore-table';
 				$command           .= ' %s';
 				$command_esc_args[] = trim( DB_NAME . '.' . $table );
+			}
+		}
+
+		$exclude_tables_data = Utils\get_flag_value( $assoc_args, 'exclude_tables_data', '' );
+		unset( $assoc_args['exclude_tables_data'] );
+		if ( is_string( $exclude_tables_data ) && '' !== trim( $exclude_tables_data, ', ' ) ) {
+			// The dump client ignores --ignore-table-data for tables named with --tables.
+			if ( $has_tables ) {
+				WP_CLI::error( 'The --exclude_tables_data option cannot be combined with --tables.' );
+			}
+
+			// --ignore-table-data is a dump client option, so check the client rather than the server.
+			if ( ! $this->command_supports_option( $mysqldump_binary, 'ignore-table-data' ) ) {
+				WP_CLI::error( sprintf( 'The --exclude_tables_data option requires a dump client that supports --ignore-table-data (mariadb-dump from MariaDB 10.1.45, 10.2.32, 10.3.23, 10.4.13, 10.5.3 or later). "%s" does not.', $mysqldump_binary ) );
+			}
+
+			$tables = explode( ',', trim( $exclude_tables_data, ',' ) );
+			foreach ( $tables as $table ) {
+				$table = trim( $table );
+				if ( '' === $table ) {
+					continue;
+				}
+				$command           .= ' --ignore-table-data';
+				$command           .= ' %s';
+				$command_esc_args[] = DB_NAME . '.' . $table;
 			}
 		}
 
