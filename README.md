@@ -550,7 +550,9 @@ Runs SQL queries using `DB_HOST`, `DB_NAME`, `DB_USER` and
 `DB_PASSWORD` database credentials specified in wp-config.php. This
 does not create database by itself and only performs whatever tasks are
 defined in the SQL. If MySQL/MariaDB client binaries are not available,
-falls back to importing via WordPress's `wpdb`.
+falls back to importing via WordPress's `wpdb`. The fallback reads the
+whole file into memory, so it is slower and needs more memory than the
+client binaries for large imports.
 
 **OPTIONS**
 
@@ -1052,6 +1054,141 @@ wp db columns <table> [--format]
     | post_mime_type        | varchar(100)        | NO   |     |                     |                |
     | comment_count         | bigint(20)          | NO   |     | 0                   |                |
     +-----------------------+---------------------+------+-----+---------------------+----------------+
+
+
+
+### wp db status
+
+Displays an overview of the database.
+
+~~~
+wp db status [--dbuser=<value>] [--dbpass=<value>] [--skip-check] [--format=<format>] [--defaults]
+~~~
+
+Shows the database name, the number of tables and their total size, the
+table prefix, the storage engine, character set and collation of the
+tables, and whether `mysqlcheck` reports any problems. Engine, charset
+and collation read "Mixed" when the tables don't all share the same one.
+
+Unlike `wp db size` or `wp db prefix`, this doesn't load WordPress, so it
+also works before WordPress is installed.
+
+For SQLite databases, the engine is reported as SQLite, and charset,
+collation and check status are not available.
+
+**OPTIONS**
+
+	[--dbuser=<value>]
+		Username to pass to mysql and mysqlcheck. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to pass to mysql and mysqlcheck. Defaults to DB_PASSWORD.
+
+	[--skip-check]
+		Don't run `mysqlcheck`, which reads every table and can take a while on large databases.
+
+	[--format=<format>]
+		Render output in a particular format. The JSON output lists the total size in bytes.
+		---
+		default: list
+		options:
+		  - list
+		  - json
+		---
+
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
+**EXAMPLES**
+
+    $ wp db status
+    Database Name:     wordpress_dbase
+    Tables:            12
+    Total Size:        868.35 KB
+    Prefix:            wp_
+    Engine:            InnoDB
+    Charset:           utf8mb4
+    Collation:         utf8mb4_unicode_520_ci
+    Check Status:      OK
+
+    $ wp db status --skip-check --format=json
+    {"database":"wordpress_dbase","tables":12,"size":868352,"prefix":"wp_","engine":"InnoDB","charset":"utf8mb4","collation":"utf8mb4_unicode_520_ci","check":"Skipped"}
+
+
+
+### wp db users
+
+Manages MySQL and MariaDB user accounts.
+
+~~~
+wp db users
+~~~
+
+Creating users needs a database account with the `CREATE USER` privilege
+(and `GRANT OPTION` for `--grant-privileges`), which the one in wp-config.php
+usually doesn't have. Pass a privileged account with `--dbuser` and `--dbpass`.
+
+**EXAMPLES**
+
+    # Create a user with full privileges on the WordPress database, prompting for both passwords.
+    $ wp db users create appuser localhost --grant-privileges --dbuser=root --prompt=dbpass
+    1/1 [--dbpass=<value>]:
+    Password:
+    Success: Created database user 'appuser'@'localhost' with all privileges on 'wp_database'.
+
+
+
+
+
+### wp db users create
+
+Creates a database user.
+
+~~~
+wp db users create <username> [<host>] [--password=<password>] [--grant-privileges] [--dbuser=<value>] [--dbpass=<value>] [--defaults]
+~~~
+
+The statements are sent to the `mysql` client through STDIN, so the new
+user's password doesn't show up in the process list or in `--debug` output.
+
+**OPTIONS**
+
+	<username>
+		Name of the user to create.
+
+	[<host>]
+		Host the user is allowed to connect from. Use `%` for any host.
+		---
+		default: localhost
+		---
+
+	[--password=<password>]
+		Password for the new user. If omitted, it is read from STDIN when input is piped, and prompted for otherwise. Avoid passing it here on shared systems, as it ends up in the shell history.
+
+	[--grant-privileges]
+		Grant the new user all privileges on the WordPress database (DB_NAME).
+
+	[--dbuser=<value>]
+		Username to connect as. Needs the `CREATE USER` privilege. Defaults to DB_USER.
+
+	[--dbpass=<value>]
+		Password to connect with. Defaults to DB_PASSWORD.
+
+	[--defaults]
+		Loads the environment's MySQL option files. Default behavior is to skip loading them to avoid failures due to misconfiguration.
+
+**EXAMPLES**
+
+    # Create a user that can connect from any host, reading its password from a file.
+    # This connects as DB_USER, which then needs the CREATE USER privilege.
+    $ wp db users create appuser '%' < password.txt
+    Success: Created database user 'appuser'@'%'.
+
+    # Create a user with full privileges on the WordPress database.
+    $ wp db users create appuser localhost --grant-privileges --dbuser=root --prompt=dbpass
+    1/1 [--dbpass=<value>]:
+    Password:
+    Success: Created database user 'appuser'@'localhost' with all privileges on 'wp_database'.
 
 ## Installing
 
